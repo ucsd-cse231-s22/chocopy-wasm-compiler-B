@@ -1,10 +1,12 @@
-import {Type, BinOp, UniOp, Parameter} from './ast';
+import {Type, BinOp, UniOp } from './ast';
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
+
+export type Parameter<A> = { name: string, type: Type }
 
 export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>> }
 
@@ -28,6 +30,12 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin1", name: string, arg: Value<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
+
+  // def test(x : int, y : int = 5)
+  // f(3)
+  // Did you define y?
+  // If so, just treat as normal, if NOT, insert 5 into the list of arguments
+  // so end result is a call of f(3,5)
 
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
