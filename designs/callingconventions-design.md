@@ -9,7 +9,7 @@
 2. A function with a non-default argument following default arguments will fail in parsing (ex `def test(x : int = 3, y : int)` will not be parsed, since `x` is a default and `y` is not a default)
 
    ```python
-   def test(x : int = 3, y : int)
+   def test(x : int = 3, y : int):
    ```
 
    _Expected result: Parse error_
