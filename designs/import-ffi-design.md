@@ -26,25 +26,7 @@ and
 
 ```
 
-# Tests we’d like to pass
-
-```
-Should pass:
-
-from mod import x
-from mod immport x as y
-from mod import *
-from mod import x as y, m as n, z
-
-Should fail:
-
-from mod import x, *
-from mod import x.y
-from mod.n impport x.y
-```
-
-
-## Sample test cases
+# Sample test cases
 
 
 1. Simple import
