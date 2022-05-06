@@ -75,7 +75,7 @@ s:int = "asd"
 def f(s:str)->str:
     return s
 print(f("asd"))
-``
+```
 
 * test case 11: use string as class fields
 ```
