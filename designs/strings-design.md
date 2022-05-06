@@ -77,7 +77,7 @@ def f(s:str)->str:
 print(f("asd"))
 ```
 
-* test case 11: use string as class fields
+* test case 12: use string as class fields
 ```
 class C(object):
     s:str = "asd"
@@ -89,7 +89,7 @@ print(c.gets())
 ``` 
 
 ## Changes to code base
-* ast: add ``` { tag: "str", value: string} // adding str to Literal``` to Literal
+* ast: add ``` { tag: "str", value: string}``` to Literal
 * ir: No changes
 * New functions/files: add String.wat to codebase. String.wat would contain the implementation of the string class. The String class would include methods such as access, greater_than, equals_to etc.
 * New value representation/memory layout: we are either going to implement strings are arrays of ascii bytes or unicode byte-string (which is how python actually implements them). If we are going to stick to the ascii representation, we are going to store strings in memory as arrays with byte-size-elements. If we are going to implement the unicode representation, we are going to store strings as byte-strings with variable length elements with sizes between 1 and 4 bytes. We will also need a codec to decode the byte-string.
