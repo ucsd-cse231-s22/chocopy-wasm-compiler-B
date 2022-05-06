@@ -92,7 +92,7 @@
 
    _Expected parse result:_
 
-   ```
+   ```json
    {
     "funs": [
         {
