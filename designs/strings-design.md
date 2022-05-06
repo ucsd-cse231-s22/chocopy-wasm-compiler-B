@@ -88,7 +88,7 @@ c = C()
 print(c.gets())     
 ``` 
 
-## Changes to AST and IR
+## Changes to code base
 * ast: add ``` { tag: "str", value: string} // adding str to Literal``` to Literal
 * ir: No changes
 * New functions/files: add String.wat to codebase. String.wat would contain the implementation of the string class. The String class would include methods such as access, greater_than, equals_to etc.
