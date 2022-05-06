@@ -1,0 +1,64 @@
+Jeff Makings and Zach Lee 
+
+Test cases: 
+1.
+Test for initial compilation: 
+“999999999999999999999999999999999999999999999999” 
+Expected: 999999999999999999999999999999999999999999999999
+2.
+Basic assignment and printing: 
+“x: int = 999999999999999999999999999999999999999999999999 
+print(x)” 
+Expected: “999999999999999999999999999999999999999999999999” 
+3.
+Unary operation: 
+“x: int = -999999999999999999999999999999999999999999999999 
+print(x)” 
+Expected: “-999999999999999999999999999999999999999999999999”
+4.
+Basic addition: 
+“x:int = 1000000000000000000000000000 + 1000000000000000000000000000
+print(x)” 
+Expected: 2000000000000000000000000000
+5.
+Basic subtraction: 
+“x:int = 5000000000000000000000000000 - 2000000000000000000000000000
+print(x)” 
+Expected: 3000000000000000000000000000
+6.
+Multiply i32s to get BigNum: 
+“x:int = 10000*300000
+print(x)” 
+Expected: 3000000000
+7.
+Divide: 
+“x:int = 30000000000000000000000000000 / 30000000000 
+print(x)”
+Expected: 1000000000000000000
+8.
+Comparison Operator: 
+“x:int = 1000000000000000000
+y: int = 2000000000000000000
+If y > x: 
+	print(True)
+Else: 
+	print(False)
+Expected: True” 
+9.
+Equality Operator: 
+“x:int = 1000000000000000000
+y: int = 2000000000000000000
+If y == x: 
+	print(True)
+Else: 
+	print(False)
+Expected: False” 
+10.
+List Test (for when it’s implemented): 
+“x:int = 900000001
+list1 = [3] * x
+print(list1[x-1])”
+Expected: 3
+
+
+
