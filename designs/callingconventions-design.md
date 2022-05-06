@@ -114,6 +114,7 @@ New functionality in type checking:
 
 - If a function has default values, typecheck as an Expr and make sure it has the right type (VarInit-ish)
 - In lowering, for calls, check if default values are passed - if they aren’t, insert their default values to the call’s arguments
+- In regards to merging conflicts with functions, we don't believe that we need to add any crucial changes to existing functions (including things like parameters) as we only need to focus on changing the parameter representation in the AST
 
 ## Memory Layout
 
