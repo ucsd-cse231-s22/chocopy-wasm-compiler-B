@@ -4,8 +4,17 @@
 
 1. Functions without optional parameters _still work_
 
-   TBD
+   ```python
+   def test(x : int, y : int):
+      return x + y
+      
+   test(3,5)
+   ```
 
+   _Expected result: 8_
+   
+   This is just one example, we plan on testing a variety of the original functionality including errors.
+   
 2. A function with a non-default argument following default arguments will fail in parsing (ex `def test(x : int = 3, y : int)` will not be parsed, since `x` is a default and `y` is not a default)
 
    ```python
