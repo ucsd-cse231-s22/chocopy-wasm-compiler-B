@@ -234,7 +234,36 @@ export type Class<A> = { a?: A, name: string, supers: Array<string>, fields: Arr
     export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
         return equalType(t1, t2) || isSubClass(t1,t2) ||t1.tag === "none" && t2.tag === "class" 
     }
-
 ```
 
+## compiler.ts
+For Week 7, we do not plan to support multiple inheritance yet. Thus, our approach for implementing inherited method calls follows from Lectures 9 and 10.
+We will add a vtable and use ```call_indirect``` to reference the correct method calls.
+The compiler will need to build a ```funcref``` table and populate it with all the class-prefixed methods.
+Furthermore, each object struct will need to be augmented with a field that stores its class's offset into the table.
+In the case that a subclass does not override a method of its superclass, we will probably populate the table with a dummy entry that allows the subclass to reference the superclass's method.
+
+e.g. given the following classes
+```
+class A(object):
+    def foo(self : A, arg : int):
+        print(arg)
+
+class B(A):
+    def foo2(self : B, arg : bool):
+        print(arg)
+    # B does not override foo()
+```
+
+We think the resulting table should look something like
+```
+(table 3 funcref) <-- 3 because there's 3 function references (not 2)
+(elem (i32.const 0) 
+    A$foo
+    A$foo
+    B$foo2
+)
+```
+We would put ```A$foo``` in twice and note A's offset as 0 while B's offset is 1.
+This way, if something like ```B().foo(0)``` is called, then the WASM will know to reference the ```A$foo``` at offset 1.
 
