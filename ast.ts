@@ -12,7 +12,7 @@ export type SourceLocation = { line: number }
 
 export type Parameter<A> = { name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>, mod: string }
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
@@ -29,6 +29,11 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "import", mod: string, names: Array<ImportName> | "*" }
+
+export type ImportName =
+  // from mod import x as y --> name=x, alias=y
+  { tag: "import-name", name: string, alias: string }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
