@@ -31,12 +31,6 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin2", name: string, left: Value<A>, right: Value<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Value<A>> } 
 
-  // def test(x : int, y : int = 5)
-  // f(3)
-  // Did you define y?
-  // If so, just treat as normal, if NOT, insert 5 into the list of arguments
-  // so end result is a call of f(3,5)
-
   | {  a?: A, tag: "alloc", amount: Value<A> }
   | {  a?: A, tag: "load", start: Value<A>, offset: Value<A> }
 
