@@ -86,11 +86,45 @@
 9. Unit test for parsing output in functions - parse default to have a Value
 
    ```python
-   def test(x : bool, y : bool = False):
+   def test(x : bool = False):
        pass
    ```
 
-   _Expected parse result: TBD_
+   _Expected parse result:_
+
+   ```
+   {
+    "funs": [
+        {
+            "name": "test",
+            "parameters": [
+                {
+                    "name": "x",
+                    "type": {
+                        "tag": "bool"
+                    }
+                    "value": {
+                       "tag": "bool",
+                       "value": false
+                    }
+                }
+            ],
+            "ret": {
+                "tag": "none"
+            },
+            "inits": [],
+            "body": [
+                {
+                    "tag": "pass"
+                }
+            ]
+        }
+    ],
+    "inits": [],
+    "classes": [],
+    "stmts": []
+   }
+   ```
 
 10. Use an expr as a default value (`def test(x : int = 1+2): return x` will return 3)
 
