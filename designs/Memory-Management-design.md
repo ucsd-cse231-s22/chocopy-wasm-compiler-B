@@ -1,3 +1,16 @@
+# Memory management design
+
+## Compiler changes
+
+In addition to the function headers already added to `compiler.ts`, the
+following extra will need to change:
+ - `lower.ts` will need to be fixed to actually record the type of an
+   allocation. Currently, it leaves it as `undefined`.
+ - Functions `$$inc_refcount` and `$$dec_refcount` will be added to `memory.wat`.
+ - The interface of `alloc` in `memory.wat` will be modified to include type
+   information. This function **will not be a public interface**, and all
+   allocation should happen through `codeGenAlloc` in `compiler.ts`.
+
 ## Test Cases
 
 ### Testcase 1
