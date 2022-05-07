@@ -89,10 +89,11 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
+      const freeStmts = codeGenFree(stmt.name, env);
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+        return valStmts.concat(freeStmts).concat([`(local.set $${stmt.name})`]);
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        return valStmts.concat(freeStmts).concat([`(global.set $${stmt.name})`]); 
       }
 
     case "return":
@@ -173,10 +174,8 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       return valStmts;
 
     case "alloc":
-      return [
-        ...codeGenValue(expr.amount, env),
-        `call $alloc`
-      ];
+      return codeGenAlloc(expr.a, expr.amount, env);
+
     case "load":
       return [
         ...codeGenValue(expr.start, env),
@@ -198,10 +197,11 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "none":
       return [`(i32.const 0)`];
     case "id":
+      const incStmts = incRefcount(val.name, env);
       if (env.locals.has(val.name)) {
-        return [`(local.get $${val.name})`];
+        return incSmtmts.concat([`(local.get $${val.name})`]);
       } else {
-        return [`(global.get $${val.name})`];
+        return incSmtmts.concat([`(global.get $${val.name})`]);
       }
   }
 }
@@ -289,4 +289,47 @@ function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
-  }
+}
+
+
+/** Generate code to allocate a value of this type.
+ * 
+ * This will get called to handle the alloc IR instruction
+ */
+function codeGenAlloc(type: Type, amount: Value<Type>, env: GlobalEnv): Array<string> {
+  throw new Error("TODO: Memory management implementation");
+}
+
+/** Generate code to allocate an instance of a class
+ *
+ * This will be called by codeGenAlloc in most cases
+ */
+function allocClass(cls: Class<Type>) : Array<string> {
+  throw new Error("TODO: Memory management implementation");
+}
+
+/** Generate code to decrease the refcount, if that variable is a pointer
+ * (and don't do anything, if it's not a pointer)
+ * This will get called when values are overwritten, and on local variables at
+ * the end of a function
+ */
+function decRefcount(name: string, env: GlobalEnv): Array<string> {
+  throw new Error("TODO: Memory management implementation");
+}
+
+/** Generate code to increase the refcount, if that variable is a pointer
+ * (and don't do anything, if it's not a pointer)
+ * This will get called when values are loaded from fields or variables
+ */
+function incRefcount(name: string, env: GlobalEnv): Array<string> {
+  throw new Error("TODO: Memory management implementation");
+}
+
+/** Generate code to decrease the reference counts of all local variables
+ *
+ * This will get called on all exit paths from a function
+ */
+function freeAllLocals(env: GlobalEnv): Array<string> {
+  throw new Error("TODO: Memory management implementation");
+}
+
