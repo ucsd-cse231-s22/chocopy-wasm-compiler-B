@@ -4,7 +4,7 @@
 
 In addition to the function headers already added to `compiler.ts`, the
 following extra will need to change:
- - The object header, named as `Header` class, will be add to the compiler. It contains object's type info, size info and reference count. It will be padded if needed.
+ - The object header contains object's type info, size info and reference count. It will be padded if needed.
  - `lower.ts` will need to be fixed to actually record the type of an
    allocation. Currently, it leaves it as `undefined`.
  - Functions `$$inc_refcount` and `$$dec_refcount` will be added to `memory.wat`.
