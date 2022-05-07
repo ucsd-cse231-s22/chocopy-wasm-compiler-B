@@ -10,6 +10,11 @@ following extra will need to change:
  - The interface of `alloc` in `memory.wat` will be modified to include type
    information. This function **will not be a public interface**, and all
    allocation should happen through `codeGenAlloc` in `compiler.ts`.
+ - We are adding the new builtin function `test_refcount`. It takes two
+   arguments: an object and a count.  It throws a runtime error if the refcount
+   of the object is different from its argument.
+ - And of course, the internal implementation of the operations in `memory.wat`
+   will change.
 
 ## Test Cases
 
