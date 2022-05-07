@@ -89,7 +89,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      const freeStmts = codeGenFree(stmt.name, env);
+      const freeStmts = decRefcount(stmt.name, env);
       if (env.locals.has(stmt.name)) {
         return valStmts.concat(freeStmts).concat([`(local.set $${stmt.name})`]);
       } else {
@@ -199,9 +199,9 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
     case "id":
       const incStmts = incRefcount(val.name, env);
       if (env.locals.has(val.name)) {
-        return incSmtmts.concat([`(local.get $${val.name})`]);
+        return incStmts.concat([`(local.get $${val.name})`]);
       } else {
-        return incSmtmts.concat([`(global.get $${val.name})`]);
+        return incStmts.concat([`(global.get $${val.name})`]);
       }
   }
 }
