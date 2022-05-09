@@ -107,4 +107,12 @@ def test(x:int=3, z:bool=True):
   assertParseFail("Does not accept non-default arguments after default arguments", `
 def test(x : int = 3, y : int):
   pass`);
+
+  // TODO: parse a class with methods
+});
+
+describe("Type check functions with default arguments", () => {
+  // ...
+  // ensure default parameter values have the correct type
+  // check methods AND functions
 })
