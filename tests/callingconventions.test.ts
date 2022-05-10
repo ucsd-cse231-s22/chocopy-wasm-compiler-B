@@ -1,6 +1,13 @@
 import { expect } from "chai";
 import { parse } from "../parser";
 import { Program, FunDef } from "../ast";
+import {
+  assertPrint,
+  assertTCFail,
+  assertTC,
+  assertFail,
+} from "./asserts.test";
+import { NUM, BOOL, NONE, CLASS } from "./helpers.test";
 
 /**
  * Given a test case name, source program, and expected Program output, test if the
@@ -16,7 +23,7 @@ function assertParse(name: string, source: string, result: Program<null>) {
  * Ensures that when parsing source, the parser throws an exception.
  */
 function assertParseFail(name: string, source: string) {
-  expect(() => parse(source)).to.throw("PARSE ERROR:")
+  expect(() => parse(source)).to.throw("PARSE ERROR:");
 }
 
 let blankPrgm: Program<null> = {
@@ -24,89 +31,96 @@ let blankPrgm: Program<null> = {
   inits: [],
   classes: [],
   stmts: [],
-}
+};
 
 let testWithPass: FunDef<null> = {
   name: "test",
   parameters: [],
   ret: { tag: "none" },
   inits: [],
-  body: [
-    { tag: "pass" }
-  ]
-}
+  body: [{ tag: "pass" }],
+};
 
 describe("Parses default arguments", () => {
-  assertParse("Parses one default argument", `
+  assertParse(
+    "Parses one default argument",
+    `
 def test(x:int=3):
-  pass`, {
-    ...blankPrgm,
-    funs:
-      [
+  pass`,
+    {
+      ...blankPrgm,
+      funs: [
         {
-          ...testWithPass, parameters: [
+          ...testWithPass,
+          parameters: [
             {
-              "name": "x",
-              "type": {
-                "tag": "number"
+              name: "x",
+              type: {
+                tag: "number",
               },
-              "value": {
-                "tag": "literal",
-                "value": {
-                  "tag": "num",
-                  "value": 3
+              value: {
+                tag: "literal",
+                value: {
+                  tag: "num",
+                  value: 3,
                 },
-              }
-            }
-          ]
+              },
+            },
+          ],
         },
       ],
-  });
+    }
+  );
 
-
-  assertParse("Parses multiple default arguments", `
+  assertParse(
+    "Parses multiple default arguments",
+    `
 def test(x:int=3, z:bool=True):
-  pass`, {
-    ...blankPrgm,
-    funs:
-      [
+  pass`,
+    {
+      ...blankPrgm,
+      funs: [
         {
-          ...testWithPass, parameters: [
+          ...testWithPass,
+          parameters: [
             {
-              "name": "x",
-              "type": {
-                "tag": "number"
+              name: "x",
+              type: {
+                tag: "number",
               },
-              "value": {
-                "tag": "literal",
-                "value": {
-                  "tag": "num",
-                  "value": 3
+              value: {
+                tag: "literal",
+                value: {
+                  tag: "num",
+                  value: 3,
                 },
-              }
+              },
             },
             {
               name: "z",
               type: {
-                tag: "bool"
+                tag: "bool",
               },
               value: {
-                "tag": "literal",
+                tag: "literal",
                 value: {
                   tag: "bool",
-                  value: true
-                }
-
-              }
-            }
-          ]
+                  value: true,
+                },
+              },
+            },
+          ],
         },
       ],
-  });
+    }
+  );
 
-  assertParseFail("Does not accept non-default arguments after default arguments", `
+  assertParseFail(
+    "Does not accept non-default arguments after default arguments",
+    `
 def test(x : int = 3, y : int):
-  pass`);
+  pass`
+  );
 
   // TODO: parse a class with methods
 });
@@ -115,4 +129,4 @@ describe("Type check functions with default arguments", () => {
   // ...
   // ensure default parameter values have the correct type
   // check methods AND functions
-})
+});
