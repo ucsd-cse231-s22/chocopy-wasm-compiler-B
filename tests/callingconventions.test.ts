@@ -126,7 +126,37 @@ def test(x : int = 3, y : int):
 });
 
 describe("Type check functions with default arguments", () => {
-  // ...
-  // ensure default parameter values have the correct type
+  assertTC(
+    "Default parameter values have correct type",
+    `
+def returnInt(x : int = 5) -> int:
+  return x
+  
+returnInt()`,
+    NUM
+  );
+
+  assertTCFail(
+    "Calls that redefine default arguments are typechecked",
+    `
+def test(x : bool = False) -> bool:
+    return x
+
+print(test(3))`
+  );
+
+  assertTC(
+    "Default arguments defined with an Expr are typechecked",
+    `def test(x : bool = 3 != 5) -> bool:
+    return x
+
+print(test())`,
+    BOOL
+  );
+
+  assertTCFail(
+    "Arguments with same name, default or not, fail in typechecking",
+    `def test(x : bool, x : bool = True):`
+  );
   // check methods AND functions
 });
