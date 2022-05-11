@@ -61,6 +61,7 @@ print(list1[x-1])”
 Expected: 3
 
 The below is related to the concerns from instructors.
+
 (1)
 AST/IR
 For parsing, we can store the value as a javaScript big number.
