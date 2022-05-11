@@ -1,13 +1,8 @@
 import { expect } from "chai";
 import { parse } from "../parser";
 import { Program, FunDef } from "../ast";
-import {
-  assertPrint,
-  assertTCFail,
-  assertTC,
-  assertFail,
-} from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test";
+import { assertPrint, assertTC, assertFail } from "./asserts.test";
+import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
 
 /**
  * Given a test case name, source program, and expected Program output, test if the
@@ -20,10 +15,19 @@ function assertParse(name: string, source: string, result: Program<null>) {
 }
 
 /**
+ * Ensure during typechecking, a TypeError is thrown.
+ */
+function assertTCFail(name: string, source: string) {
+  it(name, async () => {
+    expect(() => typeCheck(source)).to.throw(TypeError);
+  });
+}
+
+/**
  * Ensures that when parsing source, the parser throws an exception.
  */
 function assertParseFail(name: string, source: string) {
-  expect(() => parse(source)).to.throw("PARSE ERROR:");
+  expect(() => parse(source)).to.throw(Error);
 }
 
 let blankPrgm: Program<null> = {
@@ -127,7 +131,7 @@ def test(x : int = 3, y : int):
 
 describe("Type check functions with default arguments", () => {
   assertTC(
-    "Default parameter values have correct type",
+    "Functions can be called without defining their optional arguments",
     `
 def returnInt(x : int = 5) -> int:
   return x
@@ -147,8 +151,9 @@ print(test(3))`
 
   assertTC(
     "Default arguments defined with an Expr are typechecked",
-    `def test(x : bool = 3 != 5) -> bool:
-    return x
+    `
+def test(x : bool = 3 != 5) -> bool:
+  return x
 
 print(test())`,
     BOOL
@@ -156,8 +161,9 @@ print(test())`,
 
   assertTCFail(
     "Arguments with same name, default or not, fail in typechecking",
-    `def test(x : bool, x : bool = True):
-      pass`
+    `
+def test(x : bool, x : bool = True):
+  pass`
   );
   // check methods AND functions
 });
