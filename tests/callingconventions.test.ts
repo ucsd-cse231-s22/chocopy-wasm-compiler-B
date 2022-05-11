@@ -27,7 +27,7 @@ function assertTCFail(name: string, source: string) {
  * Ensures that when parsing source, the parser throws an exception.
  */
 function assertParseFail(name: string, source: string) {
-  expect(() => parse(source)).to.throw(Error);
+  it(name, () => expect(() => parse(source)).to.throw(Error));
 }
 
 let blankPrgm: Program<null> = {
