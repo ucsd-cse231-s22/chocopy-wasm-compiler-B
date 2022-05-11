@@ -16,6 +16,11 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
         tag: "bool",
         value: s.substring(c.from, c.to) === "True"
       }
+    case "String":
+      return {
+        tag: "str",
+        value: s.substring(c.from + 1, c.to - 1)
+      }
     case "None":
       return {
         tag: "none"
@@ -172,6 +177,45 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
+      var dotOrBracket = s.substring(c.from, c.to);
+      if( dotOrBracket === "["){
+        var start_index: Expr<any>;
+        var stop_index: Expr<any>;
+        var step: Expr<any> = {
+          tag: "literal",
+          value: { tag: "num", value: 1}
+        };
+
+        var indexItems = "";
+        c.nextSibling();
+        while (s.substring(c.from, c.to) != "]") {
+          indexItems += s.substring(c.from, c.to);
+          c.nextSibling();
+        }
+        c.parent();
+        c.firstChild(); // str object name
+        c.nextSibling(); // "[""
+        c.nextSibling(); // start index
+
+        if(indexItems.length === 0){
+          throw new Error("Error: there should have at least one value inside the brackets");
+        }
+
+        var sliced_indices = indexItems.split(":");
+        if(sliced_indices.length > 3){
+          throw new Error("Too much indices, maximum is three");
+        }
+
+        start_index = traverseExpr(c, s)
+
+        c.parent();
+        return {
+          tag: "index",
+          obj: objExpr,
+          index: start_index
+        }  
+      }
+
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();

@@ -44,6 +44,7 @@ export type Expr<A> =
 export type Literal = 
     { tag: "num", value: number }
   | { tag: "bool", value: boolean }
+  | { tag: "str", value: string}
   | { tag: "none" }
 
 // TODO: should we split up arithmetic ops from bool ops?
