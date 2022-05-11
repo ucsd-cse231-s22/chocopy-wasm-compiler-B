@@ -85,7 +85,7 @@ class C(object):
         return self.s
 c:C = None
 c = C()
-print(c.gets())     
+print(c.gets())
 ``` 
 
 ## Changes to code base
