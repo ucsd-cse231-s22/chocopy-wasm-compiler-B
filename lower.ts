@@ -21,10 +21,14 @@ function generateName(base : string) : string {
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
+type funMeta = Map<string,Array<AST.Expr<[Type,SourceLocation]>>>;
+let funEnv:funMeta;
+
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
+    funEnv = new Map(p.funs.map(f => [f.name, f.parameters.filter(p => p.value).map(p => p.value)]));
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
@@ -228,6 +232,15 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
+      // here we can access the method that is being called, check for defaults,
+      // and add them to callvals in the same way that the normal args are added
+      
+      // callvals.length 
+      // loop through method.arguments keeping track of index until i == callvals.length
+      // then check if the value is not undefined 
+      // if it is not undefined(which it shouldn't be because of type check)
+      // then add all arguments from i to the end to call vals
+      // convert the type to the same type of callvalls and pass it in to arguments
       return [ callinits, callstmts,
         {
           ...e,
@@ -240,6 +253,8 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
+      // similar to normal call, add missing default vals to argvals
+      // I dont think that we need to worry about any of the class specific information
       var objTyp = e.obj.a[0];
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
