@@ -156,7 +156,8 @@ print(test())`,
 
   assertTCFail(
     "Arguments with same name, default or not, fail in typechecking",
-    `def test(x : bool, x : bool = True):`
+    `def test(x : bool, x : bool = True):
+      pass`
   );
   // check methods AND functions
 });
