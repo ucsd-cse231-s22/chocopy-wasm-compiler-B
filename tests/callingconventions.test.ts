@@ -3,6 +3,7 @@ import { parse } from "../parser";
 import { Program, FunDef } from "../ast";
 import { assertPrint, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
+import { TypeCheckError } from "../type-check";
 
 /**
  * Given a test case name, source program, and expected Program output, test if the
@@ -19,7 +20,7 @@ function assertParse(name: string, source: string, result: Program<null>) {
  */
 function assertTCFail(name: string, source: string) {
   it(name, async () => {
-    expect(() => typeCheck(source)).to.throw(TypeError);
+    expect(() => typeCheck(source)).to.throw(TypeCheckError);
   });
 }
 
@@ -131,7 +132,22 @@ def test(x : int = 3, y : int):
 
 describe("Type check functions with default arguments", () => {
   assertTC(
-    "Functions can be called without defining their optional arguments",
+    "Default arguments are typechecked correctly",
+    `
+def returnInt(x : int = 5) -> int:
+  return x`,
+    NONE
+  );
+
+  assertTCFail(
+    "The value of a default argument must match its declaration",
+    `
+def returnInt(x : int = False) -> int:
+  return x`
+  );
+
+  assertTC(
+    "A function can be called without defining default arguments",
     `
 def returnInt(x : int = 5) -> int:
   return x
@@ -157,6 +173,13 @@ def test(x : bool = 3 != 5) -> bool:
 
 print(test())`,
     BOOL
+  );
+
+  assertTCFail(
+    "Default arguments with an Expr resulting in the wrong type are typechecked",
+    `
+def test(x : bool = 1 + 2) -> bool:
+  return x`
   );
 
   assertTCFail(
