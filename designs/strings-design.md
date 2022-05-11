@@ -81,7 +81,7 @@ print(f("asd"))
 ```
 class C(object):
     s:str = "asd"
-    def gets(self)->str:
+    def gets(self: C)->str:
         return self.s
 c:C = None
 c = C()
