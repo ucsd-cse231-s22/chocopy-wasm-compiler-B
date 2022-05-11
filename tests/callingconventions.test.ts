@@ -3,7 +3,7 @@ import { parse } from "../parser";
 import { Program, FunDef, Class, Parameter, BinOp } from "../ast";
 import { assertPrint, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
-import { TypeCheckError } from "../type-check";
+import { TypeCheckError } from "../error_reporting";
 
 // BLank programs/functions/classes, used in helpers at the bottom of this
 // file
