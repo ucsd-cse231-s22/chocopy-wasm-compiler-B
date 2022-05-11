@@ -34,6 +34,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   switch(c.type.name) {
     case "Number":
     case "Boolean":
+    case "String":
     case "None":
       return { 
         tag: "literal", 
@@ -262,6 +263,26 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
       return { tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
+      if (c.type.name === 'MemberExpression'){
+        c.firstChild(); // go to variableName
+        const objName = traverseExpr(c, s);
+        c.nextSibling(); // focus on "["
+        c.nextSibling(); // focus on index
+        const index = traverseExpr(c, s);
+        
+        c.parent(); // back to MemberExpression
+        c.nextSibling(); // focus on equals
+        c.nextSibling(); // go to value
+        var value = traverseExpr(c, s);
+        c.parent();
+
+        return {
+          tag: "index-assign",
+          obj: objName,
+          index: index,
+          value: value
+        }
+      }
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
