@@ -1,36 +1,12 @@
 import { expect } from "chai";
 import { parse } from "../parser";
-import { Program, FunDef } from "../ast";
+import { Program, FunDef, Class, Parameter, BinOp } from "../ast";
 import { assertPrint, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
 import { TypeCheckError } from "../type-check";
 
-/**
- * Given a test case name, source program, and expected Program output, test if the
- * given Program is parsed into the expected Program.
- */
-function assertParse(name: string, source: string, result: Program<null>) {
-  it(name, () => {
-    expect(parse(source)).to.deep.equal(result);
-  });
-}
-
-/**
- * Ensure during typechecking, a TypeError is thrown.
- */
-function assertTCFail(name: string, source: string) {
-  it(name, async () => {
-    expect(() => typeCheck(source)).to.throw(TypeCheckError);
-  });
-}
-
-/**
- * Ensures that when parsing source, the parser throws an exception.
- */
-function assertParseFail(name: string, source: string) {
-  it(name, () => expect(() => parse(source)).to.throw(Error));
-}
-
+// BLank programs/functions/classes, used in helpers at the bottom of this
+// file
 let blankPrgm: Program<null> = {
   funs: [],
   inits: [],
@@ -46,35 +22,33 @@ let testWithPass: FunDef<null> = {
   body: [{ tag: "pass" }],
 };
 
+let blankC: Class<null> = {
+  name: "C",
+  fields: [],
+  methods: [],
+};
+
 describe("Parses default arguments", () => {
   assertParse(
     "Parses one default argument",
     `
 def test(x:int=3):
   pass`,
-    {
-      ...blankPrgm,
-      funs: [
-        {
-          ...testWithPass,
-          parameters: [
-            {
-              name: "x",
-              type: {
-                tag: "number",
-              },
-              value: {
-                tag: "literal",
-                value: {
-                  tag: "num",
-                  value: 3,
-                },
-              },
-            },
-          ],
+    testFuncWithParams([
+      {
+        name: "x",
+        type: {
+          tag: "number",
         },
-      ],
-    }
+        value: {
+          tag: "literal",
+          value: {
+            tag: "num",
+            value: 3,
+          },
+        },
+      },
+    ])
   );
 
   assertParse(
@@ -82,42 +56,34 @@ def test(x:int=3):
     `
 def test(x:int=3, z:bool=True):
   pass`,
-    {
-      ...blankPrgm,
-      funs: [
-        {
-          ...testWithPass,
-          parameters: [
-            {
-              name: "x",
-              type: {
-                tag: "number",
-              },
-              value: {
-                tag: "literal",
-                value: {
-                  tag: "num",
-                  value: 3,
-                },
-              },
-            },
-            {
-              name: "z",
-              type: {
-                tag: "bool",
-              },
-              value: {
-                tag: "literal",
-                value: {
-                  tag: "bool",
-                  value: true,
-                },
-              },
-            },
-          ],
+    testFuncWithParams([
+      {
+        name: "x",
+        type: {
+          tag: "number",
         },
-      ],
-    }
+        value: {
+          tag: "literal",
+          value: {
+            tag: "num",
+            value: 3,
+          },
+        },
+      },
+      {
+        name: "z",
+        type: {
+          tag: "bool",
+        },
+        value: {
+          tag: "literal",
+          value: {
+            tag: "bool",
+            value: true,
+          },
+        },
+      },
+    ])
   );
 
   assertParseFail(
@@ -127,7 +93,56 @@ def test(x : int = 3, y : int):
   pass`
   );
 
-  // TODO: parse a class with methods
+  assertParse(
+    "Parses a function with an Expr for a default arg",
+    `
+def test(x : int = 1 + 2):
+  pass`,
+    testFuncWithParams([
+      {
+        name: "x",
+        type: {
+          tag: "number",
+        },
+        value: {
+          left: {
+            tag: "literal",
+            value: {
+              tag: "num",
+              value: 1,
+            },
+          },
+          op: BinOp.Plus,
+          right: {
+            tag: "literal",
+            value: {
+              tag: "num",
+              value: 2,
+            },
+          },
+          tag: "binop",
+        },
+      },
+    ])
+  );
+
+  assertParse(
+    "Parses a method with default arguments",
+    `
+class C(object):
+  def test(self : C, x : int = 5):
+    pass`,
+    classCWithTestWithParams([
+      {
+        name: "x",
+        type: { tag: "number" },
+        value: {
+          tag: "literal",
+          value: { tag: "num", value: 5 },
+        },
+      },
+    ])
+  );
 });
 
 describe("Type check functions with default arguments", () => {
@@ -190,3 +205,83 @@ def test(x : bool, x : bool = True):
   );
   // check methods AND functions
 });
+
+// Helpers
+
+/**
+ * Given a test case name, source program, and expected Program output, test if the
+ * given Program is parsed into the expected Program.
+ */
+function assertParse(name: string, source: string, result: Program<null>) {
+  it(name, () => {
+    expect(parse(source)).to.deep.equal(result);
+  });
+}
+
+/**
+ * Ensure during typechecking, a TypeError is thrown.
+ */
+function assertTCFail(name: string, source: string) {
+  it(name, async () => {
+    expect(() => typeCheck(source)).to.throw(TypeCheckError);
+  });
+}
+
+/**
+ * Ensures that when parsing source, the parser throws an exception.
+ */
+function assertParseFail(name: string, source: string) {
+  it(name, () => expect(() => parse(source)).to.throw(Error));
+}
+
+function testFuncWithParams(params: Parameter<null>[]): Program<null> {
+  return {
+    ...blankPrgm,
+    funs: [{ ...testWithPass, parameters: params }],
+  };
+}
+
+function classCWithTestWithParams(params: Parameter<null>[]): Program<null> {
+  return {
+    ...blankPrgm,
+    classes: [
+      {
+        ...blankC,
+        methods: [
+          {
+            ...testWithPass,
+            parameters: (
+              [
+                {
+                  name: "self",
+                  type: {
+                    name: "C",
+                    tag: "class",
+                  },
+                  value: undefined,
+                },
+              ] as Array<Parameter<null>>
+            ).concat(params),
+          },
+          {
+            body: [],
+            inits: [],
+            name: "__init__",
+            parameters: [
+              {
+                name: "self",
+                type: {
+                  name: "C",
+                  tag: "class",
+                },
+              },
+            ],
+            ret: {
+              tag: "none",
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
