@@ -22,13 +22,14 @@ function generateName(base : string) : string {
 // }
 
 type funMeta = Map<string,Array<AST.Expr<[Type,SourceLocation]>>>;
-let funEnv:funMeta;
+let funEnv:funMeta = null;
 
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    funEnv = new Map(p.funs.map(f => [f.name, f.parameters.filter(p => p.value).map(p => p.value)]));
+    funEnv = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]));
+    console.log(funEnv);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
@@ -232,13 +233,16 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       var arglen = e.arguments.length;
 
       // dont need to check .has name as that should be handled in the type checker
-      var funcVals = this.funEnv.get(e.name);
+      var funcVals = funEnv.get(e.name);
 
       var newArgs = e.arguments;
+      console.log(funcVals);
 
       // don't need to check if this call is not reaching default vals
       // because it is checked in the type checker
       funcVals.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
+        console.log(v);
+        console.log(i);
         if(i >= arglen) {
           newArgs.push(v);
         }
