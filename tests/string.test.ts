@@ -11,7 +11,30 @@ describe("string test", () => {
     "test case 3: index accessing",
     `
     s:str = "asdf"
-print(s[0])`,
+    print(s[0])`,
     ["a"]
   );
+  //7
+  assertPrint("test case 7: compare two strings using their ascii values",
+  `s1:str = "ab"
+  s2:str = "abc"
+  print(s1 < s2)`,[`True`])
+  //7.5
+  assertPrint("test case 7.5: compare two strings using their ascii values",
+  `print("abcd" < "abc")`,[`False`])
+  //8
+  assertPrint("test case 8: check if two strings are equal",
+  `s1:str = "ab"
+  s2:str = "abc"
+  print(s1 == s2)`,[`False`])
+  //8.5
+  assertPrint("test case 8.5: check if two strings are equal",
+  `s1:str = "abc"
+  s2:str = "abc"
+  print(s1 == s2)`,[`True`])
+  //9
+  assertPrint("test case 9: concat two strings",
+  `s1:str = "abc"
+  s2:str = "def"
+  print(s1+s2)`,[`abcdef`])
 });
