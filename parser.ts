@@ -204,6 +204,7 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<null>
   return args;
 }
 
+
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<null> {
   switch(c.node.type.name) {
     case "ReturnStatement":
@@ -426,6 +427,26 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+  var superExpr = traverseArguments(c,s);
+  if (superExpr.length == 0) {
+    throw new Error(`Class must have at least one super class: ${className}`);
+  }
+  var supers:Array<string> = [];
+  c.firstChild();
+  
+  superExpr.forEach((e)=>{
+    c.nextSibling();
+    if(e.tag==="id"){
+      if(e.name!=="object"){
+        supers.push(e.name);
+      }
+      
+    } else {
+      throw new Error(`Parse Error near token ${s.substring(c.from, c.to)}`);
+    }
+    c.nextSibling(); // Skip comma
+  })
+  c.parent()
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
@@ -445,8 +466,9 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   }
   return {
     name: className,
+    supers:supers,
     fields,
-    methods
+    methods,
   };
 }
 
