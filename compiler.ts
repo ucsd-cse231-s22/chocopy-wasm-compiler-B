@@ -195,6 +195,30 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       return ["(i32.const " + val.value + ")"];
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
+    case "str":
+      let stringInitCode = [];
+      for(let i = 0; i < val.value.length; i++){
+        stringInitCode.push(`global.get $string$scratch`);
+        stringInitCode.push(`i32.const ${i}`);
+        stringInitCode.push(`i32.const ${val.value.charCodeAt(i)}`);
+        stringInitCode.push(`call $store`);
+      }
+      return [`(i32.const 2)`,
+              `(call $alloc)`,
+              `(global.set $string$Obj$scratch)`,
+              `(i32.const ${Math.ceil(val.value.length / 4)})`,
+              `(call $alloc)`,
+              ...stringInitCode,
+              `(global.get $string$Obj$scratch)`,
+              `(i32.const 0)`,
+              `(global.get $string$scratch)`,
+              `(call $store)`,
+              `(global.get $string$Obj$scratch)`,
+              `(i32.const 1)`,
+              `(i32.const ${val.value.length})`,
+              `(call $store)`,
+              `(global.get $string$Obj$scratch)`
+            ]
     case "none":
       return [`(i32.const 0)`];
     case "id":

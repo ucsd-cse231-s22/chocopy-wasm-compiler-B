@@ -1,6 +1,7 @@
 import { TreeCursor } from "lezer-tree";
 import {parser} from "lezer-python";
 import { parse } from "./parser";
+import { tc } from "./type-check";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
 
@@ -26,18 +27,26 @@ export function stringifyTree(t:TreeCursor, source: string, d:number){
 
 // entry point for debugging
 async function debug() {
-  var source = `
-  s:str = "asdf"
-  s[1] = "p"`
-  const t = parser.parse(source);
-  console.log(stringifyTree(t.cursor(),source,0));
+  var source = `class C(object):
+      x: int = 1`
+  // const t = parser.parse(source);
+  // console.log(stringifyTree(t.cursor(),source,0));
   
-  const ast = parse(source);
-  console.log(JSON.stringify((ast), null,2));
+  // const ast = parse(source);
+  // console.log(JSON.stringify((ast), null,2));
+
+
   // const repl = new BasicREPL(await addLibs());
   // const result = repl.run(source).then(result => {
   //   console.log(result);    
-  // })  
+  // })
+  
+  const ast = parse(source);
+  console.log(ast);
+  const repl = new BasicREPL(await addLibs());
+  const result = repl.run(source).then(result => {
+    console.log(result);    
+  }) 
 }
 
 debug();
