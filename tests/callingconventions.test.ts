@@ -115,6 +115,61 @@ x.test()`,
   );
 });
 
+describe("Can successfully call functions with default parameters", () => {
+  assertPrint(
+    "Call function without defining default arg",
+    `
+def test(x : int, y : int = 3) -> int:
+    return x + y
+
+print(test(3))`,
+    ["6"]
+  );
+
+  assertPrint(
+    "Call function and redefine default arg",
+    `
+def test(x : int, y : int = 3) -> int:
+    return x + y
+
+print(test(3, 6))`,
+    ["9"]
+  );
+
+  assertPrint(
+    "Default arguments defined as expressions work",
+    `
+def test(x : bool = 3 != 5) -> bool:
+    return x
+
+print(test())`,
+    ["True"]
+  );
+
+  assertPrint(
+    "Default arguments in methods work",
+    `
+class C(object):
+  def test(self : C, x : int = 7+2):
+    print(x)
+    
+x : C = None
+x = C()
+x.test()`,
+    ["9"]
+  );
+
+  assertPrint(
+    "Functions with required and optional args work",
+    `
+def test(x : int, y : int = 3, z : int = 5):
+  print(x + y + z)
+  
+test(1, 4)`,
+    ["10"]
+  );
+});
+
 // Helpers
 
 /**
