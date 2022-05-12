@@ -228,19 +228,27 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
           right: rval
         }];
     case "call":
-      const callpairs = e.arguments.map(a => flattenExprToVal(a, env));
+
+      var arglen = e.arguments.length;
+
+      // dont need to check .has name as that should be handled in the type checker
+      var funcVals = this.funEnv.get(e.name);
+
+      var newArgs = e.arguments;
+
+      // don't need to check if this call is not reaching default vals
+      // because it is checked in the type checker
+      funcVals.forEach((v,i) => {
+        if(i >= arglen) {
+          newArgs.push(v);
+        }
+      })
+
+      const callpairs = newArgs.map(a => flattenExprToVal(a, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
       const callvals = callpairs.map(cp => cp[2]).flat();
-      // here we can access the method that is being called, check for defaults,
-      // and add them to callvals in the same way that the normal args are added
       
-      // callvals.length 
-      // loop through method.arguments keeping track of index until i == callvals.length
-      // then check if the value is not undefined 
-      // if it is not undefined(which it shouldn't be because of type check)
-      // then add all arguments from i to the end to call vals
-      // convert the type to the same type of callvalls and pass it in to arguments
       return [ callinits, callstmts,
         {
           ...e,
