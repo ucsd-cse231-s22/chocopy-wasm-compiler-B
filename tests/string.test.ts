@@ -14,6 +14,25 @@ describe("string test", () => {
     print(s[0])`,
     ["a"]
   );
+  // 4
+  assertFail(
+      "test case 4: index out of range error, should be a runtime error",
+      `s:str = "asdf"
+      print(s[5])`
+  )
+  // 5
+  assertPrint(
+      "test case 5: get the length of string",
+      `s:str = "asdf"
+      print(len(s))`,
+      ["4"]
+  )
+  // 6
+  assertTCFail(
+      "test case 6: immutable",
+      `s:str = "asdf"
+      s[1] = "p"`
+  )
   //7
   assertPrint("test case 7: compare two strings using their ascii values",
   `s1:str = "ab"
