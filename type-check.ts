@@ -19,7 +19,8 @@ export class TypeCheckError extends Error {
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  // Added one more field to track supers
+  classes: Map<string, [Array<string>, Map<string, Type>, Map<string, [Array<Type>, Type]>]>
 }
 
 export type LocalTypeEnv = {
@@ -35,6 +36,10 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+
+// To track the ordering of classes in the program
+const classOrder: Array<String> = new Array<string>();
+
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -74,8 +79,30 @@ export function isNoneOrClass(t: Type) {
   return t.tag === "none" || t.tag === "class";
 }
 
+// t2 = t1
+// Added code to support subclass assignable to superclass
+
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
+  if (equalType(t1, t2)) {
+    return true;
+  } else if (t1.tag === "none" && t2.tag === "class") {
+    return true;
+  } else if (t1.tag === "class" && t2.tag ==="class"){
+    const supers = env.classes.get(t1.name)[0];
+    if(supers.includes(t2.name) || t2.name === "object"){
+      return true;
+    }
+    var isSupType = false;
+    supers.forEach(sup => {
+      var supType : Type = { tag: "class", name: sup};
+      if (isSubtype(env, supType, t2)) {
+        isSupType = true;
+      }
+    });
+    return isSupType;
+  } else {
+    return false;
+  }
 }
 
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -93,14 +120,18 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   program.classes.forEach(cls => {
+    classOrder.push(cls.name);
     const fields = new Map();
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
-    newClasses.set(cls.name, [fields, methods]);
+    const supers = cls.supers;
+    newClasses.set(cls.name, [supers, fields, methods]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
+
+
 
 export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type>, GlobalTypeEnv] {
   const locals = emptyLocalTypeEnv();
@@ -150,17 +181,127 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<null>) : FunDef<Type> {
   return {...fun, a: NONE, body: tBody};
 }
 
+export function tcSign(env: GlobalTypeEnv, clsName: string){
+  const [supers, fields, methods] = env.classes.get(clsName);
+  methods.forEach((sign, name) => {
+    var [argTyp, retTyp] = sign;
+    argTyp = argTyp.slice(1,argTyp.length);
+    supers.forEach(sup=> {
+      const supMethods = env.classes.get(sup)[2];
+      var [supArgTyp,supRetTyp] = supMethods.get(name);
+      supArgTyp = supArgTyp.slice(1,supArgTyp.length);
+      if(JSON.stringify(supArgTyp)!=JSON.stringify(argTyp)) {
+        throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
+      }
+      if(JSON.stringify(supRetTyp)!=JSON.stringify(retTyp)) {
+        throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
+      }
+    });
+  });
+  
+}
+
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
+  // Check whether super-classes are defined before the definition of current class
+  const clsOrder = classOrder.indexOf(cls.name);
+  cls.supers.forEach(sup => {
+    if(sup === "int" || sup === "bool")
+    if(!env.classes.has(sup)){
+      throw new TypeCheckError(`Super-class not defined : ${sup}`);
+    }
+    
+    const supOrder = classOrder.indexOf(sup);
+    if (supOrder > clsOrder) {
+      throw new TypeCheckError(`Super-class not defined : ${sup}`);
+    }
+  });
+  // cls -> Class<A> : Field: VarInit<A>[]
+  // GlobalEnv
   const tFields = cls.fields.map(field => tcInit(env, field));
+  // Check whether fields overlap between super and sub class
+  cls.fields.forEach(field => {
+    cls.supers.forEach(sup => {
+      const supFields = env.classes.get(sup)[1];
+      if(supFields.has(field.name)) {
+        throw new TypeCheckError(`Cannot re-define attribute ${field.name}`);
+      }
+    });
+  });
+  // Push super class fields to derived class env
+  const curFields = env.classes.get(cls.name)[1];
+  cls.supers.forEach(sup => {
+    const supFields = env.classes.get(sup)[1];
+    supFields.forEach( (type, name) => {
+      curFields.set(name, type);
+    });
+  });
+  
   const tMethods = cls.methods.map(method => tcDef(env, method));
+  
+  // To check if we have method overwritten with different signature in the derived class
+  tcSign(env, cls.name);
+  
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
   if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
     throw new TypeCheckError("Cannot override __init__ type signature");
+
+  // To check if the first argument of each method is self
+  cls.methods.forEach(m => {
+    if(m.parameters.length == 0) {
+      throw new TypeCheckError(`First parameter of the following method must be of the enclosing class: ${cls.name}`);
+    }
+    var firstParam = m.parameters[0];
+    if(!(firstParam.type.tag==="class" && firstParam.type.name === cls.name)) {
+      throw new TypeCheckError(`First parameter of the following method must be of the enclosing class: ${cls.name}`);
+    }
+  });
+
+  // Push super class methods to derived class env
+  const curMethods = env.classes.get(cls.name)[2];
+  cls.supers.forEach(sup => {
+    const supMethods = env.classes.get(sup)[2];
+    supMethods.forEach((typeArr, name) => {
+      if(!curMethods.has(name)){
+        curMethods.set(name,typeArr);
+      }
+    });
+  });
+
   return {a: NONE, name: cls.name, fields: tFields, methods: tMethods};
 }
+
+// export function hasField(env:GlobalTypeEnv,className:string,fieldName:string): boolean {
+//   var [_,fields] = env.classes.get(className);
+//   if(fields.has(fieldName)){
+//     return true;
+//   }else{
+//     var supHasField = false;
+//     env.classes.get(className)[0].forEach(sup => {
+//       if (hasField(env, sup, fieldName)) {
+//         supHasField = true;
+//       }
+//     });
+//     return supHasField;
+//   }
+// }
+
+// export function hasMethod(env:GlobalTypeEnv,className:string,methodName:string): boolean {
+//   var [_,fields,methods] = env.classes.get(className);
+//   if(methods.has(methodName)){
+//     return true;
+//   }else{
+//     var supHasMethod = false;
+//     env.classes.get(className)[0].forEach(sup => {
+//       if (hasMethod(env, sup, methodName)) {
+//         supHasMethod = true;
+//       }
+//     });
+//     return supHasMethod;
+//   }
+// }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
   var tStmts = stmts.map(stmt => tcStmt(env, locals, stmt));
@@ -220,7 +361,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<n
         throw new TypeCheckError("field assignments require an object");
       if (!env.classes.has(tObj.a.name)) 
         throw new TypeCheckError("field assignment on an unknown class");
-      const [fields, _] = env.classes.get(tObj.a.name);
+      const [_,fields] = env.classes.get(tObj.a.name);
       if (!fields.has(stmt.field)) 
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a.name}`);
       if (!isAssignable(env, tVal.a, fields.get(stmt.field)))
@@ -317,7 +458,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
-        const [_, methods] = env.classes.get(expr.name);
+        const [_,field,methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
@@ -345,7 +486,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       var tObj = tcExpr(env, locals, expr.obj);
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
-          const [fields, _] = env.classes.get(tObj.a.name);
+          const [_,fields] = env.classes.get(tObj.a.name);
           if (fields.has(expr.field)) {
             return {...expr, a: fields.get(expr.field), obj: tObj};
           } else {
@@ -362,7 +503,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
       if (tObj.a.tag === "class") {
         if (env.classes.has(tObj.a.name)) {
-          const [_, methods] = env.classes.get(tObj.a.name);
+          const [_, __, methods] = env.classes.get(tObj.a.name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
