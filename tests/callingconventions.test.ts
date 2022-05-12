@@ -101,10 +101,18 @@ def test(x : bool, x : bool = True):
   pass`
   );
 
-  // TODO
-  //   assertTC("Typecheck methods", `
-  // class C(object):
-  //   def test(self : C, x : int = 5)`)
+  assertTC(
+    "Typecheck methods",
+    `
+class C(object):
+  def test(self : C, x : int = 5) -> int:
+    return x
+      
+x : C = None
+x = C()
+x.test()`,
+    NUM
+  );
 });
 
 // Helpers
