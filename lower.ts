@@ -238,7 +238,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
 
       // don't need to check if this call is not reaching default vals
       // because it is checked in the type checker
-      funcVals.forEach((v,i) => {
+      funcVals.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
         if(i >= arglen) {
           newArgs.push(v);
         }
