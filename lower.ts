@@ -24,12 +24,20 @@ function generateName(base : string) : string {
 type funMeta = Map<string,Array<AST.Expr<[Type,SourceLocation]>>>;
 let funEnv:funMeta = new Map();
 
+type classMeta = Map<string, Map<string, Array<AST.Expr<[Type,SourceLocation]>>>>;
+let classEnv:classMeta = new Map();
+
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var mapToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]))
-    funEnv = new Map([...funEnv, ...mapToAdd]);
+    var funsToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]))
+    funEnv = new Map([...funEnv, ...funsToAdd]);
+
+    // slice skips the self argument
+    var classesToAdd2 = new Map(p.classes.map(c => [c.name, new Map(c.methods.map(m => [m.name, m.parameters.map(p => p.value).slice(1)]))]));
+    classEnv = new Map([...classEnv, ...classesToAdd2]);
+
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
@@ -243,7 +251,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
         if(i >= arglen) {
           newArgs.push(v);
         }
-      })
+      });
 
       const callpairs = newArgs.map(a => flattenExprToVal(a, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
@@ -257,8 +265,31 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
         }
       ];
     case "method-call": {
+      // handled in the typechecker - should be class
+      if(e.obj.a[0].tag === "class") {
+        var classData = classEnv.get(e.obj.a[0].name);
+        var methodData = classData.get(e.method);
+
+        var arglen = e.arguments.length;
+  
+        var newArgs = e.arguments;
+  
+        // don't need to check if this call is not reaching default vals
+        // because it is checked in the type checker
+        methodData.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
+          if(i >= arglen) {
+            if(v === undefined) {
+              throw new Error("method call not properly type checked");
+            }
+            newArgs.push(v);
+          }
+        });
+
+      } else {
+        throw new Error("Lower Error: Should have checked for class in Type Check")
+      }
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, env);
-      const argpairs = e.arguments.map(a => flattenExprToVal(a, env));
+      const argpairs = newArgs.map(a => flattenExprToVal(a, env));
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
