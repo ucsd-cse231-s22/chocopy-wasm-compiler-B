@@ -22,13 +22,14 @@ function generateName(base : string) : string {
 // }
 
 type funMeta = Map<string,Array<AST.Expr<[Type,SourceLocation]>>>;
-let funEnv:funMeta = null;
+let funEnv:funMeta = new Map();
 
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    funEnv = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]));
+    var mapToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]))
+    funEnv = new Map([...funEnv, ...mapToAdd]);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
