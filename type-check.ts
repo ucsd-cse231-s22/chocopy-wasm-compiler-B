@@ -243,10 +243,40 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Mul:
         case BinOp.IDiv:
         case BinOp.Mod:
+          // str can add together
+          if (expr.op === BinOp.Plus && tLeft.a.tag === "class"){
+            switch(tLeft.a.name){
+              case "str":
+                if(equalType(tLeft.a, tRight.a)){
+                  return {...tBin, a: CLASS("str")}
+                }
+            }
+          }
+
+          // str can be multiplied by a num
+          if (expr.op === BinOp.Mul){
+            // ex: "abc"*5
+            if (tLeft.a.tag === "class"){
+              if (tLeft.a.name === "str" && equalType(tRight.a, NUM)){
+                return {...tBin, a: CLASS("str")}
+              }
+            }
+            // ex: 5*"abc"
+            if (tRight.a.tag === "class"){
+              if (tRight.a.name === "str" && equalType(tLeft.a, NUM)){
+                return {...tBin, a: CLASS("str")}
+              }
+            }
+          }
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: NUM, ...tBin}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
         case BinOp.Neq:
+          if(tLeft.a.tag === "class" && tRight.a.tag === "class"){
+            if(tLeft.a.name === "str" && tRight.a.name === "str"){
+              return {a: BOOL, ...tBin}
+            }
+          }
           if(tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if(equalType(tLeft.a, tRight.a)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op)}
@@ -254,6 +284,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
         case BinOp.Gte:
         case BinOp.Lt:
         case BinOp.Gt:
+          if(tLeft.a.tag === "class" && tRight.a.tag === "class"){
+            if(tLeft.a.name === "str" && tRight.a.name === "str"){
+              return {a: BOOL, ...tBin}
+            }
+          }
           if(equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return {a: BOOL, ...tBin} ; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.And:
@@ -381,6 +416,20 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else {
         throw new TypeCheckError("method calls require an object");
       }
+    case "index":
+      var tObj = tcExpr(env, locals, expr.obj);
+      var tIndex = tcExpr(env, locals, expr.index);
+
+      switch(tObj.a.tag){
+        case "class":
+          switch(tObj.a.name){
+            case "str":
+              if(!equalType(tIndex.a, NUM)){
+                throw new Error("Type Error: Index value must be num")
+              }
+              return {...expr, obj: tObj, index: tIndex, a: tObj.a}
+          }
+      }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
 }
@@ -389,6 +438,7 @@ export function tcLiteral(literal : Literal) {
     switch(literal.tag) {
         case "bool": return BOOL;
         case "num": return NUM;
+        case "str": return CLASS("str");
         case "none": return NONE;
     }
 }
