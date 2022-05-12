@@ -29,7 +29,6 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     funEnv = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]));
-    console.log(funEnv);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
@@ -236,13 +235,10 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       var funcVals = funEnv.get(e.name);
 
       var newArgs = e.arguments;
-      console.log(funcVals);
 
       // don't need to check if this call is not reaching default vals
       // because it is checked in the type checker
       funcVals.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
-        console.log(v);
-        console.log(i);
         if(i >= arglen) {
           newArgs.push(v);
         }
