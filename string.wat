@@ -1,0 +1,6 @@
+(func $str$access (param $self i32) (param $index i32) (result i32))
+(func $str$length (param $self i32) (param $index i32) (result i32))
+(func $str$lessthan (param $self i32) (param $rhs i32) (result i32))
+(func $str$greaterthan (param $self i32) (param $rhs i32) (result i32))
+(func $str$equalsto (param $self i32) (param $rhs i32) (result i32))
+(func $str$concat (param $self i32) (param $rhs i32) (result i32))
