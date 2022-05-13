@@ -193,7 +193,7 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       var generatedString = ``;
       var curVal = val.value;
       var i = 1; // the first field is preserved for the size
-      const base = BigInt(2 ** 32);
+      const base = BigInt(2 ** 31);
 
       // use a do-while loop to address the edge case of initial curVal == 0
       do {
@@ -208,12 +208,12 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
       // "i" represents the number of fields
       var prefix = ``;
       var allocation = `(i32.const ${i})\n(call $alloc)\n`; // allocate spaces for the number
-      var storeSize = `(i32.const 0)\n(i32.const ${i})\n(call $store)\n`; // store the size of the number at the first field
+      var storeSize = `(i32.const 0)\n(i32.const ${i - 1})\n(call $store)\n`; // store the number of digits of the number at the first field
       while (i > 0) {
         prefix += `(i32.const 0)\n(call $alloc)\n`; // prepare the addresses for the store calls
         i -= 1;
       }
-      
+
       // We call $alloc (n + 1) times, call $store n times, and return 1 time.
       prefix += allocation + storeSize;
       return [prefix + generatedString];

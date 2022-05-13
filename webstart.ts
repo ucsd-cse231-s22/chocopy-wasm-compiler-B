@@ -9,7 +9,7 @@ function stringify(typ: Type, arg: any) : string {
     case "number":
       return (arg as number).toString();
     case "bool":
-      return (arg as boolean)? "Hello" : "False";
+      return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
     case "class":
@@ -17,12 +17,25 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
+function reconstructBigint(arg : number, load : any) : bigint {
+  var base = BigInt(2 ** 31);
+  var digitNum = load(arg, 0);
+  var consturctedBigint = BigInt(0);
+  for (let i = 1; i < digitNum + 1; i++) {
+    consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
+  }
+  return consturctedBigint;
+}
+
 function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg);
-  elt.innerText = load(arg, 1);
+
+  if (typ.tag === "number") {
+    elt.innerText = reconstructBigint(arg, load).toString();
+  }
   return arg;
 }
 
