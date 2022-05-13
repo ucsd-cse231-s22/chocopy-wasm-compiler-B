@@ -22,13 +22,22 @@ class File(object):
         pass
         
     def close(self : File):
-        if self.closed:    
+        if self.closed:
             print(99999)
             return
+        jsclose(self.fd)
         self.closed = True
+
+def open(mode : int) -> File:
+    newFile : File = None
+    newFile = File()
+    newFile.fd = jsopen(mode)
+    newFile.closed = False
+    newFile.mode = mode
+    return newFile
 `
 
-export function open(flag : number) : number {
+export function jsopen(flag : number) : number {
     // fixed file path, until string is implemented
     const fixed_path : string = "test.txt";
     let flag_idx : string;
@@ -36,10 +45,18 @@ export function open(flag : number) : number {
         case 0: flag_idx = "r";
         case 1: flag_idx = "w";
     }
+
+    console.log(typeof window.fs)
+
     return window.fs.openSync(fixed_path, flag_idx);
 }
 
-export function close(fd : number) {
+export function jsclose(fd : number) : number {
     window.fs.closeSync(fd);
+    return 0;
+}
+
+export function jsRead(fd : number) : number {
+    return 0;
 }
 

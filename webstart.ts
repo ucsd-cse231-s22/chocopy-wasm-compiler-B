@@ -2,7 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
-import { open, close } from './io';
+import { jsopen, jsclose } from './io';
 
 declare global {
   interface Window { 
@@ -39,21 +39,20 @@ function assert_not_none(arg: any) : any {
 }
 
 function webStart() {
+  // create the filesystem
+  window.duplicated = Object.create(window) // the overcome the __dirname problem
+  const BrowserFS = require("browserfs");
+  BrowserFS.install(window.duplicated);
+  BrowserFS.configure({ fs: "LocalStorage" }, (err: any) => {
+    if (err) {
+      alert(err);
+    } else {
+      window.fs =  window.duplicated.require('fs');
+    }
+  });
+
   document.addEventListener("DOMContentLoaded", async function() {
-
     // https://github.com/mdn/webassembly-examples/issues/5
-
-    // create the filesystem
-    window.duplicated = Object.create(window) // the overcome the __dirname problem
-    const BrowserFS = require("browserfs");
-    BrowserFS.install(window.duplicated);
-    BrowserFS.configure({ fs: "LocalStorage" }, (err: any) => {
-      if (err) {
-        alert(err);
-      } else {
-        window.fs =  window.duplicated.require('fs');
-      }
-    });
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
     const memoryModule = await fetch('memory.wasm').then(response => 
@@ -72,8 +71,8 @@ function webStart() {
         min: Math.min,
         max: Math.max,
         pow: Math.pow,
-        open: (arg: number) => open,
-        close: (arg: number) => close
+        jsopen: (arg: number) => jsopen(arg),
+        jsclose: (arg: number) => jsclose(arg)
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

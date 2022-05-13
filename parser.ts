@@ -533,7 +533,7 @@ export function parse(source : string) : Program<null> {
 
   const str = stringifyTree(t.cursor(), source, 0);
 
-  // console.log(str);
+  console.log(str);
 
   return traverse(t.cursor(), source);
 }

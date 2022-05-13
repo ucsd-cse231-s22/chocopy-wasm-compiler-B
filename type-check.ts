@@ -35,8 +35,8 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
-defaultGlobalFunctions.set("open", [[NUM], NUM]);
-defaultGlobalFunctions.set("close", [[NUM], NUM]);
+defaultGlobalFunctions.set("jsopen", [[NUM], NUM]);
+defaultGlobalFunctions.set("jsclose", [[NUM], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -127,6 +127,7 @@ export function tc(env : GlobalTypeEnv, program : Program<null>) : [Program<Type
     newEnv.globals.set(name, locals.vars.get(name));
   }
   const aprogram = {a: lastTyp, inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  console.log(aprogram);
   return [aprogram, newEnv];
 }
 
@@ -336,7 +337,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
 
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
-             return {...expr, a: retType, arguments: expr.arguments};
+             return {...expr, a: retType, arguments: tArgs};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
            }
