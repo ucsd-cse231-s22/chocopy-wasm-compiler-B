@@ -171,10 +171,17 @@ We do not require any new library functionality - this feature only impacts func
 
 ### Changes in Lowering
 
-- Two global variables, `funMeta` and `classMeta`, are defined to hold default arguments for functions and methods, and they are filled in `lowerProgram`.
+- Two global variables, `funMeta` and `classMeta`, are defined to hold the argument values for functions and methods, and they are filled in `lowerProgram`.
+
+- `classMeta` ignores the first argument as it is Self and not needed for the method call itself
+
+- The global variables are created as empty maps so that every call to lowering can add new information to the global variables without deleting previous data
 
 - For function and method calls, any default parameters that were not defined in the call have the default value added to their argument list.
 
+- For the flatten expression for "call", the arguments of the given function are retrieved from `funMeta` with their values (non default values are simply undefined). Since the call is already typechecked, we know that the number of arguments passed are between the number of non default arguments and total arguments, so we can simply loop through the arguments and add in the values of all remaining undefined default arguments. Once this is done the rest of the call implementation can act as normal with the newArgs variable, which hold the passed arguments and the remaining default arguments.
+
+- For the flatten expression to "method-call", the logic is very similar but the method arguments are found by finding the class associated with the method and then getting the method all from the global variable `classMeta`. Following this, the arguments are added in the same fashion.
 ## Memory Layout
 
 We do not need to modify or use memory - as mentioned before, our feature only changes function/method definitions and calls.
