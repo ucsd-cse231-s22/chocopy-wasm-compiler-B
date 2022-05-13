@@ -1,7 +1,7 @@
 (func $str$access (param $self i32) (param $index i32) (result i32)
 (i32.const 0)
 (return))
-(func $str$length (param $self i32) (param $index i32) (result i32)
+(func $str$length (param $self i32) (result i32)
     (local.get $self)
     (call $assert_not_none)
     (i32.const 0)
@@ -14,8 +14,9 @@
 (i32.const 0)
 (return))
 (func $str$equalsto (param $self i32) (param $rhs i32) (result i32)
-    (local $selfLength)
-    (local $rhsLength)
+    (local $selfLength i32)
+    (local $rhsLength i32)
+    (local $i i32)
     (local.get $self)
     (i32.load)
     (local.set $selfLength)
@@ -29,12 +30,11 @@
         return ;; if length is not equal, return false
       )
     )
-    (local $i)
     (i32.const 1)
     (local.set $i)
     (block 
         (loop 
-            (br_if 1 (i32.le_s (local.get $i) (local.get $lhs_len) )(i32.eqz) )
+            (br_if 1 (i32.le_s (local.get $i) (local.get $selfLength) )(i32.eqz) )
             (i32.load (i32.add (local.get $self) (local.get $i)))
             (i32.load (i32.add (local.get $rhs) (local.get $i)))
             (i32.ne)  ;;check if left and right character values are not equal

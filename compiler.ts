@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
+import { readFileSync } from "fs";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -48,7 +49,9 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  const allFuns = funs.concat(classes).join("\n\n");
+  // add string library to allFuns
+  const strLib:string = readFileSync("string.wat").toString();
+  const allFuns = strLib.concat(funs.concat(classes).join("\n\n"));
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -153,7 +156,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && argTyp === NUM) {
+      if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(NUM)) {
         callName = "print_num";
       } else if (expr.name === "print" && argTyp === BOOL) {
         callName = "print_bool";
