@@ -76,11 +76,63 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
             return { ...lit, value: BigInt(lit.value) }
         case "bool":
             return lit
-        case "str":
-          return lit
         case "none":
             return lit        
     }
+}
+
+function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>]{
+  const strName = generateName("newObj")
+  const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1 } };
+  const assigns : IR.Stmt<Type>[] = [];
+  assigns.push({
+    tag: "store",
+    start: { tag: "id", name: strName },
+    offset: { tag: "wasmint", value: 0 },
+    value: { tag: "wasmint", value: lit.value.length }
+  });
+
+  // var result = ( ( (bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF) ); charCodeAt(i)
+  for(let i = 0; i < Math.floor(lit.value.length / 4); i++){
+    let register_1 = ((lit.value.charCodeAt(i) & 0xFF) << 24);
+    let register_2 = ((lit.value.charCodeAt(i+1) & 0xFF) << 16);
+    let register_3 = ((lit.value.charCodeAt(i+2) & 0xFF) << 8);
+    let register_4 = ((lit.value.charCodeAt(i+3) & 0xFF));
+
+    let result = (register_1 | register_2 | register_3 | register_4);
+
+    assigns.push({
+      tag: "store",
+      start: { tag: "id", name: strName },
+      offset: { tag: "wasmint", value: i+1 },
+      value: { tag: "wasmint", value: result }
+    });
+  }
+
+  if (lit.value.length % 4 !== 0){
+    let result = 0x0;
+    for(let i = 0; i < lit.value.length % 4; i++){
+      let offset = Math.floor(lit.value.length);
+      let register_1 = ((lit.value.charCodeAt(offset + i) & 0xFF) << 24 - 8*i);
+  
+      result = (result | register_1);
+    }
+
+    let offset = Math.floor(lit.value.length / 4);
+    assigns.push({
+      tag: "store",
+      start: { tag: "id", name: strName },
+      offset: { tag: "wasmint", value: offset+1 },
+      value: { tag: "wasmint", value: result }
+    });
+  }
+
+  return [
+    [ { name: strName, type: {tag: "class", name: "str"}, value: { tag: "none" } }],
+    [ { tag: "assign", name: strName, value: alloc }, ...assigns 
+    ],
+    { a: {tag: "class", name: "str"}, tag: "value", value: { a: {tag: "class", name: "str"}, tag: "id", name: strName } }
+  ];
 }
 
 function flattenStmts(s : Array<AST.Stmt<Type>>, blocks: Array<IR.BasicBlock<Type>>, env : GlobalEnv) : Array<IR.VarInit<Type>> {

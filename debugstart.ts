@@ -27,8 +27,8 @@ export function stringifyTree(t:TreeCursor, source: string, d:number){
 
 // entry point for debugging
 async function debug() {
-  var source = `class C(object):
-      x: int = 1`
+  var source = `s: str = "abba"
+  x: int = 8`
   // const t = parser.parse(source);
   // console.log(stringifyTree(t.cursor(),source,0));
   
