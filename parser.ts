@@ -34,12 +34,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
   switch(c.type.name) {
     case "Number":
     case "Boolean":
-    case "String":
     case "None":
       return { 
         tag: "literal", 
         value: traverseLiteral(c, s)
       }      
+    case "String":
+      return{
+        tag:"call",
+        name: "str", 
+        arguments: [{tag:"literal", value:traverseLiteral(c,s)}]
+      }
     case "VariableName":
       return {
         tag: "id",

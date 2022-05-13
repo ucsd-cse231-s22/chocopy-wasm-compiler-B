@@ -6,6 +6,8 @@ describe("string test", () => {
   assertTC("test case 1: var definition for string", `s:str = "asdf"\ns`, CLASS("str"));
   // 2
   assertPrint("test case 2: print string", `s:str = "asdf"\nprint(s)`, [`asdf`]);
+  //2.5
+  assertPrint("test case 2.5: print string", `print("asdf")`, [`asdf`]);
   // 3
   assertPrint(
     "test case 3: index accessing",
@@ -46,7 +48,7 @@ describe("string test", () => {
   //8
   assertPrint("test case 8: check if two strings are equal",
     `s1:str = "ab"
-  s2:str = "abc"
+  s2:str = "abc"s1==s2
   print(s1 == s2)`, [`False`])
   //8.5
   assertPrint("test case 8.5: check if two strings are equal",
