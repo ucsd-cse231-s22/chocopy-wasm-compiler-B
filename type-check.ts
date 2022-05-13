@@ -31,7 +31,7 @@ export const defaultTypeEnv = {
   classes: new Map(),
 };
 
-export function emptyGlobalTypeEnv(): GlobalTypeEnv {
+export function emptyGlobalTypeEnv() : GlobalTypeEnv {
   return {
     globals: new Map(),
     functions: new Map(),
@@ -39,7 +39,7 @@ export function emptyGlobalTypeEnv(): GlobalTypeEnv {
   };
 }
 
-export function emptyLocalTypeEnv(): LocalTypeEnv {
+export function emptyLocalTypeEnv() : LocalTypeEnv {
   return {
     vars: new Map(),
     expectedRet: NONE,
@@ -64,14 +64,14 @@ export function isNoneOrClass(t: Type) {
 }
 
 export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class"
+  return equalType(t1, t2) || t1.tag === "none" && t2.tag === "class" 
 }
 
-export function isAssignable(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
   return isSubtype(env, t1, t2);
 }
 
-export function join(env: GlobalTypeEnv, t1: Type, t2: Type): Type {
+export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
 }
 
@@ -158,7 +158,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
   const tFields = cls.fields.map(field => tcInit(env, field));
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
-  if (init.parameters.length !== 1 ||
+  if (init.parameters.length !== 1 || 
     init.parameters[0].name !== "self" ||
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
@@ -188,7 +188,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
-      return { a: tExpr.a, tag: stmt.tag, expr: tExpr };
+      return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
     case "if":
       var tCond = tcExpr(env, locals, stmt.cond);
       const tThn = tcBlock(env, locals, stmt.thn);
@@ -271,8 +271,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       }
     case "uniop":
       const tExpr = tcExpr(env, locals, expr.expr);
-      const tUni = { ...expr, a: tExpr.a, expr: tExpr }
-      switch (expr.op) {
+      const tUni = {...expr, a: tExpr.a, expr: tExpr}
+      switch(expr.op) {
         case UniOp.Neg:
           if(equalType(tExpr.a[0], NUM)) { return tUni }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op);}
@@ -291,8 +291,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "builtin1":
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
-        return { ...expr, a: tArg.a, arg: tArg };
-      } else if (env.functions.has(expr.name)) {
+        return {...expr, a: tArg.a, arg: tArg};
+      } else if(env.functions.has(expr.name)) {
         const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
@@ -305,7 +305,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "builtin2":
-      if (env.functions.has(expr.name)) {
+      if(env.functions.has(expr.name)) {
         const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
         const tLeftArg = tcExpr(env, locals, expr.left);
         const tRightArg = tcExpr(env, locals, expr.right);
@@ -318,7 +318,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
-      if (env.classes.has(expr.name)) {
+      if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
         if (expr.name == "str" && expr.arguments[0].tag == "literal") {
@@ -332,13 +332,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           const [initArgs, initRet] = methods.get("__init__");
           if (expr.arguments.length !== initArgs.length - 1)
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor");
-          if (initRet !== NONE)
+          if (initRet !== NONE) 
             throw new TypeCheckError("__init__  must have a void return type");
           return tConstruct;
         } else {
           return tConstruct;
         }
-      } else if (env.functions.has(expr.name)) {
+      } else if(env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
