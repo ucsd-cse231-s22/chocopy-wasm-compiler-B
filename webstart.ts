@@ -2,7 +2,6 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE, CLASS } from './utils';
-import { type } from 'os';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -69,7 +68,6 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
         print_str: (arg: number) => print(CLASS("str"), arg, memory),
-        // print_str: (arg: number) => print(NUM, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,

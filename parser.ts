@@ -110,7 +110,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.nextSibling(); // go to op
       var opStr = s.substring(c.from, c.to);
       var op;
-      switch (opStr) {
+      switch(opStr) {
         case "+":
           op = BinOp.Plus;
           break;
@@ -141,19 +141,6 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         case "<":
           op = BinOp.Lt;
           break;
-        // c.nextSibling(); // go to rhs
-        // const rhsExpr = traverseExpr(c, s);
-        // c.parent();
-        // return {
-        //   tag: "call",
-        //   name: "str",
-        //   arguments: [{
-        //     tag: "binop",
-        //     op: op,
-        //     left: lhsExpr,
-        //     right: rhsExpr
-        //   }]
-        // }
         case ">":
           op = BinOp.Gt;
           break;
@@ -189,7 +176,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.firstChild(); // Focus on op
       var opStr = s.substring(c.from, c.to);
       var op;
-      switch (opStr) {
+      switch(opStr) {
         case "-":
           op = UniOp.Neg;
           break;
@@ -213,12 +200,12 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
       var dotOrBracket = s.substring(c.from, c.to);
-      if (dotOrBracket === "[") {
+      if( dotOrBracket === "[") {
         var start_index: Expr<any>;
         var stop_index: Expr<any>;
         var step: Expr<any> = {
           tag: "literal",
-          value: { tag: "num", value: 1 }
+          value: { tag: "num", value: 1}
         };
 
         var indexItems = "";
@@ -232,12 +219,12 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         c.nextSibling(); // "[""
         c.nextSibling(); // start index
 
-        if (indexItems.length === 0) {
+        if(indexItems.length === 0) {
           throw new Error("Error: there should have at least one value inside the brackets");
         }
 
         var sliced_indices = indexItems.split(":");
-        if (sliced_indices.length > 3) {
+        if(sliced_indices.length > 3){
           throw new Error("Too much indices, maximum is three");
         }
 
@@ -275,7 +262,7 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Sourc
   c.firstChild();  // Focuses on open paren
   const args = [];
   c.nextSibling();
-  while (c.type.name !== ")") {
+  while(c.type.name !== ")") {
     let expr = traverseExpr(c, s);
     args.push(expr);
     c.nextSibling(); // Focuses on either "," or ")"
@@ -383,7 +370,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       c.nextSibling(); // Focus on : thn
       c.firstChild(); // Focus on :
       var thn = [];
-      while (c.nextSibling()) {  // Focus on thn stmts
+      while(c.nextSibling()) {  // Focus on thn stmts
         thn.push(traverseStmt(c, s));
       }
       // console.log("Thn:", thn);
@@ -434,7 +421,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
 export function traverseType(c: TreeCursor, s: string): Type {
   // For now, always a VariableName
   let name = s.substring(c.from, c.to);
-  switch (name) {
+  switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
     default: return CLASS(name);
@@ -446,7 +433,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
-  while (c.type.name !== ")") {
+  while(c.type.name !== ")") {
     let name = s.substring(c.from, c.to);
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
     let nextTagName = c.type.name; // NOTE(joe): a bit of a hack so the next line doesn't if-split
@@ -456,7 +443,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     let typ = traverseType(c, s);
     c.parent();
     c.nextSibling(); // Move on to comma or ")"
-    parameters.push({ name, type: typ });
+    parameters.push({name, type: typ});
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
@@ -469,7 +456,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLoca
   var name = s.substring(c.from, c.to);
   c.nextSibling(); // go to : type
 
-  if (c.type.name !== "TypeDef") {
+  if(c.type.name !== "TypeDef") {
     c.parent();
     throw new ParseError("invalid variable init", location.line);
   }
@@ -499,8 +486,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
   c.nextSibling(); // Focus on Body or TypeDef
-  let ret: Type = NONE;
-  if (c.type.name === "TypeDef") {
+  let ret : Type = NONE;
+  if(c.type.name === "TypeDef") {
     c.firstChild();
     ret = traverseType(c, s);
     c.parent();
@@ -512,7 +499,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
 
   var hasChild = c.nextSibling();
 
-  while (hasChild) {
+  while(hasChild) {
     if (isVarInit(c, s)) {
       let temp = traverseVarInit(c, s)
       if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
@@ -586,7 +573,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<Source
   const funs : Array<FunDef<SourceLocation>> = [];
   const classes : Array<Class<SourceLocation>> = [];
 
-  while (true) {
+  while(true) {
     if (isVarInit(c, s)) {
       inits.push(traverseVarInit(c, s));
     } else if (isFunDef(c, s)) {
@@ -601,7 +588,7 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<Source
 
 }
 
-export function isVarInit(c: TreeCursor, s: string): Boolean {
+export function isVarInit(c : TreeCursor, s : string): Boolean {
   if (c.type.name === "AssignStatement") {
     c.firstChild(); // Focus on lhs
     c.nextSibling(); // go to : type
@@ -614,11 +601,11 @@ export function isVarInit(c: TreeCursor, s: string): Boolean {
   }
 }
 
-export function isFunDef(c: TreeCursor, s: string): Boolean {
+export function isFunDef(c : TreeCursor, s : string): Boolean {
   return c.type.name === "FunctionDefinition";
 }
 
-export function isClassDef(c: TreeCursor, s: string): Boolean {
+export function isClassDef(c : TreeCursor, s : string): Boolean {
   return c.type.name === "ClassDefinition";
 }
 
@@ -632,7 +619,7 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
       const stmts : Array<Stmt<SourceLocation>> = [];
       var hasChild = c.firstChild();
 
-      while (hasChild) {
+      while(hasChild) {
         if (isVarInit(c, s)) {
           let temp = traverseVarInit(c, s)
           if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
@@ -650,7 +637,7 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
         hasChild = c.nextSibling();
       }
 
-      while (hasChild) {
+      while(hasChild) {
         stmts.push(traverseStmt(c, s));
         hasChild = c.nextSibling();
       }
