@@ -152,7 +152,6 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
     }
     return { name: p.name, type: p.type };
   });
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
   var tcinits: VarInit<[Type, SourceLocation]>[] = [];
   fun.inits.forEach(init => {
     const tcinit = tcInit(env, init);
@@ -350,7 +349,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // check if length is at least non-default (here 2-4)
         const passedArgLength = expr.arguments.length;
         if (passedArgLength > argTypes.length) {
-          throw new TypeError(`${expr.name}() takes from ${nonDefault} to ${argTypes.length} positional arguments but ${passedArgLength} were given`);
+          throw new TypeCheckError(`${expr.name}() takes from ${nonDefault} to ${argTypes.length} positional arguments but ${passedArgLength} were given`);
         }
         let index;
         for (index = 0; index < passedArgLength; index++) {
@@ -360,7 +359,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
 
         }
         if (index < nonDefault) {
-          throw new TypeError(`${expr.name}() missing ${nonDefault - index} required positional arguments`)
+          throw new TypeCheckError(`${expr.name}() missing ${nonDefault - index} required positional arguments`)
         }
         return { ...expr, a: [retType, expr.a], arguments: tArgs };
       } else {
@@ -393,7 +392,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
             const realArgs = [tObj].concat(tArgs);
             const passedArgLength = realArgs.length;
             if (passedArgLength > methodArgs.length) {
-              throw new TypeError(`Method ${expr.method}() takes from ${nonDefault} to ${methodArgs.length} positional arguments but ${passedArgLength} were given`);
+              throw new TypeCheckError(`Method ${expr.method}() takes from ${nonDefault} to ${methodArgs.length} positional arguments but ${passedArgLength} were given`);
             }
             let index;
             for (index = 0; index < passedArgLength; index++) {
@@ -403,7 +402,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
 
             }
             if (index < nonDefault) {
-              throw new TypeError(`${expr.method}() missing ${nonDefault - index} required positional arguments`)
+              throw new TypeCheckError(`${expr.method}() missing ${nonDefault - index} required positional arguments`)
             }
             return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs };
           } else {

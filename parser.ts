@@ -382,7 +382,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
       default_started = true;
     } else {
       if(default_started) {
-        throw new Error("PARSE ERROR: Can't have non default parameters after default parameters");
+        throw new ParseError("Can't have non default parameters after default parameters ",getSourceLocation(c,s).line);
       }
     }
     
