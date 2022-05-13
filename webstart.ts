@@ -1,7 +1,8 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, CLASS } from './utils';
+import { type } from 'os';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -16,11 +17,27 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
-function print(typ: Type, arg : number) : any {
+function print(typ: Type, arg : number, mem?: WebAssembly.Memory) : any {
   console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  if(typ.tag === "class"){
+    switch(typ.name){
+      case "str":
+        var  bytes = new  Uint32Array(mem.buffer, arg, 1);
+        var length = bytes[0];
+        var char_bytes = new Uint8Array(mem.buffer, arg+4, length);
+        var  string = new  TextDecoder('utf8').decode(char_bytes);
+
+        const elt = document.createElement("pre");
+        document.getElementById("output").appendChild(elt);
+        elt.innerText = string;
+    }
+  }
+  
+  else{
+    const elt = document.createElement("pre");
+    document.getElementById("output").appendChild(elt);
+    elt.innerText = stringify(typ, arg);
+  }
   return arg;
 }
 
@@ -48,6 +65,8 @@ function webStart() {
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
+        // print_str: (arg: number) => print(CLASS("str"), arg, memory),
+        print_str: (arg: number) => print(NUM, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
