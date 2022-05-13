@@ -60,5 +60,30 @@ list1 = [3] * x
 print(list1[x-1])”
 Expected: 3
 
+The below is related to the concerns from instructors.
+
+(1)
+AST/IR
+For parsing, we can store the value as a javaScript big number.
+ex.
+export type Literal<A>  = 
+  { a?: A, tag: "num"  , value: javaScript big number }
+
+(2)
+We can store the big number like a class which looks like this.
+class bigNum(object):
+    size : int = 3
+    0 : int = 1 // ranges from 0 to 2^32 - 1
+    1 : int = 333
+    2 : int = 5934739
+
+With the first field, we can know how many bytes does a big number need
+bignum.size = 3 
+
+To reconstruct the number we need the following 3 fields bignum.0, bignum.1, and bignum.2.
+The number would be 1 * (2^32) ^ 0 + 333 * (2^32) ^ 1 + 5934739 * (2^32) ^ 2. 
+
+(3)
+We can view all numbers as big numbers, so that we don't need to worry about conversion during arithmetic operations.
 
 
