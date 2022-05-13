@@ -31,6 +31,7 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: [...inits, ...lowerVarInits(p.inits, env)],
+        initStrs: strInit,
         classes: lowerClasses(p.classes, env),
         body: blocks
     }
