@@ -3,7 +3,7 @@ import {parser} from "lezer-python";
 import { parse } from "./parser";
 import { tc } from "./type-check";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { importObject, addLibs  } from "./tests/string-import-object.test";
 import { augmentEnv, Config } from "./runner";
 import { lowerProgram } from "./lower";
 
@@ -30,9 +30,7 @@ export function stringifyTree(t:TreeCursor, source: string, d:number){
 // entry point for debugging
 async function debug() {
   var source = 
-  `s: str = "abba"
-  x: int = 5
-  print(s)`
+  `print("abba")`
   // const t = parser.parse(source);
   // console.log(stringifyTree(t.cursor(),source,0));
   
@@ -40,7 +38,7 @@ async function debug() {
   // console.log(JSON.stringify((ast), null,2));
 
 
-  // const repl = new BasicREPL(await addLibs());
+  const repl = new BasicREPL(await addLibs());
   // const result = repl.run(source).then(result => {
   //   console.log(result);    
   // })
@@ -50,8 +48,8 @@ async function debug() {
   // const ast = parse(source);
   // console.log(JSON.stringify((ast), null,2));
 
-  const repl = new BasicREPL(await addLibs());
-  console.log(JSON.stringify(repl.importObject.import));
+  // const repl = new BasicREPL(await addLibs());
+  // console.log(JSON.stringify(repl.importObject.import));
   // const config : Config = {importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions};
   // const parsed = parse(source);
   // const [tprogram, tenv] = tc(config.typeEnv, parsed);
@@ -60,7 +58,8 @@ async function debug() {
   // const irprogram = lowerProgram(tprogram, globalEnv);
   // // console.log(JSON.stringify(irprogram, null,2))
   const result = repl.run(source).then(result => {
-    console.log(result);    
+    console.log("hello")
+    console.log(result);
   }) 
 }
 
