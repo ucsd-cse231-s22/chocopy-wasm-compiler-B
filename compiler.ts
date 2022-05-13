@@ -301,6 +301,7 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
 function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   return [
     ...codeGenValue(amount, env),
+    `(i32.const 0)`, // type info
     `call $alloc`
   ];
 }
