@@ -6,12 +6,17 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+  class A(object):
+    a:int = 0
+  class B(A):
+    b:int = 0
+  def test(arg: A):
+      pass
+  x : B = None
+  x = B()
+  test(x)
+  `
+
   const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
@@ -20,5 +25,9 @@ class C(object):
   })  
 }
 
-debug();
+try {
+  debug();
+} catch (err) {
+  console.log(err);
+}
 

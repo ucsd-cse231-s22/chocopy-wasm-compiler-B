@@ -39,6 +39,9 @@ defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 // To track the ordering of classes in the program
 const classOrder: Array<String> = new Array<string>();
+// Map from class name to Class<A>
+// Needed because we need to populate all the super class fields and methods in subclass
+const classMap: Map<string,Class<null>> = new Map();
 
 
 export const defaultTypeEnv = {
@@ -188,13 +191,15 @@ export function tcSign(env: GlobalTypeEnv, clsName: string){
     argTyp = argTyp.slice(1,argTyp.length);
     supers.forEach(sup=> {
       const supMethods = env.classes.get(sup)[2];
-      var [supArgTyp,supRetTyp] = supMethods.get(name);
-      supArgTyp = supArgTyp.slice(1,supArgTyp.length);
-      if(JSON.stringify(supArgTyp)!=JSON.stringify(argTyp)) {
-        throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
-      }
-      if(JSON.stringify(supRetTyp)!=JSON.stringify(retTyp)) {
-        throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
+      if (supMethods.has(name)) {
+        var [supArgTyp,supRetTyp] = supMethods.get(name);
+        supArgTyp = supArgTyp.slice(1,supArgTyp.length);
+        if(JSON.stringify(supArgTyp)!=JSON.stringify(argTyp)) {
+          throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
+        }
+        if(JSON.stringify(supRetTyp)!=JSON.stringify(retTyp)) {
+          throw new TypeCheckError(`Method overriden with different type signature: ${name}`);
+        }
       }
     });
   });
@@ -215,6 +220,8 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
       throw new TypeCheckError(`Super-class not defined : ${sup}`);
     }
   });
+  // Set classMap
+  classMap.set(cls.name,cls);
   // cls -> Class<A> : Field: VarInit<A>[]
   // GlobalEnv
   const tFields = cls.fields.map(field => tcInit(env, field));
@@ -225,8 +232,14 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
       if(supFields.has(field.name)) {
         throw new TypeCheckError(`Cannot re-define attribute ${field.name}`);
       }
+      //const supClass = classMap.get(sup);
+
     });
   });
+  // A(B,C)
+  // B->a:int 
+  // C-> a:int
+
   // Push super class fields to derived class env
   const curFields = env.classes.get(cls.name)[1];
   cls.supers.forEach(sup => {
@@ -472,9 +485,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<n
       } else if(env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-
+        // t2 = t1
+        // B = A
         if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => tArg.a === argTypes[i])) {
+           tArgs.every((tArg, i) => isAssignable(env, tArg.a, argTypes[i]))) {
              return {...expr, a: retType, arguments: expr.arguments};
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
