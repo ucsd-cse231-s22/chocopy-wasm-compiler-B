@@ -25,7 +25,6 @@ class File(object):
         if self.closed:    
             print(99999)
             return
-        close(self.fd)
         self.closed = True
 `
 

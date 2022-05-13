@@ -6,6 +6,7 @@ import { open, close } from './io';
 
 declare global {
   interface Window { 
+    duplicated: any,
     fs: any
   }
 }
@@ -43,13 +44,14 @@ function webStart() {
     // https://github.com/mdn/webassembly-examples/issues/5
 
     // create the filesystem
+    window.duplicated = Object.create(window) // the overcome the __dirname problem
     const BrowserFS = require("browserfs");
-    BrowserFS.install(window);
+    BrowserFS.install(window.duplicated);
     BrowserFS.configure({ fs: "LocalStorage" }, (err: any) => {
       if (err) {
         alert(err);
       } else {
-        window.fs =  window.require('fs');
+        window.fs =  window.duplicated.require('fs');
       }
     });
 
