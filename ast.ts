@@ -10,7 +10,7 @@ export type Type =
 
 export type SourceLocation = { line: number }
 
-export type Parameter<A> = { name: string, type: Type, value?: Expr<A> }
+export type Parameter<A> = { name: string, type: Type, defaultValue?: Expr<A> }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 

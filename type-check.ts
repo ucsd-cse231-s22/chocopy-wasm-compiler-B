@@ -83,7 +83,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
   // if -1, there are no defaults
   // else, everything before this index is a non-default argument
   program.funs.forEach(fun => {
-    const nonDefault = fun.parameters.filter(p => p.value === undefined).length;
+    const nonDefault = fun.parameters.filter(p => p.defaultValue === undefined).length;
     newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret, nonDefault])
   }); // add defaultLength
   program.classes.forEach(cls => {
@@ -91,7 +91,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => {
-      const nonDefault = method.parameters.filter(p => p.value === undefined).length;
+      const nonDefault = method.parameters.filter(p => p.defaultValue === undefined).length;
       methods.set(method.name, [method.parameters.map(p => p.type), method.ret, nonDefault])
     });
     newClasses.set(cls.name, [fields, methods]);
@@ -144,11 +144,11 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
 
     }
     locals.vars.set(p.name, p.type);
-    if (p.value) {
-      const tcValue = tcExpr(env, emptyLocalTypeEnv(), p.value);
+    if (p.defaultValue) {
+      const tcValue = tcExpr(env, emptyLocalTypeEnv(), p.defaultValue);
       if (!isAssignable(env, tcValue.a[0], p.type))
         throw new TypeCheckError(`Type mismatch for default value of argument ${p.name}`);
-      return { ...p, value: tcValue };
+      return { ...p, defaultValue: tcValue };
     }
     return { name: p.name, type: p.type };
   });

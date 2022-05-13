@@ -31,11 +31,11 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var funsToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.value)]))
+    var funsToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.defaultValue)]))
     funEnv = new Map([...funEnv, ...funsToAdd]);
 
     // slice skips the self argument
-    var classesToAdd2 = new Map(p.classes.map(c => [c.name, new Map(c.methods.map(m => [m.name, m.parameters.map(p => p.value).slice(1)]))]));
+    var classesToAdd2 = new Map(p.classes.map(c => [c.name, new Map(c.methods.map(m => [m.name, m.parameters.map(p => p.defaultValue).slice(1)]))]));
     classEnv = new Map([...classEnv, ...classesToAdd2]);
 
     var inits = flattenStmts(p.stmts, blocks, env);

@@ -373,11 +373,11 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     c.nextSibling(); // Focuses on type itself
     let typ = traverseType(c, s);
     c.parent();
-    let value;
+    let defaultValue;
     c.nextSibling(); // possibly go to the equals
     if( s.substring(c.from,c.to) === "=" ) { // check if equals (assign op)
       c.nextSibling()
-      value = traverseExpr(c,s);// traverse expression to store in value
+      defaultValue = traverseExpr(c,s);// traverse expression to store in value
       c.nextSibling(); // Move on to comma or ")"
       default_started = true;
     } else {
@@ -388,7 +388,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     
     
     
-    parameters.push({name, type: typ, value});
+    parameters.push({name, type: typ, defaultValue});
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
