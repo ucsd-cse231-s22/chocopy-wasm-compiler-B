@@ -44,7 +44,7 @@ export type Expr<A> =
   | {  a?: A, tag: "construct", name: string }
 
 export type Literal = 
-    { tag: "num", value: number }
+    { tag: "num", value: bigint }
   | { tag: "bool", value: boolean }
   | { tag: "none" }
 
@@ -55,4 +55,4 @@ export enum UniOp { Neg, Not };
 
 export type Value =
     Literal
-  | { tag: "object", name: string, address: number}
+  | { tag: "object", name: string, address: bigint}
