@@ -526,14 +526,14 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 }
 
 export function parse(source : string) : Program<null> {
-  source = fileObjectDefinition + source;
-  console.log(source);
+  // source = fileObjectDefinition + source;
+  // console.log(source);
 
   const t = parser.parse(source);
 
   const str = stringifyTree(t.cursor(), source, 0);
 
-  console.log(str);
+  // console.log(str);
 
   return traverse(t.cursor(), source);
 }

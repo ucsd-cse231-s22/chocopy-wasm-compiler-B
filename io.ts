@@ -10,20 +10,40 @@ class File(object):
         pass
     
     def read(self : File) -> int:
-        return 0
+        if self.mode != 0:
+            print(44444)
+            return -1
+        if self.closed:
+            print(33333)
+            return -1
+        return jsread(self.fd)
     
     def write(self : File, s : int) -> int:
-        return 0
+        if self.mode != 1:
+            print(77777)
+            return -1
+        if self.closed:
+            print(66666)
+            return -1
+        return jswrite(self.fd, s)
 
     def tell(self : File) -> int:
-        return 0
+        return self.pointer
 
     def seek(self : File, pos : int):
-        pass
+        if pos < 0:
+            print(88888)
+            return
+        if pos >= self.filelength:
+            print(55555)
+            return
+        self.pointer = pos
+        
         
     def close(self : File):
         if self.closed:
             print(99999)
+            print(self.closed)
             return
         jsclose(self.fd)
         self.closed = True
@@ -56,7 +76,12 @@ export function jsclose(fd : number) : number {
     return 0;
 }
 
-export function jsRead(fd : number) : number {
-    return 0;
+export function jswrite(fd : number, data: number) : number {
+    const toWrite = String(data);
+    return window.fs.writeSync(fd, toWrite, 0);
+}
+
+export function jsread(fd : number) : number {
+    return Number(window.fs.readSync(fd, 1, 0, 'utf8'));
 }
 
