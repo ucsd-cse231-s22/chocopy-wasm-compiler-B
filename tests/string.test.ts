@@ -1,9 +1,9 @@
-import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertPrint, assertFail, assertTCFail, assertTC } from "./string-asserts.test";
+import { NUM, BOOL, NONE, CLASS } from "./string-helpers.test"
 
 describe("string test", () => {
   // 1
-  assertTC("test case 1: var definition for string", `s:str = "asdf"\ns`, [`class: str`]);
+  assertTC("test case 1: var definition for string", `s:str = "asdf"\ns`, CLASS("str"));
   // 2
   assertPrint("test case 2: print string", `s:str = "asdf"\nprint(s)`, [`asdf`]);
   // 3

@@ -111,10 +111,10 @@ function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, 
 
   // var result = ( ( (bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF) ); charCodeAt(i)
   for(let i = 0; i < Math.floor(lit.value.length / 4); i++){
-    let register_1 = ((lit.value.charCodeAt(i) & 0xFF) << 24);
-    let register_2 = ((lit.value.charCodeAt(i+1) & 0xFF) << 16);
-    let register_3 = ((lit.value.charCodeAt(i+2) & 0xFF) << 8);
-    let register_4 = ((lit.value.charCodeAt(i+3) & 0xFF));
+    let register_1 = ((lit.value.charCodeAt(4*i) & 0xFF));
+    let register_2 = ((lit.value.charCodeAt(4*i+1) & 0xFF) << 8);
+    let register_3 = ((lit.value.charCodeAt(4*i+2) & 0xFF) << 16);
+    let register_4 = ((lit.value.charCodeAt(4*i+3) & 0xFF) << 24);
 
     let result = (register_1 | register_2 | register_3 | register_4);
 
@@ -129,8 +129,8 @@ function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, 
   if (lit.value.length % 4 !== 0){
     let result = 0x0;
     for(let i = 0; i < lit.value.length % 4; i++){
-      let offset = Math.floor(lit.value.length);
-      let register_1 = ((lit.value.charCodeAt(offset + i) & 0xFF) << 24 - 8*i);
+      let offset = Math.floor(lit.value.length / 4) * 4;
+      let register_1 = ((lit.value.charCodeAt(offset + i) & 0xFF) << 8*i);
   
       result = (result | register_1);
     }
