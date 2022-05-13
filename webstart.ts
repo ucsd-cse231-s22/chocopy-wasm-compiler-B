@@ -2,13 +2,14 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { table } from 'console';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
     case "number":
       return (arg as number).toString();
     case "bool":
-      return (arg as boolean)? "True" : "False";
+      return (arg as boolean)? "Hello" : "False";
     case "none":
       return "None";
     case "class":
@@ -16,11 +17,12 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
-function print(typ: Type, arg : number) : any {
+function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg);
+  elt.innerText = load(arg, 1);
   return arg;
 }
 
@@ -45,9 +47,9 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
+        print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
+        print_bool: (arg: number) => print(BOOL, arg, memoryModule.instance.exports.load),
+        print_none: (arg: number) => print(NONE, arg, memoryModule.instance.exports.load),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
