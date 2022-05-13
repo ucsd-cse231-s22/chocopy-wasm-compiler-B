@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
+import { CLASS } from "../utils";
 
-enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, String}
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
@@ -13,7 +14,16 @@ function stringify(typ: Type, arg: any): string {
   }
 }
 
-function print(typ: Type, arg: any): any {
+function print(typ: Type, arg: any, mem?:WebAssembly.Memory): any {
+  if(typ === Type.String){
+      var  bytes = new  Uint32Array(mem.buffer, arg, 1);
+      var length = bytes[0];
+      var char_bytes = new Uint8Array(mem.buffer, arg+4, length);
+      var  string = new  TextDecoder('utf8').decode(char_bytes);
+      importObject.output += string;
+      importObject.output += "\n";
+      return arg;
+  }
   importObject.output += stringify(typ, arg);
   importObject.output += "\n";
   return arg;
@@ -25,9 +35,9 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
+const memory = new WebAssembly.Memory({initial:10, maximum:100});
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
-  const memory = new WebAssembly.Memory({initial:10, maximum:100});
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports,
   importObject.memory_values = memory;
@@ -46,6 +56,7 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
+    print_str: (arg: number) => print(Type.String, arg, memory),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

@@ -75,6 +75,14 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
 }
 
+export function builtinStringClass(env: GlobalTypeEnv): GlobalTypeEnv {
+  var strFields: Map<string, Type> = new Map();
+  var strMethods: Map<string, [Array<Type>, Type]> = new Map();
+  strMethods.set("__init__", [[{ tag: "class", name: "str" }, { tag: "class", name: "str" }], NONE])
+  strFields.set("length", { tag: "number" });
+  env.classes.set("str", [strFields, strMethods]);
+  return env;
+}
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
@@ -88,7 +96,9 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+  var env = { globals: newGlobs, functions: newFuns, classes: newClasses };
+  env = builtinStringClass(env); //add str class
+  return env;
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<SourceLocation>) : [Program<[Type, SourceLocation]>, GlobalTypeEnv] {
@@ -311,6 +321,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
+        if (expr.name == "str" && expr.arguments[0].tag == "literal") {
+          if (expr.arguments[0].value.tag != "str") {
+            throw new Error("TYPE ERROR: Initializing string with non string literal");
+          }
+          tConstruct.strarg = expr.arguments[0].value.value;
+        }
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
@@ -379,10 +395,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
   }
 }
 
-export function tcLiteral(literal : Literal) {
-    switch(literal.tag) {
-        case "bool": return BOOL;
-        case "num": return NUM;
-        case "none": return NONE;
-    }
+export function tcLiteral(literal: Literal) {
+  switch (literal.tag) {
+    case "bool": return BOOL;
+    case "num": return NUM;
+    case "str": return CLASS("str");
+    case "none": return NONE;
+  }
 }
