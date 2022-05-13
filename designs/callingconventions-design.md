@@ -136,51 +136,38 @@
     _Expected result: 3_
 
 ### To Run Our Test Cases
-This PR includes a new command in `package.json` - `npm run test-callconv`. This
-will run our test suite located at `tests/callingconventions.test.ts`. The most
-interesting use cases are default values that are defined via expressions:
-functions such as `def test(x : int = 3 + 4)` can now use `x` which will be
-defined as 7.
+This PR includes a new command in `package.json` - `npm run test-callconv`. This will run our test suite located at `tests/ callingconventions.test.ts`. The most interesting use cases are default values that are defined via expressions:
+functions such as `def test(x : int = 3 + 4)` can now use `x` which will be defined as 7.
 
 ## Changes
 
 ### AST
 
-- Parameter must hold an optional defaultValue of type Expr. This field will be
-undefined if the parameter doesn't have a default value, and will hold the
-parsed expression otherwise.
+- Parameter must hold an optional defaultValue of type Expr. This field will be undefined if the parameter doesn't have a default value, and will hold the parsed expression otherwise.
 
 ### IR
 
-- During lowering from AST to IR, all calls that do not redefine default values
-will have the default values added to their argument list. Therefore, a
-Parameter now doesn’t need to hold any default values/arguments. We restore the
-Parameter to its original state, without holding any Expr.
+- During lowering from AST to IR, all calls that do not redefine default values will have the default values added to their argument list. Therefore, a Parameter now doesn’t need to hold any default values/arguments. We restore the Parameter to its original state, without holding any Expr.
 
 ### Built-in Libraries
 
-We do not require any new library functionality - this feature only impacts
-function/method definitions and calls.
+We do not require any new library functionality - this feature only impacts function/method definitions and calls.
 
 ## Functions, Datatypes, New Files
 
 ### Changes in Parser
 
-- `traverseParameters` is expanded to parse default values, and to throw a parse
-error if parameters without a default value is defined after parameters with
-default values (for example, `def test(x : int = 5, y : int` will throw an
-error.)
+- `traverseParameters` is expanded to parse default values, and to throw a parse error if parameters without a default value is defined after parameters with default values (for example, `def test(x : int = 5, y : int)` will throw an error.)
 
 ### Changes in Type Checking
 
-- `GlobalTypeEnv` is extended so that functions and classes hold the number of
-required parameters, and `augmentTEnv` is extended to add this information. Without this information, we cannot distinguish between a
-required and optional parameter in the `GlobalTypeEnv`, and typechecking must
-ensure that all required parameters are called.
+- `GlobalTypeEnv` is extended so that functions and classes hold the number of required parameters, and `augmentTEnv` is extended to add this information. Without this information, we cannot distinguish between a required and optional parameter in the `GlobalTypeEnv`, and typechecking must ensure that all required parameters are called.
 
 - All default value exprs are typechecked as valid exprs and matching the type of the parameter.
 
 - Method and function calls are typechecked to ensure they call all required arguments, but are allowed to not define optional arguments.
+
+- If default arguments are passed they are also typechecked similar to non default arguments.
 
 ### Changes in Lowering
 
@@ -190,5 +177,4 @@ ensure that all required parameters are called.
 
 ## Memory Layout
 
-We do not need to modify or use memory - as mentioned before, our feature only
-changes function/method definitions and calls.
+We do not need to modify or use memory - as mentioned before, our feature only changes function/method definitions and calls.
