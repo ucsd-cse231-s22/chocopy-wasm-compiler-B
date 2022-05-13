@@ -24,6 +24,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("test_refcount", [[CLASS("object"), NUM], BOOL]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -308,6 +309,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
+      if(expr.name === "test_refcount"){
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        return {...expr, a: [BOOL, expr.a], arguments: tArgs};
+      }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
@@ -325,7 +330,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else if(env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => tArg.a[0] === argTypes[i])) {
              return {...expr, a: [retType, expr.a], arguments: tArgs};

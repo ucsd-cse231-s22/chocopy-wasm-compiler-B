@@ -7,11 +7,17 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 async function debug() {
   var source = `
 class C(object):
-  def f(self: C) -> int:
-    if True:
-      return 0
-    else:
-      return`
+  i: int = 0
+    
+c: C = None
+d: C = None
+c = C()
+test_refcount(c, 1)
+d = c
+test_refcount(c, 2)
+d = None
+test_refcount(c, 1)
+c = None`
   const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
