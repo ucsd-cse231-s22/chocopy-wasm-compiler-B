@@ -3,6 +3,7 @@ import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
+import { Func } from 'mocha';
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends Error {
@@ -20,7 +21,9 @@ export type GlobalTypeEnv = {
   globals: Map<string, Type>,
   functions: Map<string, [Array<Type>, Type]>,
   // Added one more field to track supers
-  classes: Map<string, [Array<string>, Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  classes: Map<string, [Array<string>, Map<string, Type>, Map<string, [Array<Type>, Type]>]>,
+  classOrder?: Array<string>,
+  classMap?:Map<string,Class<any>>
 }
 
 export type LocalTypeEnv = {
@@ -120,10 +123,11 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
+
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
   program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
   program.classes.forEach(cls => {
-    classOrder.push(cls.name);
+    
     const fields = new Map();
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
@@ -131,7 +135,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<null>) : Glob
     const supers = cls.supers;
     newClasses.set(cls.name, [supers, fields, methods]);
   });
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+  return { globals: newGlobs, functions: newFuns, classes: newClasses};
 }
 
 
@@ -206,49 +210,92 @@ export function tcSign(env: GlobalTypeEnv, clsName: string){
   
 }
 
+
+
 export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
+
+  if(env.classOrder == undefined){
+    env.classOrder = new Array<string>();
+  }
+  // push the current class -> this will be used to track the ordering of the class
+
+  env.classOrder.push(cls.name);
+
+  if(env.classMap == undefined){
+    env.classMap = new Map<string,Class<any>>();
+  }
+  
   // Check whether super-classes are defined before the definition of current class
-  const clsOrder = classOrder.indexOf(cls.name);
   cls.supers.forEach(sup => {
-    if(sup === "int" || sup === "bool")
+    if(sup === "int" || sup === "bool"){
+      throw new TypeCheckError(`Keywords cannot be super class`);
+    }
     if(!env.classes.has(sup)){
       throw new TypeCheckError(`Super-class not defined : ${sup}`);
     }
-    
-    const supOrder = classOrder.indexOf(sup);
-    if (supOrder > clsOrder) {
+
+    if(!env.classOrder.includes(sup)){
       throw new TypeCheckError(`Super-class not defined : ${sup}`);
     }
   });
-  // Set classMap
-  classMap.set(cls.name,cls);
-  // cls -> Class<A> : Field: VarInit<A>[]
-  // GlobalEnv
-  const tFields = cls.fields.map(field => tcInit(env, field));
-  // Check whether fields overlap between super and sub class
 
-  //
-  const curFields = env.classes.get(cls.name)[1];
+
+
+  // Check whether fields overlap between super and sub class. Also populate the env with super class Fields
+  const currFieldOld = new Map(env.classes.get(cls.name)[1].entries());
+  const currMethodOld = new Map(env.classes.get(cls.name)[2].entries());
+
+  const [_,curFields,currMethod] = env.classes.get(cls.name);
+ 
   cls.fields.forEach(field => {
     cls.supers.forEach(sup => {
       const supFields = env.classes.get(sup)[1];
       if(supFields.has(field.name)) {
         throw new TypeCheckError(`Cannot re-define attribute ${field.name}`);
       }
-      const supClass = classMap.get(sup);
-      supClass.fields.forEach((b)=>{
-        var fieldName = b.name;
-        if(!curFields.has(fieldName)){
-          tFields.unshift(b);
-          curFields.set(b.name,b.type);
-        }
-      })
     });
   });
- 
   
+  // Update env with super class field and methods
+  cls.supers.forEach(sup=>{
+    const supClass = env.classMap.get(sup);
+    supClass.fields.forEach(f=>{
+      var fieldName = f.name;
+      if(!curFields.has(fieldName)){
+         curFields.set(f.name,f.type);
+       }
+    });
+    supClass.methods.forEach(f=>{
+      var methodName = f.name;
+      var supMethodType = env.classes.get(sup)[2].get(methodName);
+      if(!currMethod.has(methodName)){
+        currMethod.set(methodName,supMethodType);
+      }
+
+    })
+  }) 
+  const tFields = cls.fields.map(field => tcInit(env, field));
+  
+  // Populate tFields with super class Fields as well
+  cls.supers.forEach(sup=>{
+    const supClass = env.classMap.get(sup);
+    supClass.fields.forEach(b=>{
+      var fieldName = b.name;
+      if(!currFieldOld.has(fieldName)){
+        tFields.push(b);
+      }
+    })
+  })
+  ///
+
   const tMethods = cls.methods.map(method => tcDef(env, method));
-  
+  const currClassMethodMap:Map<string,FunDef<Type>> = new Map();
+
+
+  // this will be used later for ordering the methods
+  tMethods.forEach(t=>{
+    currClassMethodMap.set(t.name,t);
+  })
   // To check if we have method overwritten with different signature in the derived class
   tcSign(env, cls.name);
   
@@ -271,48 +318,34 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   });
 
   // Push super class methods to derived class env
-  const curMethods = env.classes.get(cls.name)[2];
+  
+  const orderMethod:FunDef<Type>[] = [];
   cls.supers.forEach(sup => {
-    const supMethods = env.classes.get(sup)[2];
-    supMethods.forEach((typeArr, name) => {
-      if(!curMethods.has(name)){
-        curMethods.set(name,typeArr);
+    const supClass = env.classMap.get(sup);
+    supClass.methods.forEach((m)=>{
+      var funName = m.name;
+      // Push the functions as per order... First will be all the functions from parent class
+      if(!currMethodOld.has(funName)){
+        orderMethod.push(m);
+      }else{
+        orderMethod.push(currClassMethodMap.get(funName));
       }
+      currClassMethodMap.delete(funName);
     });
   });
+  
+  // Push the functions that belong only to derived class
+  currClassMethodMap.forEach((fun,key)=>{
+    orderMethod.push(fun);
 
-  return {a: NONE, name: cls.name, fields: tFields, methods: tMethods};
+  });
+  
+  
+  const newClassMap:Class<Type> = {a: NONE, name: cls.name, fields: tFields, methods: orderMethod};
+  env.classMap.set(cls.name,newClassMap);
+  return newClassMap;
 }
 
-// export function hasField(env:GlobalTypeEnv,className:string,fieldName:string): boolean {
-//   var [_,fields] = env.classes.get(className);
-//   if(fields.has(fieldName)){
-//     return true;
-//   }else{
-//     var supHasField = false;
-//     env.classes.get(className)[0].forEach(sup => {
-//       if (hasField(env, sup, fieldName)) {
-//         supHasField = true;
-//       }
-//     });
-//     return supHasField;
-//   }
-// }
-
-// export function hasMethod(env:GlobalTypeEnv,className:string,methodName:string): boolean {
-//   var [_,fields,methods] = env.classes.get(className);
-//   if(methods.has(methodName)){
-//     return true;
-//   }else{
-//     var supHasMethod = false;
-//     env.classes.get(className)[0].forEach(sup => {
-//       if (hasMethod(env, sup, methodName)) {
-//         supHasMethod = true;
-//       }
-//     });
-//     return supHasMethod;
-//   }
-// }
 
 export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Array<Stmt<null>>) : Array<Stmt<Type>> {
   var tStmts = stmts.map(stmt => tcStmt(env, locals, stmt));
