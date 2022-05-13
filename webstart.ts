@@ -1,7 +1,9 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
+import { Type, Value, BinOp } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { table } from 'console';
+import { electron } from 'webpack';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -26,12 +28,49 @@ function reconstructBigint(arg : number, load : any) : bigint {
   return consturctedBigint;
 }
 
-function print(typ: Type, arg : number) : any {
+function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg);
+
+  if (typ.tag === "number") {
+    elt.innerText = reconstructBigint(arg, load).toString();
+  }
   return arg;
+}
+
+function binop(op: BinOp, type:Type, arg1: number, arg2: number, load:any, alloc:any) : any {
+  const arg1val = reconstructBigint(arg1,load); 
+  const arg2val = reconstructBigint(arg2,load);
+  var newval:bigint = BigInt(0)
+  switch(op) {
+    case(BinOp.Plus):
+      newval = arg1val + arg2val
+  }
+  var generatedString = ``
+  var i = 1 
+  const base = BigInt(2**32) 
+
+  do {
+    var remainder = newval % base;
+
+    generatedString += `(i32.const ${i})\n(i32.const ${remainder})\n(call $store)`; // call the store function with address, offset, and val
+
+    i += 1; // next iteration
+    newval /= base; // default to use floor() 
+  } while (newval > 0);
+
+  // "i" represents the number of fields
+  var prefix = ``;
+  var allocation = `(i32.const ${i})\n(call $alloc)\n`; // allocate spaces for the number
+  var storeSize = `(i32.const 0)\n(i32.const ${i})\n(call $store)\n`; // store the size of the number at the first field
+  while (i > 0) {
+    prefix += `(i32.const 0)\n(call $alloc)\n`; // prepare the addresses for the store calls
+    i -= 1;
+  }
+  prefix += allocation + storeSize;
+  return [prefix + generatedString]; 
 }
 
 function assert_not_none(arg: any) : any {
@@ -55,9 +94,10 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM,arg),
-        print_bool: (arg: number) => print(BOOL, arg),
-        print_none: (arg: number) => print(NONE, arg),
+        print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
+        print_bool: (arg: number) => print(BOOL, arg, memoryModule.instance.exports.load),
+        print_none: (arg: number) => print(NONE, arg, memoryModule.instance.exports.load),
+        binop: (arg1:number, arg2:number) => binop(BinOp.Plus,NUM, arg1,arg2, memoryModule.instance.exports.load,memoryModule.instance.exports.alloc),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,

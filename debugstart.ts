@@ -9,7 +9,8 @@ import {parser} from 'lezer-python'
 // entry point for debugging
 async function debug() {
   var source = `
-  10000000000 + 10000000000`
+  print(4532645325234243)
+  `
 
   const t = parser.parse(source);
   console.log(stringifyTree(t.cursor(), source, 0));

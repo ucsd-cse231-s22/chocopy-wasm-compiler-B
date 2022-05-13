@@ -157,7 +157,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const rhsStmts = codeGenValue(expr.right, env);
 
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-    */ 
+    
     case "binop": 
       const lhsStmts = codeGenValue(expr.left, env);
       console.log(lhsStmts)
@@ -170,6 +170,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
           break
         }
       }
+      
       const size = split[ind]
       console.log(ind, split[ind])
       
@@ -178,6 +179,17 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const rhsStmts = codeGenValue(expr.right, env);
 
       return [...lhsStmts, load1, ...rhsStmts, load1, codeGenBinOp(expr.op)]
+    */ 
+    case "binop":
+
+      const lhsStmts = codeGenValue(expr.left, env);
+        
+      const rhsStmts = codeGenValue(expr.right, env);
+      //const call = "(call $binop)"
+      
+
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
@@ -354,3 +366,14 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
   }
+
+  function reconstructBigint(arg : number, load : any) : bigint {
+    var base = BigInt(2 ** 31);
+    var digitNum = load(arg, 0);
+    var consturctedBigint = BigInt(0);
+    for (let i = 1; i < digitNum + 1; i++) {
+      consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
+    }
+    return consturctedBigint;
+  }
+  
