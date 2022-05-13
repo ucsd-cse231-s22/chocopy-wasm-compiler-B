@@ -412,6 +412,15 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
+      if(expr.name === 'len'){
+        if (expr.arguments[0].tag === 'call' && expr.arguments[0].name === 'str'){
+          if (expr.arguments[0].arguments[0].tag === "literal"){
+            if (expr.arguments[0].arguments[0].value.tag === "str"){
+              return { a: NUM, tag: "literal", value: { tag: "num", value: expr.arguments[0].arguments[0].value.value.length } }
+            }
+          }
+        }
+      }
       if (env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct: Expr<Type> = { a: CLASS(expr.name), tag: "construct", name: expr.name };
