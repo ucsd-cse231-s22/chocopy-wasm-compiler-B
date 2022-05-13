@@ -72,16 +72,21 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
-  const progTyp = tprogram.a;
+  var progTyp = tprogram.a; 
+
+  // progTyp === NONE
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
-  if(progTyp !== NONE) {
+  if (progTyp === NUM) {
+    progTyp = NONE;
+    returnExpr = "(local.get $$last)\n(call $print_num)\n(local.set $$last)" // use set to consume the element on stack
+  } else if (progTyp === BOOL) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
-  } 
+  }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
