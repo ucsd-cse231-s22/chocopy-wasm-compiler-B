@@ -283,23 +283,70 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<null
           if (equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return { a: NUM, ...tBin } }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
+          if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
+            if (tLeft.a.name === "str" && tRight.a.name === "str") {
+              if (tLeft.tag == "construct" && tRight.tag == "construct") {
+                let res = tLeft.strarg == tRight.strarg;
+                return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
+              }
+            }
+          }
+          if (tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
+          if (equalType(tLeft.a, tRight.a)) { return { a: BOOL, ...tBin }; }
+          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.Neq:
           if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
             if (tLeft.a.name === "str" && tRight.a.name === "str") {
-              return { a: BOOL, ...tBin }
+              if (tLeft.tag == "construct" && tRight.tag == "construct") {
+                let res = tLeft.strarg != tRight.strarg;
+                return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
+              }
             }
           }
           if (tLeft.a.tag === "class" || tRight.a.tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if (equalType(tLeft.a, tRight.a)) { return { a: BOOL, ...tBin }; }
           else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.Lte:
+          if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
+            if (tLeft.a.name === "str" && tRight.a.name === "str") {
+              if (tLeft.tag == "construct" && tRight.tag == "construct") {
+                let res = tLeft.strarg <= tRight.strarg;
+                return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
+              }
+
+            }
+          }
+          if (equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return { a: BOOL, ...tBin }; }
+          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.Gte:
+          if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
+            if (tLeft.a.name === "str" && tRight.a.name === "str") {
+              if (tLeft.tag == "construct" && tRight.tag == "construct") {
+                let res = tLeft.strarg >= tRight.strarg;
+                return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
+              }
+
+            }
+          }
+          if (equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return { a: BOOL, ...tBin }; }
+          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.Lt:
-        case BinOp.Gt:
           if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
             if (tLeft.a.name === "str" && tRight.a.name === "str") {
               if (tLeft.tag == "construct" && tRight.tag == "construct") {
                 let res = tLeft.strarg < tRight.strarg;
+                return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
+              }
+
+            }
+          }
+          if (equalType(tLeft.a, NUM) && equalType(tRight.a, NUM)) { return { a: BOOL, ...tBin }; }
+          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
+        case BinOp.Gt:
+          if (tLeft.a.tag === "class" && tRight.a.tag === "class") {
+            if (tLeft.a.name === "str" && tRight.a.name === "str") {
+              if (tLeft.tag == "construct" && tRight.tag == "construct") {
+                let res = tLeft.strarg > tRight.strarg;
                 return { a: BOOL, tag: "literal", value: { tag: "bool", value: res } }
               }
 
