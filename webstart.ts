@@ -16,6 +16,16 @@ function stringify(typ: Type, arg: any) : string {
   }
 }
 
+function reconstructBigint(arg : number, load : any) : bigint {
+  var base = BigInt(2 ** 31);
+  var digitNum = load(arg, 0);
+  var consturctedBigint = BigInt(0);
+  for (let i = 1; i < digitNum + 1; i++) {
+    consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
+  }
+  return consturctedBigint;
+}
+
 function print(typ: Type, arg : number) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -45,13 +55,13 @@ function webStart() {
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg),
+        print_num: (arg: number) => print(NUM,arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow, 
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

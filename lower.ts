@@ -3,26 +3,26 @@ import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 
-const nameCounters : Map<string, number> = new Map();
+const nameCounters : Map<string, bigint> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
-    nameCounters.set(base, cur + 1);
-    return base + (cur + 1);
+    nameCounters.set(base, cur + BigInt(1));
+    return base + (cur + BigInt(1));
   }
   else {
-    nameCounters.set(base, 1);
+    nameCounters.set(base, BigInt(1));
     return base + 1;
   }
 }
 
-// function lbl(a: Type, base: string) : [string, IR.Stmt<[Type, SourceLocation]>] {
+// function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
-    var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
+  var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
@@ -267,7 +267,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: BigInt(fields.length) } };
       const assigns : IR.Stmt<[Type, SourceLocation]>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
