@@ -5,10 +5,10 @@ import { EnvironmentPlugin } from "webpack";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
+  classes: Map<string, Map<string, [bigint, Value<[Type, SourceLocation]>]>>;  
   locals: Set<string>;
   labels: Array<string>;
-  offset: number;
+  offset: bigint;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -16,7 +16,7 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: BigInt(0) 
 };
 
 type CompileResult = {
@@ -142,7 +142,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const rhsStmts = codeGenValue(expr.right, env);
 
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-    */ 
+     
     case "binop":
       if (expr.left.tag === "num" && expr.right.tag === "num") {
         switch(expr.op) {
@@ -157,7 +157,27 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const rhsStmts = codeGenValue(expr.right, env);
 
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+    */ 
+    case "binop": 
+      const lhsStmts = codeGenValue(expr.left, env);
+      console.log(lhsStmts)
+      const split = lhsStmts[0].split('\n')
+      console.log(split)
+      var ind = 0
+      for (let i = 0; i < split.length; i++) {
+        if (split[i].includes("call $store")) {
+          ind = i - 1
+          break
+        }
+      }
+      const size = split[ind]
+      console.log(ind, split[ind])
       
+      const load1 = '(i32.const 1)\n(call $load)'
+      
+      const rhsStmts = codeGenValue(expr.right, env);
+
+      return [...lhsStmts, load1, ...rhsStmts, load1, codeGenBinOp(expr.op)]
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
@@ -238,7 +258,7 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
-      return [`(i32.const ${Number(val.value)})`];
+      return [`(i32.const ${BigInt(val.value)})`];
     case "none":
       return [`(i32.const 0)`];
     case "id":
