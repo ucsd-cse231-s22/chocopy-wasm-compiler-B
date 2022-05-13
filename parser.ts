@@ -439,8 +439,13 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<null> {
   c.nextSibling(); // go to value
   var value = traverseLiteral(c, s);
   c.parent();
-
   return { name, type, value }
+}
+
+export function initToConsturct(init: VarInit<null>): Stmt<null>
+{
+  let val:Expr<null> = {tag: "call", name: "str", arguments:[{tag:"literal", value:init.value}]};
+  return {tag:"assign",  name: init.name, value: val };
 }
 
 export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
@@ -465,7 +470,12 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<null> {
 
   while(hasChild) {
     if (isVarInit(c, s)) {
-      inits.push(traverseVarInit(c, s));
+      let temp = traverseVarInit(c, s)
+      if(JSON.stringify(temp.type) === JSON.stringify({tag:"class", name:"str"})){
+        body.push(initToConsturct(temp))
+        temp.value = {tag:"none"};
+      }
+      inits.push(temp);
     } else {
       break;
     }
@@ -494,10 +504,20 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
+    var initBody:Array<Stmt<null>> = []
     if (isVarInit(c, s)) {
-      fields.push(traverseVarInit(c, s));
+      let temp = traverseVarInit(c, s)
+      if(JSON.stringify(temp.type) === JSON.stringify({tag:"class", name:"str"})){
+        initBody.push(initToConsturct(temp))
+        temp.value = {tag:"none"};
+      }
+      fields.push(temp);
     } else if (isFunDef(c, s)) {
-      methods.push(traverseFunDef(c, s));
+      let temp = traverseFunDef(c, s)
+      if(temp.name =="__init__"){
+        temp.body = initBody.concat(temp.body)
+      }
+      methods.push();
     } else {
       throw new Error(`Could not parse the body of class: ${className}` );
     }
@@ -506,7 +526,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: initBody });
   }
   return {
     name: className,
@@ -567,7 +587,12 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
 
       while(hasChild) {
         if (isVarInit(c, s)) {
-          inits.push(traverseVarInit(c, s));
+          let temp = traverseVarInit(c, s)
+          if(JSON.stringify(temp.type) === JSON.stringify({tag:"class", name:"str"})){
+            stmts.push(initToConsturct(temp))
+            temp.value = {tag:"none"};
+          }
+          inits.push(temp);
         } else if (isFunDef(c, s)) {
           funs.push(traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {

@@ -2,6 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
+import { strictEqual } from 'assert';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -25,32 +26,31 @@ export function lowerProgram(p : AST.Program<Type>, env : GlobalEnv) : IR.Progra
     var blocks : Array<IR.BasicBlock<Type>> = [];
     var firstBlock : IR.BasicBlock<Type> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var strInit = initStrings(p.inits);
+    // var strInit = initStrings(p.inits);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
         funs: lowerFunDefs(p.funs, env),
         inits: [...inits, ...lowerVarInits(p.inits, env)],
-        initStrs: strInit,
         classes: lowerClasses(p.classes, env),
         body: blocks
     }
 }
 
-function initStrings(inits: Array<AST.VarInit<Type>>): Array<[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>]>{
-  var result: Array<[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>]>  = [];
+// function initStrings(inits: Array<AST.VarInit<Type>>): Array<[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>]>{
+//   var result: Array<[Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>]>  = [];
 
-  inits.forEach(f =>{
-    if(f.value.tag === "str"){
-      let temp = lowerStr(f.value);
-      let strName = temp[0][0].name;
+//   inits.forEach(f =>{
+//     if(f.value.tag === "str"){
+//       let temp = lowerStr(f.value);
+//       let strName = temp[0][0].name;
 
-      result.push(temp);
-      f.value.value = strName;
-    }
-  })
-  return result
-}
+//       result.push(temp);
+//       f.value.value = strName;
+//     }
+//   })
+//   return result
+// }
 
 function lowerFunDefs(fs : Array<AST.FunDef<Type>>, env : GlobalEnv) : Array<IR.FunDef<Type>> {
     return fs.map(f => lowerFunDef(f, env)).flat();
@@ -69,10 +69,6 @@ function lowerVarInits(inits: Array<AST.VarInit<Type>>, env: GlobalEnv) : Array<
 }
 
 function lowerVarInit(init: AST.VarInit<Type>, env: GlobalEnv) : IR.VarInit<Type> {
-    if (init.value.tag === "str"){
-      return lowerStr({ tag: "str", value: init.value.value})[0][0];
-    }
-
     return {
         ...init,
         value: literalToVal(init.value)
@@ -102,7 +98,7 @@ function literalToVal(lit: AST.Literal) : IR.Value<Type> {
     }
 }
 
-function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>]{
+function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, Array<IR.Stmt<Type>>, IR.Expr<Type>]{
   const strName = generateName("newObj")
   const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1 } };
   const assigns : IR.Stmt<Type>[] = [];
@@ -151,7 +147,8 @@ function lowerStr(lit: { tag: "str", value: string}): [Array<IR.VarInit<Type>>, 
   return [
     [ { name: strName, type: {tag: "class", name: "str"}, value: { tag: "none" } }],
     [ { tag: "assign", name: strName, value: alloc }, ...assigns 
-    ]
+    ],
+    { a: {tag:"class", name:"str"}, tag: "value", value: { a: {tag:"class", name:"str"}, tag: "id", name: strName } }
   ];
 }
 
@@ -338,6 +335,9 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
         offset: { tag: "wasmint", value: offset }}];
     }
     case "construct":
+      if(e.name == "str"){
+        return lowerStr({tag:"str", value:e.strarg});
+      }
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
