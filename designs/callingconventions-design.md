@@ -81,50 +81,7 @@
 
    _Expected result: TYPE ERROR: duplicate declaration of variable `x`_
 
-9. Unit test for parsing output in functions - parse default to have a Value
-
-   ```python
-   def test(x : bool = False):
-       pass
-   ```
-
-   _Expected parse result:_
-
-   ```json
-   {
-    "funs": [
-        {
-            "name": "test",
-            "parameters": [
-                {
-                    "name": "x",
-                    "type": {
-                        "tag": "bool"
-                    }
-                    "value": {
-                       "tag": "bool",
-                       "value": false
-                    }
-                }
-            ],
-            "ret": {
-                "tag": "none"
-            },
-            "inits": [],
-            "body": [
-                {
-                    "tag": "pass"
-                }
-            ]
-        }
-    ],
-    "inits": [],
-    "classes": [],
-    "stmts": []
-   }
-   ```
-
-10. Use an expr as a default value
+9. Use an expr as a default value
 
     ```python
     def test(x : int = 1+2) -> int:
@@ -134,6 +91,20 @@
     ```
 
     _Expected result: 3_
+
+10. Ensure same behavior for methods as with functions
+
+    ```python
+    class C(object):
+        def test(self : C, x : int = 7+2):
+            print(x)
+        
+    x : C = None
+    x = C()
+    x.test()
+    ```
+
+    _Expected result: 9_
 
 ### To Run Our Test Cases
 This PR includes a new command in `package.json` - `npm run test-callconv`. This will run our test suite located at `tests/ callingconventions.test.ts`. The most interesting use cases are default values that are defined via expressions:
