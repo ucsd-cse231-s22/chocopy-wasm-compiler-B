@@ -32,7 +32,7 @@ async function debug() {
   var source =
     `
     s:str = "asdf"
-    print(len(s))
+    print(s == "asdf")
     `
 
   // const t = parser.parse(source);

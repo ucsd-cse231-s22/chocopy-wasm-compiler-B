@@ -158,7 +158,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       var callName = expr.name;
       if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(NUM)) {
         callName = "print_num";
-      } else if (expr.name === "print" && argTyp === BOOL) {
+      } else if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(BOOL)) {
         callName = "print_bool";
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";

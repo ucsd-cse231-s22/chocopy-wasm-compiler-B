@@ -48,7 +48,7 @@ describe("string test", () => {
   //8
   assertPrint("test case 8: check if two strings are equal",
     `s1:str = "ab"
-  s2:str = "abc"s1==s2
+  s2:str = "abc"
   print(s1 == s2)`, [`False`])
   //8.5
   assertPrint("test case 8.5: check if two strings are equal",

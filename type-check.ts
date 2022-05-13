@@ -250,6 +250,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           if(equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return {...tBin, a: [NUM, expr.a]}}
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
+          if( (JSON.stringify(tLeft.a[0])===JSON.stringify({tag:"class", name:"str"})) && 
+              (JSON.stringify(tRight.a[0])===JSON.stringify({tag:"class", name:"str"})) ){
+            return {  a: [{tag:"bool"}, expr.a], tag: "method-call", obj: tLeft, method: "equalsto", arguments: [tRight] }
+          }
+
         case BinOp.Neq:
           if(tLeft.a[0].tag === "class" || tRight.a[0].tag === "class") throw new TypeCheckError("cannot apply operator '==' on class types")
           if(equalType(tLeft.a[0], tRight.a[0])) { return {...tBin, a: [BOOL, expr.a]} ; }
