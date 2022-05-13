@@ -7,15 +7,15 @@
    ```python
    def test(x : int, y : int):
       return x + y
-      
+
    test(3,5)
    ```
 
    _Expected result: 8_
-   
+
    This is just one example, we plan on testing a variety of the original functionality including errors.
-   
-2. A function with a non-default argument following default arguments will fail in parsing (ex `def test(x : int = 3, y : int)` will not be parsed, since `x` is a default and `y` is not a default)
+
+2. A function with a non-default argument following default arguments will fail in parsing
 
    ```python
    def test(x : int = 3, y : int):
@@ -45,7 +45,7 @@
 
    _Expected result: 9_
 
-5. Default arguments are typechecked (`def test(x : bool = 3)` will fail in typechecking) assertTCFail
+5. Default arguments are typechecked
 
    ```python
    def test(x : bool = 3):
@@ -53,7 +53,7 @@
 
    _Expected result: TYPE ERROR: x is not a bool_
 
-6. Calls that redefine default arguments are typechecked (using the same function from above, `def test(x : bool = False): …` `test(3)` will fail) assertTCFail
+6. Calls that redefine default arguments are typechecked
 
    ```python
    def test(x : bool = False) -> bool:
@@ -64,18 +64,16 @@
 
    _Expected result: TYPE ERROR: expected `bool`, got type `int` in parameter 0_
 
-7. Calls that redefine default arguments with Expressions are typechecked. `def test(x : bool = 3 != 5)` typechecks, `def test(x : int = not True)` doesn’t)
+7. Calls that redefine default arguments with Expressions are typechecked.
 
    ```python
-   def test(x : bool = 3 != 5) -> bool:
+   def test(x : bool = 1 + 2) -> bool:
        return x
-
-   print(test())
    ```
 
-   _Expected result: True_
+   _Expected result: TYPE ERROR: Type mismatch for default value of argument x_
 
-8. Arguments with the same name (default or not) will fail in typechecking (can’t have `def test(x : bool, x : bool = True)`)
+8. Arguments with the same name (default or not) will fail in typechecking
 
    ```python
    def test(x : bool, x : bool = True):
@@ -126,7 +124,7 @@
    }
    ```
 
-10. Use an expr as a default value (`def test(x : int = 1+2): return x` will return 3)
+10. Use an expr as a default value
 
     ```python
     def test(x : int = 1+2) -> int:
@@ -137,28 +135,60 @@
 
     _Expected result: 3_
 
+### To Run Our Test Cases
+This PR includes a new command in `package.json` - `npm run test-callconv`. This
+will run our test suite located at `tests/callingconventions.test.ts`. The most
+interesting use cases are default values that are defined via expressions:
+functions such as `def test(x : int = 3 + 4)` can now use `x` which will be
+defined as 7.
+
 ## Changes
 
 ### AST
 
-- Parameter must hold an optional value: Expr.
+- Parameter must hold an optional defaultValue of type Expr. This field will be
+undefined if the parameter doesn't have a default value, and will hold the
+parsed expression otherwise.
 
 ### IR
 
-- All default parameters are handled during typechecking/lowering. Therefore, a Parameter now doesn’t need to hold any default values/arguments. We restore the Parameter to its original state, without any Expr.
+- During lowering from AST to IR, all calls that do not redefine default values
+will have the default values added to their argument list. Therefore, a
+Parameter now doesn’t need to hold any default values/arguments. We restore the
+Parameter to its original state, without holding any Expr.
 
 ### Built-in Libraries
 
-We do not need any new library functionality.
+We do not require any new library functionality - this feature only impacts
+function/method definitions and calls.
 
 ## Functions, Datatypes, New Files
 
-New functionality in type checking:
+### Changes in Parser
 
-- If a function has default values, typecheck as an Expr and make sure it has the right type (Similar to a VarInit)
-- In lowering, for calls, check if default values are passed - if they aren’t, insert their default values to the call’s arguments
-- In regards to merging conflicts with functions, we don't believe that we need to add any crucial changes to existing functions (including things like parameters) as we only need to focus on changing the parameter representation in the AST
+- `traverseParameters` is expanded to parse default values, and to throw a parse
+error if parameters without a default value is defined after parameters with
+default values (for example, `def test(x : int = 5, y : int` will throw an
+error.)
+
+### Changes in Type Checking
+
+- `GlobalTypeEnv` is extended so that functions and classes hold the number of
+required parameters, and `augmentTEnv` is extended to add this information. Without this information, we cannot distinguish between a
+required and optional parameter in the `GlobalTypeEnv`, and typechecking must
+ensure that all required parameters are called.
+
+- All default value exprs are typechecked as valid exprs and matching the type of the parameter.
+
+- Method and function calls are typechecked to ensure they call all required arguments, but are allowed to not define optional arguments.
+
+### Changes in Lowering
+
+- Two global variables, `funMeta` and `classMeta`, are defined to hold default arguments for functions and methods, and they are filled in `lowerProgram`.
+
+- For function and method calls, any default parameters that were not defined in the call have the default value added to their argument list.
 
 ## Memory Layout
 
-We do not need to modify/use memory.
+We do not need to modify or use memory - as mentioned before, our feature only
+changes function/method definitions and calls.
