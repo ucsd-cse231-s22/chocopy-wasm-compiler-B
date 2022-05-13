@@ -1,6 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
+import { EnvironmentPlugin } from "webpack";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -134,12 +135,29 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
-
+    /*
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
+      
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+    */ 
+    case "binop":
+      if (expr.left.tag === "num" && expr.right.tag === "num") {
+        switch(expr.op) {
+          case BinOp.Plus: 
+            let newval = expr.left.value + expr.right.value
+            let newExpr:Value<any> = {a:expr.left.a, tag:"num", value: newval}
+            return codeGenValue(newExpr,env)
+        }
+      }
+      const lhsStmts = codeGenValue(expr.left, env);
+    
+      const rhsStmts = codeGenValue(expr.right, env);
+
+      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
       switch(expr.op){
@@ -190,7 +208,33 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
 function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      return ["(i32.const " + val.value + ")"];
+      var generatedString = ``;
+      var curVal = val.value;
+      var i = 1; // the first field is preserved for the size
+      const base = BigInt(2 ** 32);
+
+      // use a do-while loop to address the edge case of initial curVal == 0
+      do {
+        var remainder = curVal % base;
+
+        generatedString += `(i32.const ${i})\n(i32.const ${remainder})\n(call $store)`; // call the store function with address, offset, and val
+
+        i += 1; // next iteration
+        curVal /= base; // default to use floor() 
+      } while (curVal > 0);
+
+      // "i" represents the number of fields
+      var prefix = ``;
+      var allocation = `(i32.const ${i})\n(call $alloc)\n`; // allocate spaces for the number
+      var storeSize = `(i32.const 0)\n(i32.const ${i})\n(call $store)\n`; // store the size of the number at the first field
+      while (i > 0) {
+        prefix += `(i32.const 0)\n(call $alloc)\n`; // prepare the addresses for the store calls
+        i -= 1;
+      }
+      
+      // We call $alloc (n + 1) times, call $store n times, and return 1 time.
+      prefix += allocation + storeSize;
+      return [prefix + generatedString];
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
