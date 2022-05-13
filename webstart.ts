@@ -2,6 +2,13 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { open, close } from './io';
+
+declare global {
+  interface Window { 
+    fs: any
+  }
+}
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -35,6 +42,17 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
 
+    // create the filesystem
+    const BrowserFS = require("browserfs");
+    BrowserFS.install(window);
+    BrowserFS.configure({ fs: "LocalStorage" }, (err: any) => {
+      if (err) {
+        alert(err);
+      } else {
+        window.fs =  window.require('fs');
+      }
+    });
+
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
@@ -51,7 +69,9 @@ function webStart() {
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        open: (arg: number) => open,
+        close: (arg: number) => close
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

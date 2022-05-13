@@ -35,6 +35,8 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("open", [[NUM], NUM]);
+defaultGlobalFunctions.set("close", [[NUM], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
