@@ -3,15 +3,15 @@ import * as IR from './ir';
 import { Type } from './ast';
 import { GlobalEnv } from './compiler';
 
-const nameCounters : Map<string, number> = new Map();
+const nameCounters : Map<string, bigint> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
-    nameCounters.set(base, cur + 1);
-    return base + (cur + 1);
+    nameCounters.set(base, cur + BigInt(1));
+    return base + (cur + BigInt(1));
   }
   else {
-    nameCounters.set(base, 1);
+    nameCounters.set(base, BigInt(1));
     return base + 1;
   }
 }
@@ -267,7 +267,7 @@ function flattenExprToExpr(e : AST.Expr<Type>, env : GlobalEnv) : [Array<IR.VarI
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<Type> = { tag: "alloc", amount: { tag: "wasmint", value: BigInt(fields.length) } };
       const assigns : IR.Stmt<Type>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
