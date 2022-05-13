@@ -549,7 +549,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
       if (temp.name == "__init__") {
         temp.body = initBody.concat(temp.body)
       }
-      methods.push();
+      methods.push(temp);
     } else {
       throw new ParseError(`Could not parse the body of class: ${className}`, location.line);
     }

@@ -323,7 +323,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
         if (expr.name == "str" && expr.arguments[0].tag == "literal") {
           if (expr.arguments[0].value.tag != "str") {
-            throw new Error("TYPE ERROR: Initializing string with non string literal");
+            throw new TypeError("Initializing string with non string literal");
           }
           tConstruct.strarg = expr.arguments[0].value.value;
         }
@@ -348,7 +348,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
            } else {
             throw new TypeError("Function call type mismatch: " + expr.name);
            }
-      } else {
+      } else if(expr.name == "len"){
+        //built in len function (This is the string groups implementation)
+        const targs = expr.arguments.map(arg => tcExpr(env, locals, arg))
+        if(targs.length !== 1){
+          throw new TypeCheckError("len() didn't receive the correct number of arguments");
+        }
+        if(JSON.stringify(targs[0].a[0]) !== JSON.stringify({tag:"class", name:"str"})){
+          throw new TypeCheckError("len() incorrect arugment type");
+        }
+        return {  a: [{tag:"number"}, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
+      } 
+      else {
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "lookup":
