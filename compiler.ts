@@ -289,10 +289,26 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
 function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => codeGenDef(method, env));
-  return result.flat();
+  const destructor = codeGenDestructor(cls, env);
+  return methods.flatMap(method => codeGenDef(method, env)).concat(destructor);
 }
 
+
+/** Helper function for memory management: whether a type is a pointer.
+ */
+function isPointer(type: Type) : boolean {
+  switch (type.tag) {
+    case "class":
+      return true;
+    case "number":
+    case "bool":
+    case "none":
+      return false;
+    default:
+      // FIXME (memory management): I don't know what an "either" is.
+      throw new Error(`Internal error: unhandled type ${type.tag}`);
+  }
+}
 
 /** Generate code to allocate a value of this type.
  * 
@@ -313,6 +329,28 @@ function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: Gl
 function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
   const ret_stmt: Array<string> = [];
   return ret_stmt;
+}
+
+/** Generate the destructor function for a class
+ *
+ * Its name is $<class name>$$delete
+ */
+function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  const HEADER_SIZE = 8;
+  const name = `$${cls.name}$$delete`;
+  const stmts = cls.fields.flatMap((field, index) => {
+    if (!isPointer(field.a[0]))
+      return [];
+    return [
+      `(i32.load (i32.add (local.get $obj) (i32.const ${index * 4 + HEADER_SIZE})))`,
+      `(call inc_refcount)`
+    ];
+  });
+  return `
+    (func ${name} (param $obj i32) (result i32)
+      ${stmts.join('\n')}
+      (i32.const 0))
+  `;
 }
 
 /** Generate code to decrease the refcount, if that variable is a pointer
