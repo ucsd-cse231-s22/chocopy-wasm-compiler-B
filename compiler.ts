@@ -174,7 +174,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       return valStmts;
 
     case "alloc":
-      return codeGenAlloc(expr.a, expr.amount, env);
+      return codeGenAlloc(NONE, expr.amount, env); //expr.a[0]
 
     case "load":
       return [
@@ -199,9 +199,11 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "id":
       const incStmts = incRefcount(val.name, env);
       if (env.locals.has(val.name)) {
-        return incStmts.concat([`(local.get $${val.name})`]);
+        return [...incStmts, `(local.get $${val.name})`];
+        // return incStmts.concat([`(local.get $${val.name})`]);
       } else {
-        return incStmts.concat([`(global.get $${val.name})`]);
+        return [...incStmts, `(global.get $${val.name})`];
+        // return incStmts.concat([`(global.get $${val.name})`]);
       }
   }
 }
@@ -296,16 +298,20 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
  * 
  * This will get called to handle the alloc IR instruction
  */
-function codeGenAlloc(type: Type, amount: Value<Type>, env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
+function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  return [
+    ...codeGenValue(amount, env),
+    `call $alloc`
+  ];
 }
 
 /** Generate code to allocate an instance of a class
  *
  * This will be called by codeGenAlloc in most cases
  */
-function allocClass(cls: Class<Type>) : Array<string> {
-  throw new Error("TODO: Memory management implementation");
+function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
+  const ret_stmt: Array<string> = [];
+  return ret_stmt;
 }
 
 /** Generate code to decrease the refcount, if that variable is a pointer
@@ -314,7 +320,8 @@ function allocClass(cls: Class<Type>) : Array<string> {
  * the end of a function
  */
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
+  const ret_stmt: Array<string> = [];
+  return ret_stmt;
 }
 
 /** Generate code to increase the refcount, if that variable is a pointer
@@ -322,7 +329,8 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called when values are loaded from fields or variables
  */
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
+  const ret_stmt: Array<string> = [];
+  return ret_stmt;
 }
 
 /** Generate code to decrease the reference counts of all local variables
