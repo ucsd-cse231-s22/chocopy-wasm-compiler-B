@@ -1,6 +1,13 @@
 (func $str$access (param $self i32) (param $index i32) (result i32)
   (local $newstr i32)
   (local $buffer i32)
+  ;; check if index is out of range
+  (local.get $self)
+  (i32.const 0)
+  (call $load)
+  (local.get $index)
+  (call $assert_in_range)
+  (local.set $newstr) ;; just scraping up the return
   ;; alloc space for new string and set 1 as length
   (i32.const 2)
   (call $alloc)
