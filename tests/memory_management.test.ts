@@ -13,7 +13,7 @@ c = C()
 print(c.x)`,
     ["0"]
   );
-  // 
+  
   assertPrint("Test read/write", `
 class C(object):
   x: int = 0
@@ -24,7 +24,7 @@ c = C()
 print(c.x)
 c.x = 10
 print(c.x)`, ["0", "10"]);
-  // 
+  
   assertPrint("Test refcount", `
 class C(object):
   i: int = 0
@@ -38,44 +38,19 @@ print(test_refcount(c, 2))
 d = None
 print(test_refcount(c, 1))
 c = None`, ["True", "True", "True"]);
-  // 
-//   assertPrint("Test refcount in function", `
-// class C(object):
-//   i: int = 0
-    
-// def foo(x: int) -> int:
-//   c: C = None
-//   c = C()
-//   test_refcount(c, 1)
-//   return 1
 
-// foo(10)`, ["True"]);
-  // 
-//   assertPrint("Test refcount in function param", `
-// class C(object):
-//   i: int = 0
-
-// def foo(c: C):
-//   test_refcount(c, 2)
-
-// c: C = None
-// c = C()
-// test_refcount(c, 1)
-// foo(c)
-// test_refcount(c, 1)`, ["True", "True", "True"]);
-  // 
   assertPrint("Test refcount in method call", `
 class C(object):
   i: int = 0
 
   def foo(self: C, c: C):
-    print(test_refcount(c, 2))
+    print(test_refcount(c, 4))
 
 c: C = None
 c = C()
 print(test_refcount(c, 1))
 c.foo(c)
-print(test_refcount(c, 1))`, ["True", "True", "True"]);
+print(test_refcount(c, 2))`, ["True", "True", "True"]);
   // 
 //   assertPrint("Return refcount", `
 // class C(object):
@@ -109,8 +84,8 @@ node1.prev = node0
 node1.next = node2
 node2.prev = node1
 node2.next = node0
-print(test_refcount(node0, 2))
-print(test_refcount(node1, 2))
-print(test_refcount(node2, 2))
+print(test_refcount(node0, 6))
+print(test_refcount(node1, 6))
+print(test_refcount(node2, 6))
 `, ["True", "True", "True"]);
 });
