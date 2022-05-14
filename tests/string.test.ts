@@ -13,7 +13,9 @@ describe("string test", () => {
     "test case 3: index accessing",
     `
     s:str = "asdf"
-    print(s[0])`,
+    j:str = "jjj"
+    j = s[0]
+    print(j)`,
     ["a"]
   );
 
@@ -45,10 +47,13 @@ describe("string test", () => {
   //7.5
   assertPrint("test case 7.5: compare two strings using their ascii values",
     `print("abcd" < "abc")`, [`False`])
+  //7.6
+  assertPrint("test case 7.6: compare two strings using their ascii values",
+    `print("abcd" > "abc")`, [`True`])
   //8
   assertPrint("test case 8: check if two strings are equal",
     `s1:str = "ab"
-  s2:str = "abc"s1==s2
+  s2:str = "abc"
   print(s1 == s2)`, [`False`])
   //8.5
   assertPrint("test case 8.5: check if two strings are equal",
@@ -65,8 +70,32 @@ describe("string test", () => {
   assertTCFail("test case 10: should report type error ", `s:int = "asd"`);
 
   //11
-  assertPrint("test case 11: use string as function parameters", `def f(s:str)->str:\n\treturn s\nprint(f("asd"))`, [`asd`]);
+  assertPrint("test case 11: use string as function parameters",
+    `def f(s:str)->str:
+    return s
+  print(f("asd"))`,
+    [`asd`]);
+
+  `
+b:str = ""
+{
+  a = "asdf"
+  b = a
+}
+print(b)->?
+a[0]
+b = a[0]
+temp = str(a[0])
+destroy temp
+`
 
   //12
-  assertPrint("test case 12: use string as class fields", `class C(object):\n\ts:str = "asd"\n\tdef gets(self: C)->str:\n\t\treturn self.s\nc:C = None\nc = C()\nprint(c.gets())`, [`asd`]);
+  assertPrint("test case 12: use string as class fields",
+    `class C(object):
+    s:str = "asd"
+    def gets(self: C)->str:
+      return self.s
+  c:C = None
+  c = C()
+  print(c.gets())`, [`asd`]);
 });

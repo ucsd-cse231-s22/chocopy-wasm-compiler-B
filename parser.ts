@@ -475,7 +475,15 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLoca
 
 export function initToConsturct(init: VarInit<SourceLocation>): Stmt<SourceLocation> {
   let val: Expr<SourceLocation> = {a:init.a, tag: "call", name: "str", arguments: [{ tag: "literal", value: init.value }] };
-  return {a:init.a, tag: "assign", name: init.name, value: val };
+  if(init.name.includes(".")){
+    let strelems = init.name.split(".");
+    let ob:Expr<SourceLocation> = {  a:init.a, tag: "id", name: strelems[0] };
+    let strfield = strelems[1]
+    return {a:init.a, tag: "field-assign", obj: ob, field: strfield, value: val }
+  }
+  else{
+    return {a:init.a, tag: "assign", name: init.name, value: val };
+  }
 }
 
 export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocation> {
@@ -535,21 +543,21 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
+  var initBody: Array<Stmt<SourceLocation>> = []
   while (c.nextSibling()) { // Focuses first field
-    var initBody: Array<Stmt<SourceLocation>> = []
     if (isVarInit(c, s)) {
       let temp = traverseVarInit(c, s)
       if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
-        initBody.push(initToConsturct(temp))
+        initBody.push(initToConsturct({...temp, name:"self"+"." +temp.name}))
         temp.value = { tag: "none" };
       }
       fields.push(temp);
     } else if (isFunDef(c, s)) {
-      let temp = traverseFunDef(c, s)
-      if (temp.name == "__init__") {
-        temp.body = initBody.concat(temp.body)
+      let tempfun = traverseFunDef(c, s)
+      if (tempfun.name == "__init__") {
+        tempfun.body = initBody.concat(tempfun.body)
       }
-      methods.push();
+      methods.push(tempfun);
     } else {
       throw new ParseError(`Could not parse the body of class: ${className}`, location.line);
     }
