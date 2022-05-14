@@ -8,6 +8,8 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
+export type SourceLocation = { line: number }
+
 export type Parameter<A> = { name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
@@ -24,6 +26,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
   | {  a?: A, tag: "field-assign", obj: Expr<A>, field: string, value: Expr<A> }
+  | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
 
@@ -36,6 +39,7 @@ export type Expr<A> =
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>> } 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
+  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
 
