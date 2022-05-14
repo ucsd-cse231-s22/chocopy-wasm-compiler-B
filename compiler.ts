@@ -1,10 +1,10 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp } from "./ast"
+import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Type>]>>; // class -> {member -> [offset, value]}
+  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;
   classesMethods?: Map<string, Map<string, [number, Type]>>; // class -> {method -> [offset, return type]}
   classVTableOffsets?: Map<string, number>;
   locals: Set<string>;
@@ -38,7 +38,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
-export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
+export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
@@ -104,7 +104,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   };
 }
 
-function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
+function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
       return [
@@ -156,7 +156,7 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
+function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
@@ -176,7 +176,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {
@@ -241,7 +241,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
+function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
       return ["(i32.const " + val.value + ")"];
@@ -293,7 +293,7 @@ function codeGenBinOp(op : BinOp) : string {
   }
 }
 
-function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
+function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
@@ -302,7 +302,7 @@ function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   }
 }
 
-function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
+function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
@@ -339,7 +339,7 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
 }
 
 // Generate method type signatures
-function codeGenSig(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
+function codeGenSig(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   var params = def.parameters.map(p => `(param i32)`).join(" "); // at some point we should actually make sure we use the correct type for params
   var ret = 'i32'
   switch(def.ret) {
@@ -349,7 +349,7 @@ function codeGenSig(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
   return [`(type $${def.name} (func ${params} (result ${ret})))`];
 }
 
-function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
+function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
