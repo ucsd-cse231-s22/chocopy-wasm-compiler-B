@@ -143,10 +143,10 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       
 
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-/*
+
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
-      var zeroLiteral : Value<Type, SourceLocation> = { a: expr.expr.a, tag: "num", value: BigInt(0) } ;
+      var zeroLiteral : Value<[Type, SourceLocation]> = { a: expr.expr.a, tag: "num", value: BigInt(0) } ;
       var zeroExprStmts = codeGenValue(zeroLiteral, env);
       switch(expr.op){
         case UniOp.Neg:
@@ -154,7 +154,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
-*/ 
+
     case "builtin1":
       const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
