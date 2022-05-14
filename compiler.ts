@@ -42,6 +42,8 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
   console.log(ast.inits, globalNames);
+  // Add the new global variables to the global environment
+  ast.inits.forEach(init => env.globals.set(init.name, init.type));
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -66,12 +68,14 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
 
+  const destructorTable = makeDestructorTable(env);
+
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
   const allCommands = [...localDefines, ...inits, bodyCommands];
   withDefines.locals.clear();
   return {
     globals: globalNames,
-    functions: allFuns,
+    functions: allFuns + destructorTable,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines
   };
@@ -173,7 +177,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       return valStmts;
 
     case "alloc":
-      return codeGenAlloc(NONE, expr.amount, env); //expr.a[0]
+      return codeGenAlloc(expr.a[0], expr.amount, env);
 
     case "load":
       return [
@@ -298,35 +302,49 @@ function isPointer(type: Type) : boolean {
   switch (type.tag) {
     case "class":
       return true;
+
     case "number":
     case "bool":
     case "none":
       return false;
+
     default:
-      // FIXME (memory management): I don't know what an "either" is.
+      // FIXME (memory management): I don't know what an "either" is
       throw new Error(`Internal error: unhandled type ${type.tag}`);
   }
 }
+
+/** An array of the destructor names of special built-in types.
+ *
+ * TODO(memory management): Add the special built-in types to this array.
+ */
+const SPECIAL_DESTRUCTORS: string[] = [];
 
 /** Generate code to allocate a value of this type.
  * 
  * This will get called to handle the alloc IR instruction
  */
 function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  let destructor_index: number;
+  switch (type.tag) {
+    case "class":
+      destructor_index = Array.from(env.classes.keys()).indexOf(type.name);
+      break;
+
+    case "number":
+    case "bool":
+    case "none":
+      throw new Error(`Internal error: ${type.tag}: not an allocated type`);
+
+    default:
+      throw new Error(`Internal error: unknown type ${type.tag}`);
+  }
+
   return [
     ...codeGenValue(amount, env),
-    `(i32.const 0)`, // type info
+    `(i32.const ${destructor_index})`, // type info
     `call $alloc`
   ];
-}
-
-/** Generate code to allocate an instance of a class
- *
- * This will be called by codeGenAlloc in most cases
- */
-function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
 }
 
 /** Generate the destructor function for a class
@@ -344,11 +362,7 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
       `(call dec_refcount)`
     ];
   });
-  return [`
-    (func ${name} (param $obj i32) (result i32)
-      ${stmts.join('\n')}
-      (i32.const 0))
-  `];
+  return [` (func ${name} (param $obj i32) \n${stmts.join('\n')})`];
 }
 
 /** Generate code to decrease the refcount, if that variable is a pointer
@@ -359,6 +373,8 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
   const ty =
     env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  console.log(`decrementing ${name}`);
+  console.log(env.locals, env.globals);
   if (!isPointer(ty))
     return [];
   return [
@@ -374,6 +390,8 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
   const ty =
     env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  console.log(`incrementing ${name}`);
+  console.log(env.locals, env.globals);
   if (!isPointer(ty))
     return [];
   return [
@@ -390,3 +408,16 @@ function freeAllLocals(env: GlobalEnv): Array<string> {
   return Array.from(env.locals.keys()).flatMap((name) => decRefcount(name, env));
 }
 
+/** Make the destructor table
+ *
+ * This is called once for the program
+ */
+function makeDestructorTable(env: GlobalEnv): string {
+  const class_destructors =
+    Array.from(env.classes.keys()).flatMap(cls => `$${cls}$$delete`);
+  const destructors = [...SPECIAL_DESTRUCTORS, class_destructors];
+  return `
+    (table (export "destructors") funcref (elem
+      ${destructors.join(' ')}))
+  `;
+}

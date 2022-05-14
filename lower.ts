@@ -267,7 +267,11 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<[Type, SourceLocation]> = {
+        tag: "alloc",
+        amount: { tag: "wasmint", value: fields.length },
+        a: e.a
+      };
       const assigns : IR.Stmt<[Type, SourceLocation]>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
