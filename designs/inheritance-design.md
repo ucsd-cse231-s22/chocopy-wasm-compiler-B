@@ -1,3 +1,101 @@
+######
+
+# Week 7 Notes
+
+We describe our progress on implementing inheritance across the four main parts of the compiler: parser, typechecker, IR, and code gen.
+
+## Parser
+Not much had to be done other than to future-proof ourselves a bit when it comes to multiple inheritance, so we parsed in superclasses like they were function arguments, basically.
+
+## Typechecker
+We had a ton more work to do than expected here. Our approach to handling inheritance ended up involving populating subclasses with all the inherited member fields and methods of their superclasses. Since we are not aiming to support multiple inheritance yet, the issue of ordering the inherited fields and methods was made simple: simply put the inherited ones first (if a method is overridden, then replace), and then append with the newly-defined ones.
+
+We had to make changes to the GlobalTypeEnv to support inheritance. As mentioned last week, ```classes``` needed to track immediate superclasses for each class. Next, we added ```classOrder```, an array of class names, to enforce the rule that the Class of the superclass must occur before that of the subclass. Lastly, we added ```classMap``` in order to allow for accessing Class structs based on the class name.
+
+Then, we typecheck the classes in the order that their definitions appear. As we go, we populate the global state so that any subclass has full access to its checked superclass's fields and methods. Ultimately, the typechecker outputs an AST program where each class contains every field and method it has access to, including everything inherited.
+
+## IR
+To support the vtable, we need two kinds of offsets. The first is the class offset, which allows for indexing into the vtable for the start of a class's methods. The second is the method offset, which allows for indexing into a specific method within a class's method block in the table.
+
+The first is stored on a per-object basis as the first field in its struct. To do this, we 
+
+We added the "call-indirect" type to the IR to support generating code for method calls.
+
+
+## Compiler (code gen)
+
+# Week 6 Notes
+
+## AST.ts
+```
+Added supers in class like below to store the super classes for each class. It's an array because we will support
+multiple inheritance in future
+
+export type Class<A> = { a?: A, name: string, supers: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+
+```
+
+## IR.ts
+```
+Added supers in class like below to store the super classes for each class. It's an array because we will support
+multiple inheritance in future
+
+export type Class<A> = { a?: A, name: string, supers: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+
+```
+
+## type-check.ts
+```
+1) Currently we have a map from className -> [{FieldNames,Type},{FuncName,{[ParameterTypes],RetType}}]
+
+    We need to add super class info in the GlobalEnv, as below.
+
+    className -> [{FieldNames,Type},{FuncName,{[ParameterTypes],RetType}},[SuperClassType]]
+
+    classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>,Array<Type>]>
+
+2) New function isSubClass(t1:Type,t2:Type)
+    This will check if t1 is a subclass of t2
+
+   Modify isSubtype to below:
+    export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+        return equalType(t1, t2) || isSubClass(t1,t2) ||t1.tag === "none" && t2.tag === "class" 
+    }
+```
+
+## compiler.ts
+For Week 7, we do not plan to support multiple inheritance yet. Thus, our approach for implementing inherited method calls follows from Lectures 9 and 10.
+We will add a vtable and use ```call_indirect``` to reference the correct method calls.
+The compiler will need to build a ```funcref``` table and populate it with all the class-prefixed methods.
+Furthermore, each object struct will need to be augmented with a field that stores its class's offset into the table.
+In the case that a subclass does not override a method of its superclass, we will probably populate the table with a dummy entry that allows the subclass to reference the superclass's method.
+
+e.g. given the following classes
+```
+class A(object):
+    def foo(self : A, arg : int):
+        print(arg)
+
+class B(A):
+    def foo2(self : B, arg : bool):
+        print(arg)
+    # B does not override foo()
+```
+
+We think the resulting table should look something like
+```
+(table 3 funcref) <-- 3 because there's 3 function references (not 2)
+(elem (i32.const 0) 
+    A$foo
+    A$foo
+    B$foo2
+)
+```
+We would put ```A$foo``` in twice and note A's offset as 0 while B's offset is 1.
+This way, if something like ```B().foo(0)``` is called, then the WASM will know to reference the ```A$foo``` at offset 1.
+
+
+
 ### Test Cases
 
 # No.1: field access
@@ -194,76 +292,3 @@ Expected output ->
 1
 0
 ```
-
-######
-
-## Design changes
-
-## AST.ts
-```
-Added supers in class like below to store the super classes for each class. It's an array because we will support
-multiple inheritance in future
-
-export type Class<A> = { a?: A, name: string, supers: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
-
-```
-
-## IR.ts
-```
-Added supers in class like below to store the super classes for each class. It's an array because we will support
-multiple inheritance in future
-
-export type Class<A> = { a?: A, name: string, supers: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
-
-```
-
-## type-check.ts
-```
-1) Currently we have a map from className -> [{FieldNames,Type},{FuncName,{[ParameterTypes],RetType}}]
-
-    We need to add super class info in the GlobalEnv, as below.
-
-    className -> [{FieldNames,Type},{FuncName,{[ParameterTypes],RetType}},[SuperClassType]]
-
-    classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>,Array<Type>]>
-
-2) New function isSubClass(t1:Type,t2:Type)
-    This will check if t1 is a subclass of t2
-
-   Modify isSubtype to below:
-    export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
-        return equalType(t1, t2) || isSubClass(t1,t2) ||t1.tag === "none" && t2.tag === "class" 
-    }
-```
-
-## compiler.ts
-For Week 7, we do not plan to support multiple inheritance yet. Thus, our approach for implementing inherited method calls follows from Lectures 9 and 10.
-We will add a vtable and use ```call_indirect``` to reference the correct method calls.
-The compiler will need to build a ```funcref``` table and populate it with all the class-prefixed methods.
-Furthermore, each object struct will need to be augmented with a field that stores its class's offset into the table.
-In the case that a subclass does not override a method of its superclass, we will probably populate the table with a dummy entry that allows the subclass to reference the superclass's method.
-
-e.g. given the following classes
-```
-class A(object):
-    def foo(self : A, arg : int):
-        print(arg)
-
-class B(A):
-    def foo2(self : B, arg : bool):
-        print(arg)
-    # B does not override foo()
-```
-
-We think the resulting table should look something like
-```
-(table 3 funcref) <-- 3 because there's 3 function references (not 2)
-(elem (i32.const 0) 
-    A$foo
-    A$foo
-    B$foo2
-)
-```
-We would put ```A$foo``` in twice and note A's offset as 0 while B's offset is 1.
-This way, if something like ```B().foo(0)``` is called, then the WASM will know to reference the ```A$foo``` at offset 1.
-
