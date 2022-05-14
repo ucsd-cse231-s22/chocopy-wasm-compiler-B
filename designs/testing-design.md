@@ -3,8 +3,6 @@ Testing
 ## Change of files
 #### .github/workflows/main.yml
 Add macOS and Windows tests.
-#### package.json
-The original "npm run test" script cannot be executed on Windows. We updated the script to make testing can be run on Windows.
 #### tests/integrated.test.ts
 Add 40 test cases for integration. Most of them are the combination of two features. Some of them possess functions that haven't been implemented(such as writing string to file), developers won't need to pass all of them.
 #### Todo
