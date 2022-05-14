@@ -13,7 +13,9 @@ describe("string test", () => {
     "test case 3: index accessing",
     `
     s:str = "asdf"
-    print(s[0])`,
+    j:str = "jjj"
+    j = s[0]
+    print(j)`,
     ["a"]
   );
 

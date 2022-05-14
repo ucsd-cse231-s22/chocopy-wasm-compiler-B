@@ -348,6 +348,12 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+    case "index":
+      if(JSON.stringify(e.a[0]) == JSON.stringify({tag:"class", name:"str"})){
+        const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
+        const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
+        return [[], [], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
+      }
   }
 }
 

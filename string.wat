@@ -3,7 +3,7 @@
   (local $buffer i32)
   ;; check if index is out of range
   (local.get $self)
-  (i32.const 0)
+  (i32.const 0) ;;0
   (call $load)
   (local.get $index)
   (call $assert_in_range)
@@ -13,12 +13,12 @@
   (call $alloc)
   (local.set $newstr)
   (local.get $newstr)
-  ($i32.const 0)
-  ($i32.const 1)
+  (i32.const 0) ;;as
+  (i32.const 1)
   (call $store)
   ;; get char from self and set it as the string for new string
   (local.get $self)
-  (i32.add ($i32.const 1) (local.get $index))
+  (i32.add (i32.const 1) (local.get $index))
   (call $load)
   (local.set $buffer)
   (local.get $newstr)

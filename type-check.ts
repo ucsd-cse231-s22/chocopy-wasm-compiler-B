@@ -4,6 +4,7 @@ import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Clas
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
+import exp from 'constants';
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
@@ -412,6 +413,15 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         }
       } else {
         throw new TypeCheckError("method calls require an object");
+      }
+    case "index":
+      let tobj:Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.obj);
+      let tindex:Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.index)
+      if(tindex.a[0].tag != "number"){
+        throw new TypeError("non integer as index value");
+      }
+      if(JSON.stringify(tobj.a[0]) == JSON.stringify({tag:"class", name:"str"})){
+        return {a:[{tag:"class", name:"str"}, expr.a], tag:"index", obj:tobj, index:tindex};
       }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
