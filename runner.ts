@@ -10,6 +10,7 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value, SourceLocation } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { assert } from 'console';
 
 export type Config = {
   importObject: any;
@@ -45,11 +46,17 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 
 export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
+  const global_type = new Map();
+  // console.log("----------------");
+  // console.log(newGlobals);
+  // console.log("----------------");
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
+    global_type.set(v.name, v.type);
+    assert(global_type !== undefined)
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -58,8 +65,10 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
   });
   return {
     globals: newGlobals,
+    global_type: global_type,
     classes: newClasses,
     locals: env.locals,
+    local_type: new Map(),
     labels: env.labels,
     offset: newOffset
   }
