@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { BinOp } from "../ast"
+import { BinOp } from '../ast';
 
 enum Type { Num, Bool, None }
 
@@ -30,7 +30,6 @@ function reconstructBigint(arg : number, load : any) : bigint {
   }
   return isNegative * consturctedBigint;
 }
- 
 function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
@@ -112,19 +111,17 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   store(currAddress, 0, returnBool)
   return returnBool
 }
-/*
-function print(typ: Type, arg: any): any {
-  importObject.output += stringify(typ, arg);
-  importObject.output += "\n";
-  return arg;
-}
-*/ 
 
 function print(typ: Type, arg : number, load : any) : any {
-  importObject.output = stringify(typ, arg) + "\n";
   if (typ === Type.Num) {
-    importObject.output = reconstructBigint(arg, load).toString() + "\n";
+    importObject.output += reconstructBigint(arg, load).toString() + "\n";
+  } else {
+    importObject.output += stringify(typ, arg) + "\n";
   }
+  return arg;
+}
+
+function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
@@ -141,13 +138,15 @@ export async function addLibs() {
   importObject.libmemory = memoryModule.instance.exports,
   importObject.memory_values = memory;
   importObject.js = {memory};
-  
+
   var alloc = importObject.libmemory.alloc;
   var load = importObject.libmemory.load;
   var store = importObject.libmemory.store;
-
+  
+  // print functions
   importObject.print = (arg: any) => print(Type.Num, arg, load);
   importObject.imports.print_num = (arg: number) => print(Type.Num, arg, load);
+  importObject.imports.print_last_num = (arg: number) => last_print(Type.Num, arg, load);
   importObject.imports.print_bool = (arg: number) => print(Type.Bool, arg, load);
   importObject.imports.print_none = (arg: number) => print(Type.None, arg, load);
 
@@ -157,9 +156,9 @@ export async function addLibs() {
   importObject.imports.mul = (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store);
   importObject.imports.iDiv = (arg1: number, arg2: number) => arithmeticOp(BinOp.IDiv, arg1, arg2, alloc, load, store);
   importObject.imports.mod = (arg1: number, arg2: number) => arithmeticOp(BinOp.Mod, arg1, arg2, alloc, load, store);
-  
+
   // comparison operators
-  importObject.imports.eq = (arg1: number, arg2: number) => comparisonOp(BinOp.Eq,arg1, arg2, alloc, load, store); 
+  importObject.imports.eq = (arg1: number, arg2: number) => comparisonOp(BinOp.Eq,arg1, arg2, alloc, load, store);
   importObject.imports.neq = (arg1: number, arg2: number) => comparisonOp(BinOp.Neq,arg1, arg2, alloc, load, store); 
   importObject.imports.lte = (arg1: number, arg2: number) => comparisonOp(BinOp.Lte,arg1, arg2, alloc, load, store); 
   importObject.imports.gte = (arg1: number, arg2: number) => comparisonOp(BinOp.Gte,arg1, arg2, alloc, load, store); 
@@ -176,12 +175,6 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    /*
-    print: (arg: any) => print(Type.Num, arg),
-    print_num: (arg: number) => print(Type.Num, arg),
-    print_bool: (arg: number) => print(Type.Bool, arg),
-    print_none: (arg: number) => print(Type.None, arg),
-    */ 
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

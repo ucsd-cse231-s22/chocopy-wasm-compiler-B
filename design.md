@@ -176,7 +176,7 @@ Expected: 1000000000000000000
 Modulo: 
 "100000000000000000000000000000 % 6"
 
-Expected: 6
+Expected: 4
 
 9: 
 Complex operations: 

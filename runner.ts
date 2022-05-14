@@ -80,7 +80,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   // console.log("LASTEXPR", lastExpr);
   if (progTyp === NUM) {
     progTyp = NONE;
-    returnExpr = "(local.get $$last)\n(call $print_num)\n(local.set $$last)" // use set to consume the element on stack
+    returnExpr = "(local.get $$last)\n(call $print_last_num)\n(local.set $$last)" // use set to consume the element on stack
   } else if (progTyp === BOOL) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
@@ -106,6 +106,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
+    (func $print_last_num (import "imports" "print_last_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $plus (import "imports" "plus") (param i32) (param i32) (result i32))

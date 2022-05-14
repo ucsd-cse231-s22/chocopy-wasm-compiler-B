@@ -154,6 +154,7 @@ function webStart() {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         print_num: (arg: number) => print(NUM, arg, load),
+        print_last_num: (arg: number) => print(NUM, arg, load),
         print_bool: (arg: number) => print(BOOL, arg, load),
         print_none: (arg: number) => print(NONE, arg, load),
         plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
