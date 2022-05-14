@@ -1,0 +1,382 @@
+{
+  "a": {
+    "line": 1
+  },
+  "funs": [],
+  "inits": [
+    {
+      "a": {
+        "line": 5
+      },
+      "name": "c",
+      "type": {
+        "tag": "class",
+        "name": "C"
+      },
+      "value": {
+        "tag": "none"
+      }
+    }
+  ],
+  "classes": [
+    {
+      "a": {
+        "line": 2
+      },
+      "name": "C",
+      "fields": [
+        {
+          "a": {
+            "line": 3
+          },
+          "name": "s",
+          "type": {
+            "tag": "class",
+            "name": "str"
+          },
+          "value": {
+            "tag": "none"
+          }
+        },
+        {
+          "a": {
+            "line": 4
+          },
+          "name": "i",
+          "type": {
+            "tag": "number"
+          },
+          "value": {
+            "tag": "num",
+            "value": 1
+          }
+        }
+      ],
+      "methods": [
+        {
+          "a": {
+            "line": 2
+          },
+          "name": "__init__",
+          "parameters": [
+            {
+              "name": "self",
+              "type": {
+                "tag": "class",
+                "name": "C"
+              }
+            }
+          ],
+          "ret": {
+            "tag": "none"
+          },
+          "inits": [],
+          "body": [
+            {
+              "a": {
+                "line": 3
+              },
+              "tag": "field-assign",
+              "obj": {
+                "a": {
+                  "line": 3
+                },
+                "tag": "id",
+                "name": "self"
+              },
+              "field": "s",
+              "value": {
+                "a": {
+                  "line": 3
+                },
+                "tag": "call",
+                "name": "str",
+                "arguments": [
+                  {
+                    "tag": "literal",
+                    "value": {
+                      "tag": "str",
+                      "value": "as"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stmts": [
+    {
+      "a": {
+        "line": 6
+      },
+      "tag": "assign",
+      "name": "c",
+      "value": {
+        "a": {
+          "line": 6
+        },
+        "tag": "call",
+        "name": "C",
+        "arguments": []
+      }
+    },
+    {
+      "a": {
+        "line": 7
+      },
+      "tag": "expr",
+      "expr": {
+        "a": {
+          "line": 7
+        },
+        "tag": "builtin1",
+        "name": "print",
+        "arg": {
+          "a": {
+            "line": 7
+          },
+          "tag": "lookup",
+          "obj": {
+            "a": {
+              "line": 7
+            },
+            "tag": "id",
+            "name": "c"
+          },
+          "field": "s"
+        }
+      }
+    }
+  ]
+}
+{
+  "a": [
+    {
+      "tag": "class",
+      "name": "str"
+    },
+    {
+      "line": 1
+    }
+  ],
+  "inits": [
+    {
+      "a": [
+        {
+          "tag": "none"
+        },
+        {
+          "line": 5
+        }
+      ],
+      "name": "c",
+      "type": {
+        "tag": "class",
+        "name": "C"
+      },
+      "value": {
+        "tag": "none"
+      }
+    }
+  ],
+  "funs": [],
+  "classes": [
+    {
+      "a": [
+        {
+          "tag": "none"
+        },
+        {
+          "line": 2
+        }
+      ],
+      "name": "C",
+      "fields": [
+        {
+          "a": [
+            {
+              "tag": "none"
+            },
+            {
+              "line": 3
+            }
+          ],
+          "name": "s",
+          "type": {
+            "tag": "class",
+            "name": "str"
+          },
+          "value": {
+            "tag": "none"
+          }
+        },
+        {
+          "a": [
+            {
+              "tag": "none"
+            },
+            {
+              "line": 4
+            }
+          ],
+          "name": "i",
+          "type": {
+            "tag": "number"
+          },
+          "value": {
+            "tag": "num",
+            "value": 1
+          }
+        }
+      ],
+      "methods": [
+        {
+          "a": [
+            {
+              "tag": "none"
+            },
+            {
+              "line": 2
+            }
+          ],
+          "name": "__init__",
+          "parameters": [
+            {
+              "name": "self",
+              "type": {
+                "tag": "class",
+                "name": "C"
+              }
+            }
+          ],
+          "ret": {
+            "tag": "none"
+          },
+          "inits": [],
+          "body": [
+            {
+              "a": [
+                {
+                  "tag": "none"
+                },
+                {
+                  "line": 3
+                }
+              ],
+              "tag": "field-assign",
+              "obj": {
+                "a": [
+                  {
+                    "tag": "class",
+                    "name": "C"
+                  },
+                  {
+                    "line": 3
+                  }
+                ],
+                "tag": "id",
+                "name": "self"
+              },
+              "field": "s",
+              "value": {
+                "a": [
+                  {
+                    "tag": "class",
+                    "name": "str"
+                  },
+                  {
+                    "line": 3
+                  }
+                ],
+                "tag": "construct",
+                "name": "str",
+                "strarg": "as"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stmts": [
+    {
+      "a": [
+        {
+          "tag": "none"
+        },
+        {
+          "line": 6
+        }
+      ],
+      "tag": "assign",
+      "name": "c",
+      "value": {
+        "a": [
+          {
+            "tag": "class",
+            "name": "C"
+          },
+          {
+            "line": 6
+          }
+        ],
+        "tag": "construct",
+        "name": "C"
+      }
+    },
+    {
+      "a": [
+        {
+          "tag": "class",
+          "name": "str"
+        },
+        {
+          "line": 7
+        }
+      ],
+      "tag": "expr",
+      "expr": {
+        "a": [
+          {
+            "tag": "class",
+            "name": "str"
+          },
+          {
+            "line": 7
+          }
+        ],
+        "tag": "builtin1",
+        "name": "print",
+        "arg": {
+          "a": [
+            {
+              "tag": "class",
+              "name": "str"
+            },
+            {
+              "line": 7
+            }
+          ],
+          "tag": "lookup",
+          "obj": {
+            "a": [
+              {
+                "tag": "class",
+                "name": "C"
+              },
+              {
+                "line": 7
+              }
+            ],
+            "tag": "id",
+            "name": "c"
+          },
+          "field": "s"
+        }
+      }
+    }
+  ]
+}

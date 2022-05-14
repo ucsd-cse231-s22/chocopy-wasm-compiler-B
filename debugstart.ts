@@ -30,9 +30,14 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 // entry point for debugging
 async function debug() {
   var source =
-    `def f(s:str)->str:
-      return s
-    print(f("asd"))
+    `
+    class C(object):
+      i:int = 1
+      j:int = 1
+      s:str = "as"
+    c:C = None
+    c = C()
+    print(c.s)
     `
 
   // const t = parser.parse(source);
@@ -43,11 +48,12 @@ async function debug() {
   const repl = new BasicREPL(await addLibs());
   // const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
   // const parsed = parse(source);
+  // console.log(JSON.stringify(parsed, null, 2))
   // const [tprogram, tenv] = tc(config.typeEnv, parsed);
   // console.log(JSON.stringify(tprogram, null, 2))
   // const globalEnv = augmentEnv(config.env, tprogram);
   // const irprogram = lowerProgram(tprogram, globalEnv);
-  // // console.log(JSON.stringify(irprogram, null,2))
+  // console.log(JSON.stringify(irprogram, null,2))
   const result = repl.run(source).then(result => {
     console.log("hello")
     console.log(result);
