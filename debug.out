@@ -310,8 +310,84 @@ call $store
     )
   )
 {
-  instance: Instance [WebAssembly.Instance] {},
-  module: Module [WebAssembly.Module] {}
+  "a": {
+    "line": 1
+  },
+  "funs": [],
+  "inits": [
+    {
+      "a": {
+        "line": 2
+      },
+      "name": "s",
+      "type": {
+        "tag": "class",
+        "name": "str"
+      },
+      "value": {
+        "tag": "none"
+      }
+    }
+  ],
+  "classes": [],
+  "stmts": [
+    {
+      "a": {
+        "line": 2
+      },
+      "tag": "assign",
+      "name": "s",
+      "value": {
+        "a": {
+          "line": 2
+        },
+        "tag": "call",
+        "name": "str",
+        "arguments": [
+          {
+            "tag": "literal",
+            "value": {
+              "tag": "str",
+              "value": "abc"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "tag": "index-assign",
+      "obj": {
+        "a": {
+          "line": 3
+        },
+        "tag": "id",
+        "name": "s"
+      },
+      "index": {
+        "a": {
+          "line": 3
+        },
+        "tag": "literal",
+        "value": {
+          "tag": "num",
+          "value": 0
+        }
+      },
+      "value": {
+        "tag": "call",
+        "name": "str",
+        "arguments": [
+          {
+            "tag": "literal",
+            "value": {
+              "tag": "str",
+              "value": "v"
+            }
+          }
+        ]
+      }
+    }
+  ]
 }
 Consider key  newObj1
 Consider key  newObj2
