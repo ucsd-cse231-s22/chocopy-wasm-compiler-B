@@ -3,9 +3,9 @@ import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
-  globals: Map<string, boolean>;
+  globals: Map<string, Type>;
   classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
-  locals: Set<string>;
+  locals: Map<string, Type>;
   labels: Array<string>;
   offset: number;
 }
@@ -13,7 +13,7 @@ export type GlobalEnv = {
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
-  locals: new Set(),
+  locals: new Map(),
   labels: [],
   offset: 0 
 };
@@ -25,10 +25,10 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
-export function makeLocals(locals: Set<string>) : Array<string> {
+export function makeLocals(locals: Map<string, Type>) : Array<string> {
   const localDefines : Array<string> = [];
-  locals.forEach(v => {
-    localDefines.push(`(local $${v} i32)`);
+  locals.forEach((type, name) => {
+    localDefines.push(`(local $${name} i32)`);
   });
   return localDefines;
 }
@@ -36,10 +36,9 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
-  const definedVars : Set<string> = new Set(); //getLocals(ast);
-  definedVars.add("$last");
-  definedVars.add("$selector");
-  definedVars.forEach(env.locals.add, env.locals);
+  const definedVars : Map<string, Type> = new Map();
+  definedVars.set("$selector", {tag: "number"});
+  definedVars.forEach((ty, name) => env.locals.set(name, ty));
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
   console.log(ast.inits, globalNames);
@@ -103,7 +102,7 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
 
     case "expr":
       var exprStmts = codeGenExpr(stmt.expr, env);
-      return exprStmts.concat([`(local.set $$last)`]);
+      return exprStmts.concat([`drop`]);
 
     case "pass":
       return []
@@ -251,13 +250,12 @@ function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : 
 }
 
 function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
-  var definedVars : Set<string> = new Set();
-  def.inits.forEach(v => definedVars.add(v.name));
-  definedVars.add("$last");
-  definedVars.add("$selector");
+  var definedVars : Map<string, Type> = new Map();
+  def.inits.forEach(v => definedVars.set(v.name, v.type));
+  definedVars.set("$selector", {tag: "number"});
   // def.parameters.forEach(p => definedVars.delete(p.name));
-  definedVars.forEach(env.locals.add, env.locals);
-  def.parameters.forEach(p => env.locals.add(p.name));
+  definedVars.forEach((type, name) => env.locals.set(name, type));
+  def.parameters.forEach(p => env.locals.set(p.name, p.type));
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
   const locals = localDefines.join("\n");
@@ -343,14 +341,14 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
       return [];
     return [
       `(i32.load (i32.add (local.get $obj) (i32.const ${index * 4 + HEADER_SIZE})))`,
-      `(call inc_refcount)`
+      `(call dec_refcount)`
     ];
   });
-  return `
+  return [`
     (func ${name} (param $obj i32) (result i32)
       ${stmts.join('\n')}
       (i32.const 0))
-  `;
+  `];
 }
 
 /** Generate code to decrease the refcount, if that variable is a pointer
@@ -359,8 +357,14 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
  * the end of a function
  */
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  const ty =
+    env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  if (!isPointer(ty))
+    return [];
+  return [
+    `(local.get $${name})`,
+    "(call dec_refcount)"
+  ];
 }
 
 /** Generate code to increase the refcount, if that variable is a pointer
@@ -368,8 +372,14 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called when values are loaded from fields or variables
  */
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  const ty =
+    env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  if (!isPointer(ty))
+    return [];
+  return [
+    `(local.get $${name})`,
+    "(call inc_refcount)"
+  ];
 }
 
 /** Generate code to decrease the reference counts of all local variables
@@ -377,6 +387,6 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called on all exit paths from a function
  */
 function freeAllLocals(env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
+  return Array.from(env.locals.keys()).flatMap((name) => decRefcount(name, env));
 }
 
