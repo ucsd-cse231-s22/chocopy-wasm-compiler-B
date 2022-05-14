@@ -28,8 +28,16 @@
     ;; compute new offset: (i32.add (local.get $offset) (i32.const 3))
     (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val)))
 
-  (func (export "test_refcount") (param $addr i32) (param $n i32) (result i32)
-    (i32.const 0)
+
+  (func $get_refcount (export "get_refcount") (param $addr i32) (result i32)
+    (i32.load (i32.add (local.get $addr) (i32.const 8)))
   )
 
+  (func (export "test_refcount") (param $addr i32) (param $n i32) (result i32)
+    ;; get ref_count
+    (local.get $addr)
+    call $get_refcount
+    (local.get $n)
+    (i32.eq)
+  )
 )

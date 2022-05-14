@@ -32,11 +32,11 @@ class C(object):
 c: C = None
 d: C = None
 c = C()
-test_refcount(c, 1)
+print(test_refcount(c, 1))
 d = c
-test_refcount(c, 2)
+print(test_refcount(c, 2))
 d = None
-test_refcount(c, 1)
+print(test_refcount(c, 1))
 c = None`, ["True", "True", "True"]);
   // 
 //   assertPrint("Test refcount in function", `
@@ -69,13 +69,13 @@ class C(object):
   i: int = 0
 
   def foo(self: C, c: C):
-    test_refcount(c, 2)
+    print(test_refcount(c, 2))
 
 c: C = None
 c = C()
-test_refcount(c, 1)
+print(test_refcount(c, 1))
 c.foo(c)
-test_refcount(c, 1)`, ["True", "True", "True"]);
+print(test_refcount(c, 1))`, ["True", "True", "True"]);
   // 
 //   assertPrint("Return refcount", `
 // class C(object):
@@ -109,8 +109,8 @@ node1.prev = node0
 node1.next = node2
 node2.prev = node1
 node2.next = node0
-test_refcount(node0, 2)
-test_refcount(node1, 2)
-test_refcount(node2, 2)
+print(test_refcount(node0, 2))
+print(test_refcount(node1, 2))
+print(test_refcount(node2, 2))
 `, ["True", "True", "True"]);
 });
