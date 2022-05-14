@@ -1,18 +1,33 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules, ModulesContext } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
 
-let ModuleContext : any = {
-  name : "",
-  nsMap : { // expand var => $mod-name$var
-    "x" : "mod-name1",
-    "a" : "mod-name1",
-    "y" : "mod-name2"
-    // if it's a "*", expand to include all
+let modulesContext : ModulesContext = {
+  "module_name" : {
+    modMap : {
+      // lib : "lib"  -> import lib
+      //   x : "lib"  -> import lib as x
+    },
+    nsMap : { 
+      // x : "lib$x"  -> from lib import x / *
+      // y : "lib$x"  -> from lib import x as y
+    },
+    globals: ["vars", "funcs", "classes"]
   }
+  /* modMap & nsMap work differently
+  1. A module can't directly be accessed.
+   But when a imported var is accessed, need to replace.
+    modMap : y = 10 # error if 'y' is a module
+    nsMap  : y = 10 # lib$y = 10, if "from lib import y"
+
+  2. When module 'dot' is used, it merges with the rhs,
+   i.e. module.var => module$var
+    modMap : lib.y = 10 # lib$y = 10 ; import lib
+    nsMap  : y.x = 10   # lib$y.x ; from lib import y
+  */
 }
 
 // To get the line number from lezer tree to report errors
@@ -568,12 +583,16 @@ export function parse(modules : Modules) : Program<SourceLocation> {
   for(let modName in modules){
     const src = modules[modName]
     // update global ModuleContext object
+    
     const t = parser.parse(src);
     parsedModules.push(traverse(t.cursor(), src));
   }
   return mergeModules(parsedModules);
 }
 
+// takes in the modules and populates the global ModulesContext
+export function buildModulesContext(modules : Modules){
+}
 
 export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
   return null

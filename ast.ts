@@ -11,7 +11,26 @@ export type Type =
 export type Modules = {
   [name:string]: string,
 }
-
+export type ModulesContext = {
+  // module name
+  [name:string] : {
+    // imported modules
+    modMap : {
+      [name:string]: string
+      // lib : "lib"  -> import lib
+      //   x : "lib"  -> import lib as x
+    },
+    // symbols imported from modules
+    nsMap : {
+      [name:string]: string
+      // x : "lib$x"  -> from lib import x / *
+      // y : "lib$x"  -> from lib import x as y
+    },
+    // symbols exported from this module
+    globals : string[]
+    // ["vars1", ..., "func1", ..., "class1"]
+  }
+}
 export type SourceLocation = { line: number, module?: string }
 
 export type Parameter<A> = { name: string, type: Type }
