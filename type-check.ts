@@ -244,6 +244,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
         case BinOp.Plus:
+          if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
+            (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
+            return { a: [{ tag: "class", name: "str" }, expr.a], tag: "method-call", obj: tLeft, method: "concat", arguments: [tRight] }
+          }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:

@@ -31,10 +31,9 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
     `
-    s:str = "abc"
-    j:str = "jjj"
-    j = s[0]
-    print(j)
+  s1:str = "abc"
+  s2:str = "def"
+  print(len(s1+s2))
     `
 
   // const t = parser.parse(source);
