@@ -3,7 +3,6 @@ import { Type, Value, BinOp } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { table } from 'console';
-import { electron } from 'webpack';
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -28,6 +27,36 @@ function reconstructBigint(arg : number, load : any) : bigint {
   return consturctedBigint;
 }
 
+function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  var bigInt3 = BigInt(0);
+
+  switch (op) {
+    case BinOp.Plus:
+      bigInt3 = bigInt1 + bigInt2;
+  }
+
+  var i = 1; // the first field is preserved for the size
+  const base = BigInt(2 ** 31);
+  var curAddress = alloc(0);
+
+  // use a do-while loop to address the edge case of initial curVal == 0
+  do {
+    var remainder = bigInt3 % base;
+    store(curAddress, i, Number(remainder)); // call the store function with address, offset, and val
+
+    i += 1; // next iteration
+    bigInt3 /= base; // default to use floor() 
+  } while (bigInt3 > 0);
+
+  alloc(i); // alllocate spaces for the fields
+  store(curAddress, 0, i - 1); // store the number of digits in the first field
+  return curAddress;
+}
+
+
+
 function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -38,39 +67,6 @@ function print(typ: Type, arg : number, load : any) : any {
     elt.innerText = reconstructBigint(arg, load).toString();
   }
   return arg;
-}
-
-function binop(op: BinOp, type:Type, arg1: number, arg2: number, load:any, alloc:any) : any {
-  const arg1val = reconstructBigint(arg1,load); 
-  const arg2val = reconstructBigint(arg2,load);
-  var newval:bigint = BigInt(0)
-  switch(op) {
-    case(BinOp.Plus):
-      newval = arg1val + arg2val
-  }
-  var generatedString = ``
-  var i = 1 
-  const base = BigInt(2**32) 
-
-  do {
-    var remainder = newval % base;
-
-    generatedString += `(i32.const ${i})\n(i32.const ${remainder})\n(call $store)`; // call the store function with address, offset, and val
-
-    i += 1; // next iteration
-    newval /= base; // default to use floor() 
-  } while (newval > 0);
-
-  // "i" represents the number of fields
-  var prefix = ``;
-  var allocation = `(i32.const ${i})\n(call $alloc)\n`; // allocate spaces for the number
-  var storeSize = `(i32.const 0)\n(i32.const ${i})\n(call $store)\n`; // store the size of the number at the first field
-  while (i > 0) {
-    prefix += `(i32.const 0)\n(call $alloc)\n`; // prepare the addresses for the store calls
-    i -= 1;
-  }
-  prefix += allocation + storeSize;
-  return [prefix + generatedString]; 
 }
 
 function assert_not_none(arg: any) : any {
@@ -91,17 +87,21 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
 
+    var alloc = memoryModule.instance.exports.alloc;
+    var load = memoryModule.instance.exports.load;
+    var store = memoryModule.instance.exports.store;
+
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
-        print_bool: (arg: number) => print(BOOL, arg, memoryModule.instance.exports.load),
-        print_none: (arg: number) => print(NONE, arg, memoryModule.instance.exports.load),
-        binop: (arg1:number, arg2:number) => binop(BinOp.Plus,NUM, arg1,arg2, memoryModule.instance.exports.load,memoryModule.instance.exports.alloc),
+        print_num: (arg: number) => print(NUM, arg, load),
+        print_bool: (arg: number) => print(BOOL, arg, load),
+        print_none: (arg: number) => print(NONE, arg, load),
+        plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow, 
+        pow: Math.pow
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
