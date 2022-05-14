@@ -277,16 +277,22 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
   const tFields = cls.fields.map(field => tcInit(env, field));
   
   // Populate tFields with super class Fields as well
+  var tempVarInit:VarInit<Type>[] = []
   cls.supers.forEach(sup=>{
     const supClass = env.classMap.get(sup);
     supClass.fields.forEach(b=>{
       var fieldName = b.name;
       if(!currFieldOld.has(fieldName)){
-        tFields.push(b);
+        tempVarInit.push(b);
+        //tFields.push(b);
       }
     })
   })
   ///
+  tempVarInit = tempVarInit.reverse();
+  tempVarInit.forEach(t=>{
+    tFields.unshift(t);
+  })
 
   const tMethods = cls.methods.map(method => tcDef(env, method));
   const currClassMethodMap:Map<string,FunDef<Type>> = new Map();
@@ -294,7 +300,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
 
   // this will be used later for ordering the methods
   tMethods.forEach(t=>{
-    currClassMethodMap.set(t.name,t);
+    currClassMethodMap.set(t.name, t);
   })
   // To check if we have method overwritten with different signature in the derived class
   tcSign(env, cls.name);
@@ -326,6 +332,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<null>) : Class<Type> {
       var funName = m.name;
       // Push the functions as per order... First will be all the functions from parent class
       if(!currMethodOld.has(funName)){
+        m.parameters[0].type = {tag: "class", name: cls.name};
         orderMethod.push(m);
       }else{
         orderMethod.push(currClassMethodMap.get(funName));
