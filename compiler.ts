@@ -142,9 +142,11 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
+      var zeroLiteral : Value<Type> = { a: expr.expr.a, tag: "num", value: BigInt(0) };
+      var zeroExprStmts = codeGenValue(zeroLiteral, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
+          return [...zeroExprStmts, ...exprStmts, `(call  $minus)`];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
@@ -235,15 +237,15 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp) : string {
   switch(op) {
     case BinOp.Plus:
-      return "call $plus"
+      return "(call $plus)"
     case BinOp.Minus:
-      return "(i32.sub)"
+      return "(call $minus)"
     case BinOp.Mul:
-      return "(i32.mul)"
+      return "(call $mul)"
     case BinOp.IDiv:
-      return "(i32.div_s)"
+      return "(call $iDiv)"
     case BinOp.Mod:
-      return "(i32.rem_s)"
+      return "(call $mod)"
     case BinOp.Eq:
       return "(i32.eq)"
     case BinOp.Neq:

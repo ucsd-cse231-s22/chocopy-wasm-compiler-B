@@ -20,11 +20,18 @@ function stringify(typ: Type, arg: any) : string {
 function reconstructBigint(arg : number, load : any) : bigint {
   var base = BigInt(2 ** 31);
   var digitNum = load(arg, 0);
+
+  var isNegative = BigInt(1);
+  if (digitNum < 0) {
+    isNegative = BigInt(-1);
+    digitNum *= -1;
+  }
+
   var consturctedBigint = BigInt(0);
   for (let i = 1; i < digitNum + 1; i++) {
     consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
   }
-  return consturctedBigint;
+  return isNegative * consturctedBigint;
 }
 
 function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
@@ -35,6 +42,25 @@ function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   switch (op) {
     case BinOp.Plus:
       bigInt3 = bigInt1 + bigInt2;
+      break
+    case BinOp.Minus:
+      bigInt3 = bigInt1 - bigInt2;
+      break
+    case BinOp.Mul:
+      bigInt3 = bigInt1 * bigInt2;
+      break
+    case BinOp.IDiv:
+      bigInt3 = bigInt1 / bigInt2;
+      break
+    case BinOp.Mod: 
+      bigInt3 = bigInt1 % bigInt2;
+      break
+  }
+
+  var isNegative = 1;
+  if (bigInt3 < 0) {
+    isNegative = -1;
+    bigInt3 *= BigInt(-1);
   }
 
   var i = 1; // the first field is preserved for the size
@@ -51,7 +77,7 @@ function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   } while (bigInt3 > 0);
 
   alloc(i); // alllocate spaces for the fields
-  store(curAddress, 0, i - 1); // store the number of digits in the first field
+  store(curAddress, 0, isNegative * (i - 1)); // store the number of digits in the first field
   return curAddress;
 }
 
@@ -96,6 +122,10 @@ function webStart() {
         print_bool: (arg: number) => print(BOOL, arg, load),
         print_none: (arg: number) => print(NONE, arg, load),
         plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
+        minus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Minus, arg1, arg2, alloc, load, store),
+        mul: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store),
+        iDiv: (arg1: number, arg2: number) => arithmeticOp(BinOp.IDiv, arg1, arg2, alloc, load, store),
+        mod: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mod, arg1, arg2, alloc, load, store),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
