@@ -27,6 +27,7 @@ type CompileResult = {
 
 export function makeLocals(locals: Map<string, Type>) : Array<string> {
   const localDefines : Array<string> = [];
+  localDefines.push(`(local $$last i32)`);
   locals.forEach((type, name) => {
     localDefines.push(`(local $${name} i32)`);
   });
@@ -34,6 +35,8 @@ export function makeLocals(locals: Map<string, Type>) : Array<string> {
 }
 
 export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
+  console.log(ast);
+
   const withDefines = env;
 
   const definedVars : Map<string, Type> = new Map();
@@ -67,6 +70,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   })
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
+  bodyCommands += freeAllLocals(env).join('\n');
 
   const destructorTable = makeDestructorTable(env);
 
@@ -90,23 +94,25 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
-    case "assign":
-      var valStmts = codeGenExpr(stmt.value, env);
+    case "assign": {
+      const valStmts = codeGenExpr(stmt.value, env);
       const freeStmts = decRefcount(stmt.name, env);
       if (env.locals.has(stmt.name)) {
         return valStmts.concat(freeStmts).concat([`(local.set $${stmt.name})`]);
       } else {
         return valStmts.concat(freeStmts).concat([`(global.set $${stmt.name})`]); 
       }
+    }
 
-    case "return":
-      var valStmts = codeGenValue(stmt.value, env);
-      valStmts.push("return");
-      return valStmts;
+    case "return": {
+      const valStmts = codeGenValue(stmt.value, env);
+      const freeStmts = freeAllLocals(env);
+      return [...valStmts, ...freeStmts, "return"];
+    }
 
     case "expr":
       var exprStmts = codeGenExpr(stmt.expr, env);
-      return exprStmts.concat([`drop`]);
+      return exprStmts.concat([`(local.set $$last)`]);
 
     case "pass":
       return []
@@ -373,8 +379,6 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
   const ty =
     env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
-  console.log(`decrementing ${name}`);
-  console.log(env.locals, env.globals);
   if (!isPointer(ty))
     return [];
   return [
@@ -390,8 +394,6 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
   const ty =
     env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
-  console.log(`incrementing ${name}`);
-  console.log(env.locals, env.globals);
   if (!isPointer(ty))
     return [];
   return [
@@ -415,7 +417,7 @@ function freeAllLocals(env: GlobalEnv): Array<string> {
 function makeDestructorTable(env: GlobalEnv): string {
   const class_destructors =
     Array.from(env.classes.keys()).flatMap(cls => `$${cls}$$delete`);
-  const destructors = [...SPECIAL_DESTRUCTORS, class_destructors];
+  const destructors = [...SPECIAL_DESTRUCTORS, ...class_destructors];
   return `
     (table (export "destructors") funcref (elem
       ${destructors.join(' ')}))
