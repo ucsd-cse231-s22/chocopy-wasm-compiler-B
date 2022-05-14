@@ -120,6 +120,13 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     
 =======
     (func $plus (import "imports" "plus") (param i32) (param i32) (result i32))
+<<<<<<< HEAD
+>>>>>>> Zack
+=======
+    (func $minus (import "imports" "minus") (param i32) (param i32) (result i32))
+    (func $mul (import "imports" "mul") (param i32) (param i32) (result i32))
+    (func $iDiv (import "imports" "iDiv") (param i32) (param i32) (result i32))
+    (func $mod (import "imports" "mod") (param i32) (param i32) (result i32))
 >>>>>>> Zack
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
