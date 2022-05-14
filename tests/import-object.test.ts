@@ -114,10 +114,15 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
 }
 
 function print(typ: Type, arg : number, load : any) : any {
-  importObject.output = stringify(typ, arg) + "\n";
   if (typ === Type.Num) {
-    importObject.output = reconstructBigint(arg, load).toString() + "\n";
+    importObject.output += reconstructBigint(arg, load).toString() + "\n";
+  } else {
+    importObject.output += stringify(typ, arg) + "\n";
   }
+  return arg;
+}
+
+function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
@@ -142,6 +147,7 @@ export async function addLibs() {
   // print functions
   importObject.print = (arg: any) => print(Type.Num, arg, load);
   importObject.imports.print_num = (arg: number) => print(Type.Num, arg, load);
+  importObject.imports.print_last_num = (arg: number) => last_print(Type.Num, arg, load);
   importObject.imports.print_bool = (arg: number) => print(Type.Bool, arg, load);
   importObject.imports.print_none = (arg: number) => print(Type.None, arg, load);
 
