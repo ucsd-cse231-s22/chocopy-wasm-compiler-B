@@ -1,5 +1,5 @@
 import {BasicREPL} from './repl';
-import { Type, Value } from './ast';
+import { Type, Value, BinOp } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { table } from 'console';
@@ -25,6 +25,34 @@ function reconstructBigint(arg : number, load : any) : bigint {
     consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
   }
   return consturctedBigint;
+}
+
+function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  var bigInt3 = BigInt(0);
+
+  switch (op) {
+    case BinOp.Plus:
+      bigInt3 = bigInt1 + bigInt2;
+  }
+
+  var i = 1; // the first field is preserved for the size
+  const base = BigInt(2 ** 31);
+  var curAddress = alloc(0);
+
+  // use a do-while loop to address the edge case of initial curVal == 0
+  do {
+    var remainder = bigInt3 % base;
+    store(curAddress, i, Number(remainder)); // call the store function with address, offset, and val
+
+    i += 1; // next iteration
+    bigInt3 /= base; // default to use floor() 
+  } while (bigInt3 > 0);
+
+  alloc(i); // alllocate spaces for the fields
+  store(curAddress, 0, i - 1); // store the number of digits in the first field
+  return curAddress;
 }
 
 function print(typ: Type, arg : number, load : any) : any {
@@ -57,12 +85,17 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
 
+    var alloc = memoryModule.instance.exports.alloc;
+    var load = memoryModule.instance.exports.load;
+    var store = memoryModule.instance.exports.store;
+
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        print_num: (arg: number) => print(NUM, arg, memoryModule.instance.exports.load),
-        print_bool: (arg: number) => print(BOOL, arg, memoryModule.instance.exports.load),
-        print_none: (arg: number) => print(NONE, arg, memoryModule.instance.exports.load),
+        print_num: (arg: number) => print(NUM, arg, load),
+        print_bool: (arg: number) => print(BOOL, arg, load),
+        print_none: (arg: number) => print(NONE, arg, load),
+        plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
