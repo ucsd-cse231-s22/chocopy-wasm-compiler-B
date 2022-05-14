@@ -181,7 +181,7 @@ Expected: 6
 9: 
 Complex operations: 
 "x:int = 5000000000000000
-x = x *x*x-x" 
+x = x * x * x - x" 
 
 Expected: 124999999999999999999999999999995000000000000000
 
