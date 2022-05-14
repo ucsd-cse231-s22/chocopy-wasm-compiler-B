@@ -5,6 +5,7 @@ import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
 import exp from 'constants';
+import { json } from 'stream/consumers';
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
@@ -231,6 +232,16 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Sour
       if (!isAssignable(env, tVal.a[0], fields.get(stmt.field)))
         throw new TypeCheckError(`could not assign value of type: ${tVal.a}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`);
       return { ...stmt, a: [NONE, stmt.a], obj: tObj, value: tVal };
+
+    case "index-assign":
+      var iObj = tcExpr(env, locals, stmt.obj);
+      const iVal = tcExpr(env, locals, stmt.value);
+      if (JSON.stringify(iObj.a[0]) == JSON.stringify({ tag: 'class', name: 'str' })) {
+        // console.log("inndex assign")
+        throw new TypeCheckError("string is immutable")
+
+      }
+
   }
 }
 
@@ -354,13 +365,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
 
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => JSON.stringify(tArg.a[0]) === JSON.stringify(argTypes[i]))) {
-             return {...expr, a: [retType, expr.a], arguments: tArgs};
-           } else {
-            throw new TypeError("Function call type mismatch: " + expr.name);
-           }
-      } else if(expr.name == "len"){
+        if (argTypes.length === expr.arguments.length &&
+          tArgs.every((tArg, i) => JSON.stringify(tArg.a[0]) === JSON.stringify(argTypes[i]))) {
+          return { ...expr, a: [retType, expr.a], arguments: tArgs };
+        } else {
+          throw new TypeError("Function call type mismatch: " + expr.name);
+        }
+      } else if (expr.name == "len") {
         //built in len function (This is the string groups implementation)
         const targs = expr.arguments.map(arg => tcExpr(env, locals, arg))
         if (targs.length !== 1) {
@@ -415,13 +426,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         throw new TypeCheckError("method calls require an object");
       }
     case "index":
-      let tobj:Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.obj);
-      let tindex:Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.index)
-      if(tindex.a[0].tag != "number"){
+      let tobj: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.obj);
+      let tindex: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.index)
+      if (tindex.a[0].tag != "number") {
         throw new TypeError("non integer as index value");
       }
-      if(JSON.stringify(tobj.a[0]) == JSON.stringify({tag:"class", name:"str"})){
-        return {a:[{tag:"class", name:"str"}, expr.a], tag:"index", obj:tobj, index:tindex};
+      if (JSON.stringify(tobj.a[0]) == JSON.stringify({ tag: "class", name: "str" })) {
+        return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tobj, index: tindex };
       }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
   }
