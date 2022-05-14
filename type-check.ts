@@ -24,6 +24,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("get_refcount", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("test_refcount", [[CLASS("object"), NUM], BOOL]);
 
 export const defaultTypeEnv = {
@@ -309,6 +310,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeError("Undefined function: " + expr.name);
       }
     case "call":
+      // HACK(memory management): the type checker needs to support inheritance in order to usefully use these functions. For now, it is special-cased.
+      if(expr.name === "get_refcount"){
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        return {...expr, a: [NUM, expr.a], arguments: tArgs};
+      }
       if(expr.name === "test_refcount"){
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         return {...expr, a: [BOOL, expr.a], arguments: tArgs};

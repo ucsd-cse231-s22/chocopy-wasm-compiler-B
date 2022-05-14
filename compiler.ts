@@ -3,9 +3,9 @@ import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
-  globals: Map<string, boolean>;
+  globals: Map<string, Type>;
   classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
-  locals: Set<string>;
+  locals: Map<string, Type>;
   labels: Array<string>;
   offset: number;
 }
@@ -13,7 +13,7 @@ export type GlobalEnv = {
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
-  locals: new Set(),
+  locals: new Map(),
   labels: [],
   offset: 0 
 };
@@ -25,24 +25,28 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
-export function makeLocals(locals: Set<string>) : Array<string> {
+export function makeLocals(locals: Map<string, Type>) : Array<string> {
   const localDefines : Array<string> = [];
-  locals.forEach(v => {
-    localDefines.push(`(local $${v} i32)`);
+  localDefines.push(`(local $$last i32)`);
+  locals.forEach((type, name) => {
+    localDefines.push(`(local $${name} i32)`);
   });
   return localDefines;
 }
 
 export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
+  console.log(ast);
+
   const withDefines = env;
 
-  const definedVars : Set<string> = new Set(); //getLocals(ast);
-  definedVars.add("$last");
-  definedVars.add("$selector");
-  definedVars.forEach(env.locals.add, env.locals);
+  const definedVars : Map<string, Type> = new Map();
+  definedVars.set("$selector", {tag: "number"});
+  definedVars.forEach((ty, name) => env.locals.set(name, ty));
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
   console.log(ast.inits, globalNames);
+  // Add the new global variables to the global environment
+  ast.inits.forEach(init => env.globals.set(init.name, init.type));
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -65,14 +69,17 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
             `
   })
   bodyCommands += blockCommands;
-  bodyCommands += ") ;; end $loop"
+  bodyCommands += ") ;; end $loop\n\n"
+  bodyCommands += freeAllLocals(env).join('\n');
+
+  const destructorTable = makeDestructorTable(env);
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
   const allCommands = [...localDefines, ...inits, bodyCommands];
   withDefines.locals.clear();
   return {
     globals: globalNames,
-    functions: allFuns,
+    functions: allFuns + destructorTable,
     mainSource: allCommands.join("\n"),
     newEnv: withDefines
   };
@@ -87,19 +94,21 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
         ...codeGenValue(stmt.value, env),
         `call $store`
       ]
-    case "assign":
-      var valStmts = codeGenExpr(stmt.value, env);
+    case "assign": {
+      const valStmts = codeGenExpr(stmt.value, env);
       const freeStmts = decRefcount(stmt.name, env);
       if (env.locals.has(stmt.name)) {
         return valStmts.concat(freeStmts).concat([`(local.set $${stmt.name})`]);
       } else {
         return valStmts.concat(freeStmts).concat([`(global.set $${stmt.name})`]); 
       }
+    }
 
-    case "return":
-      var valStmts = codeGenValue(stmt.value, env);
-      valStmts.push("return");
-      return valStmts;
+    case "return": {
+      const valStmts = codeGenValue(stmt.value, env);
+      const freeStmts = freeAllLocals(env);
+      return [...valStmts, ...freeStmts, "return"];
+    }
 
     case "expr":
       var exprStmts = codeGenExpr(stmt.expr, env);
@@ -174,7 +183,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       return valStmts;
 
     case "alloc":
-      return codeGenAlloc(NONE, expr.amount, env); //expr.a[0]
+      return codeGenAlloc(expr.a[0], expr.amount, env);
 
     case "load":
       return [
@@ -251,13 +260,12 @@ function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : 
 }
 
 function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
-  var definedVars : Set<string> = new Set();
-  def.inits.forEach(v => definedVars.add(v.name));
-  definedVars.add("$last");
-  definedVars.add("$selector");
+  var definedVars : Map<string, Type> = new Map();
+  def.inits.forEach(v => definedVars.set(v.name, v.type));
+  definedVars.set("$selector", {tag: "number"});
   // def.parameters.forEach(p => definedVars.delete(p.name));
-  definedVars.forEach(env.locals.add, env.locals);
-  def.parameters.forEach(p => env.locals.add(p.name));
+  definedVars.forEach((type, name) => env.locals.set(name, type));
+  def.parameters.forEach(p => env.locals.set(p.name, p.type));
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
   const locals = localDefines.join("\n");
@@ -276,7 +284,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
             `
   })
   bodyCommands += blockCommands;
-  bodyCommands += ") ;; end $loop"
+  bodyCommands += ") ;; end $loop\n\n"
+  bodyCommands += freeAllLocals(env).join('\n');
   env.locals.clear();
   return [`(func $${def.name} ${params} (result i32)
     ${locals}
@@ -289,30 +298,78 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
 function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
-  const result = methods.map(method => codeGenDef(method, env));
-  return result.flat();
+  const destructor = codeGenDestructor(cls, env);
+  return methods.flatMap(method => codeGenDef(method, env)).concat(destructor);
 }
 
+
+/** Helper function for memory management: whether a type is a pointer.
+ */
+function isPointer(type: Type) : boolean {
+  switch (type.tag) {
+    case "class":
+      return true;
+
+    case "number":
+    case "bool":
+    case "none":
+      return false;
+
+    default:
+      // FIXME (memory management): I don't know what an "either" is
+      throw new Error(`Internal error: unhandled type ${type.tag}`);
+  }
+}
+
+/** An array of the destructor names of special built-in types.
+ *
+ * TODO(memory management): Add the special built-in types to this array.
+ */
+const SPECIAL_DESTRUCTORS: string[] = [];
 
 /** Generate code to allocate a value of this type.
  * 
  * This will get called to handle the alloc IR instruction
  */
 function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  let destructor_index: number;
+  switch (type.tag) {
+    case "class":
+      destructor_index = Array.from(env.classes.keys()).indexOf(type.name);
+      break;
+
+    case "number":
+    case "bool":
+    case "none":
+      throw new Error(`Internal error: ${type.tag}: not an allocated type`);
+
+    default:
+      throw new Error(`Internal error: unknown type ${type.tag}`);
+  }
+
   return [
     ...codeGenValue(amount, env),
-    `(i32.const 0)`, // type info
+    `(i32.const ${destructor_index})`, // type info
     `call $alloc`
   ];
 }
 
-/** Generate code to allocate an instance of a class
+/** Generate the destructor function for a class
  *
- * This will be called by codeGenAlloc in most cases
+ * Its name is $<class name>$$delete
  */
-function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  const HEADER_SIZE = 8;
+  const name = `$${cls.name}$$delete`;
+  const stmts = cls.fields.flatMap((field, index) => {
+    if (!isPointer(field.a[0]))
+      return [];
+    return [
+      `(i32.load (i32.add (local.get $obj) (i32.const ${index * 4 + HEADER_SIZE})))`,
+      `(call $dec_refcount)`
+    ];
+  });
+  return [` (func ${name} (param $obj i32) \n${stmts.join('\n')})`];
 }
 
 /** Generate code to decrease the refcount, if that variable is a pointer
@@ -321,8 +378,14 @@ function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
  * the end of a function
  */
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  const ty =
+    env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  if (!isPointer(ty))
+    return [];
+  return [
+    `(${env.locals.has(name) ? "local" : "global"}.get $${name})`,
+    "(call $dec_refcount)"
+  ];
 }
 
 /** Generate code to increase the refcount, if that variable is a pointer
@@ -330,8 +393,14 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called when values are loaded from fields or variables
  */
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  const ty =
+    env.locals.has(name) ? env.locals.get(name) : env.globals.get(name);
+  if (!isPointer(ty))
+    return [];
+  return [
+    `(${env.locals.has(name) ? "local" : "global"}.get $${name})`,
+    "(call $inc_refcount)"
+  ];
 }
 
 /** Generate code to decrease the reference counts of all local variables
@@ -339,6 +408,19 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called on all exit paths from a function
  */
 function freeAllLocals(env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
+  return Array.from(env.locals.keys()).flatMap(name => decRefcount(name, env));
 }
 
+/** Make the destructor table
+ *
+ * This is called once for the program
+ */
+function makeDestructorTable(env: GlobalEnv): string {
+  const class_destructors =
+    Array.from(env.classes.keys()).flatMap(cls => `$${cls}$$delete`);
+  const destructors = [...SPECIAL_DESTRUCTORS, ...class_destructors];
+  return `
+    (table (export "destructors") funcref (elem
+      ${destructors.join(' ')}))
+  `;
+}
