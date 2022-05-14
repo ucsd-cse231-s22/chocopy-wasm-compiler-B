@@ -135,64 +135,18 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
-    /*
-    case "binop":
-      const lhsStmts = codeGenValue(expr.left, env);
-      
-      const rhsStmts = codeGenValue(expr.right, env);
-
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-     
-    case "binop":
-      if (expr.left.tag === "num" && expr.right.tag === "num") {
-        switch(expr.op) {
-          case BinOp.Plus: 
-            let newval = expr.left.value + expr.right.value
-            let newExpr:Value<any> = {a:expr.left.a, tag:"num", value: newval}
-            return codeGenValue(newExpr,env)
-        }
-      }
-      const lhsStmts = codeGenValue(expr.left, env);
-    
-      const rhsStmts = codeGenValue(expr.right, env);
-
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-    
-    case "binop": 
-      const lhsStmts = codeGenValue(expr.left, env);
-      console.log(lhsStmts)
-      const split = lhsStmts[0].split('\n')
-      console.log(split)
-      var ind = 0
-      for (let i = 0; i < split.length; i++) {
-        if (split[i].includes("call $store")) {
-          ind = i - 1
-          break
-        }
-      }
-      
-      const size = split[ind]
-      console.log(ind, split[ind])
-      
-      const load1 = '(i32.const 1)\n(call $load)'
-      
-      const rhsStmts = codeGenValue(expr.right, env);
-
-      return [...lhsStmts, load1, ...rhsStmts, load1, codeGenBinOp(expr.op)]
-    */ 
     case "binop":
 
       const lhsStmts = codeGenValue(expr.left, env);
         
       const rhsStmts = codeGenValue(expr.right, env);
-      //const call = "(call $binop)"
       
 
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
-
+/*
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
-      var zeroLiteral : Value<Type> = { a: expr.expr.a, tag: "num", value: BigInt(0) };
+      var zeroLiteral : Value<Type, SourceLocation> = { a: expr.expr.a, tag: "num", value: BigInt(0) } ;
       var zeroExprStmts = codeGenValue(zeroLiteral, env);
       switch(expr.op){
         case UniOp.Neg:
@@ -200,7 +154,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
-
+*/ 
     case "builtin1":
       const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
@@ -296,19 +250,19 @@ function codeGenBinOp(op : BinOp) : string {
     case BinOp.Mod:
       return "(call $mod)"
     case BinOp.Eq:
-      return "(i32.eq)"
+      return "(call $eq)"
     case BinOp.Neq:
-      return "(i32.ne)"
+      return "(call $neq)"
     case BinOp.Lte:
-      return "(i32.le_s)"
+      return "(call $lte)"
     case BinOp.Gte:
-      return "(i32.ge_s)"
+      return "(call $gte)"
     case BinOp.Lt:
-      return "(i32.lt_s)"
+      return "(call $lt)"
     case BinOp.Gt:
-      return "(i32.gt_s)"
+      return "(call $gt)"
     case BinOp.Is:
-      return "(i32.eq)";
+      return "(i32.is)";
     case BinOp.And:
       return "(i32.and)"
     case BinOp.Or:
