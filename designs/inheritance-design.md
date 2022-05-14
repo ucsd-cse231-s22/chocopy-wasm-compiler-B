@@ -14,15 +14,84 @@ We had to make changes to the GlobalTypeEnv to support inheritance. As mentioned
 
 Then, we typecheck the classes in the order that their definitions appear. As we go, we populate the global state so that any subclass has full access to its checked superclass's fields and methods. Ultimately, the typechecker outputs an AST program where each class contains every field and method it has access to, including everything inherited.
 
+Because we copy over all inherited methods, this means that if a subclass ```B``` inherits method ```foo()``` from ```A```, then we should expect to see ```$B$foo``` explicitly defined in the WASM code.
+
 ## IR
 To support the vtable, we need two kinds of offsets. The first is the class offset, which allows for indexing into the vtable for the start of a class's methods. The second is the method offset, which allows for indexing into a specific method within a class's method block in the table.
 
-The first is stored on a per-object basis as the first field in its struct. To do this, we 
+The first is stored on a per-object basis as the first field in its struct. To do this, inside ```augmentEnv```, we compute the class offset for each class and add an ```$offset``` field to every class with that value and intra-class offset 0 so that it's at the top when we alloc (that's a lot of offset types).
 
-We added the "call-indirect" type to the IR to support generating code for method calls.
+The method offsets are also added to the global environment during ```augmentEnv```. As mentioned above, we enforce an ordering of the fields and methods, so the method offsets are simply the methods' indices in the order they appear in.
 
+Then, we also added the "call-indirect" type to the IR to support generating code for method calls. This way, each method call gets populated with its corresponding method offset by the IR, making code generation easier.
 
 ## Compiler (code gen)
+The two main parts of code gen that we had to implement were the vtable and handling ```call_indirect```.
+
+The vtable was essentially built by iterating over the classes and just adding each one's methods in according to the order set by the typechecker.
+There is some redundancy here in that we compute the class offsets in ```augmentEnv``` but only set up the actual table structure in ```compiler.ts```.
+
+For ```call_indirect```, we were able to load the address of the object twice without using a local temp variable by just running ```codeGenValue``` twice on the argument mapping to ```self```. From there, we followed the professor's writeup on vtables. The main caveat here was setting up the ```type``` constructs for each method. For this, we simply created one per class method according to WASM documentation.
+
+# Week 7 Testing Updates
+
+We had to clean up the tests we wrote for ourselves since many of them didn't actually compile the first time due to our own mistakes in writing them.
+
+Some tests we ran manually (not in the suite) out of curiosity included the List/Empty/Link example from one of the lectures:
+```
+class List(object):
+    def sum(self : List) -> int:
+        return 1 // 0
+class Empty(List):
+    def sum(self : Empty) -> int:
+        return 0
+class Link(List):
+    val : int = 0
+    next : List = None
+    def sum(self : Link) -> int:
+        return self.val + self.next.sum()
+    def new(self : Link, val : int, next : List) -> Link:
+        self.val = val
+        self.next = next
+        return self
+
+l : List = None
+l = Link().new(5, Link().new(13, Empty()))
+print(l.sum())
+```
+This should output 18, which it did for us.
+
+We put this here as a general showcase of "hey we can do this thing from lecture" and as a sort of omnibus test to hopefully catch any offset-related errors. Luckily, it just worked on the first try :)
+
+Another was chained inheritance:
+```
+class A(object):
+    x : int = 1
+    def foo(self : A):
+        print(self.x)
+
+class B(A):
+    def foo2(self : B):
+        print(self.x * 2)
+
+class C(B):
+    def foo3(self : C, arg : int):
+        self.foo()
+        self.foo2()
+        print(self.x + self.arg)
+c : C = None
+c = C()
+c.foo3(3)
+```
+This should output
+```
+1
+2
+4
+```
+This one was mainly interesting because it helped us catch a bug in how our typechecker was populating a subclass with superclass fields and methods.
+Specifically, C was mysteriously not inheriting from A.
+The bug itself originated as a result of us not updating the subclass state of B properly after typechecking it. Thus, when its subclass C was being typechecked, B was missing the fields and methods it inherited from A.
 
 # Week 6 Notes
 
@@ -96,9 +165,9 @@ This way, if something like ```B().foo(0)``` is called, then the WASM will know 
 
 
 
-### Test Cases
+# Test Cases
 
-# No.1: field access
+## No.1: field access
 ```
 class A(object):
     a : int = 1
@@ -111,7 +180,7 @@ print(x.b)
 ```
 Expected Output -> 1, 2
 
-# No.2: method call
+## No.2: method call
 ```
 class A(object):
     a : int = 1
@@ -127,14 +196,14 @@ print(x.get())
 ```
 Expected Output -> 1
 
-# No.3: wrong super class type (TC)
+## No.3: wrong super class type (TC)
 ```
 class Test(None):
     x : int = 0
 ```
 Expected Output -> TYPE ERROR (Cannot extend None)
 
-# No.4: parent-child same field (TC)
+## No.4: parent-child same field (TC)
 ```
 class A(object):
     a : int = 1
@@ -144,7 +213,7 @@ class B(A):
 
 Expected Output -> TYPE ERROR: Parent-child cannot have same field
 
-# No.5: method overwrite
+## No.5: method overwrite
 ```
 class Person(object):
     age:int = 0
@@ -189,7 +258,7 @@ True
 ```
 The point of this test is to show that Employee can override new (in a pointless way) and isEmployee (in a meaningful way).
 
-# No.6: method overwrite with different signature (TC)
+## No.6: method overwrite with different signature (TC)
 ```
 class A(object):
     def test(self: A, arg: int):
@@ -200,7 +269,7 @@ class B(A):
 ```
 Expected output -> TYPE ERROR: Method overriden with different signature
 
-# No.7: method overwrite with different return type (TC)
+## No.7: method overwrite with different return type (TC)
 ```
 class A(object):
     def test(self: A)->int:
@@ -212,7 +281,7 @@ class B(A):
 
 Expected output -> TYPE ERROR: Method overriden with different return
 
-# No.8: type conversion from subclass to superclass
+## No.8: type conversion from subclass to superclass
 ```
 class A(object):
     x : int = 1
@@ -228,7 +297,7 @@ Expected output -> 1
 
 
 
-# No.9: cannot assign instance of superclass to variable of type subclass (TC)
+## No.9: cannot assign instance of superclass to variable of type subclass (TC)
 ```
 class A(object):
     a : int = 1
@@ -242,7 +311,7 @@ x = A()
 
 Expected output -> TYPE ERROR: Assigning super class to subclass
 
-# No.10 Chained calls
+## No.10 Chained calls
 ```
 class CL(object):
     def sum(self : CL) -> int:
