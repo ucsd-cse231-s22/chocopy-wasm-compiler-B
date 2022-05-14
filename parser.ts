@@ -1,9 +1,13 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules, ModulesContext } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules, ModuleData, ModulesContext } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
+
+// modulesContext[module_name] of current module being parsed
+// let currentModule : ModuleData = null
+let currentModule : string = ""
 
 let modulesContext : ModulesContext = {
   "module_name" : {
@@ -544,6 +548,10 @@ export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
 }
 
+export function isImportStmt(c : TreeCursor, s : string) : Boolean {
+  return c.type.name === "ImportStatement";
+}
+
 export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
   var location = getSourceLocation(c, s);
   switch(c.node.type.name) {
@@ -579,20 +587,115 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
 }
 
 export function parse(modules : Modules) : Program<SourceLocation> {
-  let parsedModules = []
+  buildModulesContext(modules)
+  let parsedModules : Program<SourceLocation>[] = []
   for(let modName in modules){
-    const src = modules[modName]
-    // update global ModuleContext object
-    
+    const src = modules[modName];
+    // update global currentModule
+    currentModule = modName;
     const t = parser.parse(src);
     parsedModules.push(traverse(t.cursor(), src));
   }
   return mergeModules(parsedModules);
 }
 
+export function traverseImport(c : TreeCursor, s : string) : ModuleData {
+
+  // parseList parses the import list and populates the map
+  // <list> = mod1 [[as v1], mod2 [as v2]...]
+  let parseList = (module:string, map:any) => {
+    // c -> "import"
+    let hasNext = true
+    while(hasNext){
+      // c -> variable name
+      let name = s.substring(c.from, c.to)
+      let resolve = module? `module$${name}` : name
+
+      // move on to 'as' or VariableName or ","
+      hasNext = c.nextSibling()
+      if(c.name === 'as'){ // module aliased
+        c.nextSibling() // VariableName ("alias")
+        name = s.substring(c.from, c.to)
+        hasNext = c.nextSibling()
+      }
+      if(c.name === ',')
+        hasNext = c.nextSibling() // skip the ','
+
+      // update map
+      map[name] = resolve;
+    }
+  }
+
+  let nData : ModuleData = {
+    modMap: {},
+    nsMap: {},
+    globals : []
+  }
+
+  // c -> ImportStatement
+  c.firstChild() // point to from or import
+  if(c.name === "from"){ // from VarName import <list>
+    c.nextSibling() // VariableName ("mod_name")
+    let mod_name = s.substring(c.from, c.to)
+    c.nextSibling() // import
+    c.nextSibling() // first VariableName of <list>
+    parseList(mod_name, nData.nsMap)
+  } else if (c.name === "import"){ // import <list>
+    c.nextSibling() // first VariableName of <list>
+    parseList("", nData.modMap)
+  }
+
+  c.parent() // point back to ImportStatement
+  return nData
+}
+
 // takes in the modules and populates the global ModulesContext
 export function buildModulesContext(modules : Modules){
+  // build the maps & globals for every object
+  for(let modName in modules){
+    const s = modules[modName];
+    const c = parser.parse(s).cursor();
+    let mData : ModuleData = {
+      modMap: {},
+      nsMap: {},
+      globals : []
+    }
+    var hasChild = c.firstChild();
+
+    // populate modMap & nsMap from import statements
+    while(hasChild) {
+      if (isImportStmt(c,s)){
+        let nData : ModuleData = traverseImport(c,s)
+        mData = {
+          modMap : {...mData.modMap, ...nData.modMap},
+          nsMap : {...mData.nsMap, ...nData.nsMap},
+          globals : []
+        }
+      } else {
+        break;
+      }
+      hasChild = c.nextSibling();
+    }
+    // consume the globals
+    while(hasChild) {
+      if (isVarInit(c, s)) {
+        mData.globals.push(traverseVarInit(c, s).name);
+      } else if (isFunDef(c, s)) {
+        mData.globals.push(traverseFunDef(c, s).name);
+      } else if (isClassDef(c, s)) {
+        mData.globals.push(traverseClass(c, s).name);
+      } else {
+        break;
+      }
+      hasChild = c.nextSibling();
+    }
+    modulesContext[modName] = mData;
+  }
+
+  // expand "*" in nsMap
+  // TODO - "from lib import *" won't work yet
 }
+
 
 export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
   return null

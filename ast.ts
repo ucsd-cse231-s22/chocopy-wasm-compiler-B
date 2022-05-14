@@ -8,29 +8,35 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
+// module name -> module source
 export type Modules = {
   [name:string]: string,
 }
-export type ModulesContext = {
-  // module name
-  [name:string] : {
-    // imported modules
-    modMap : {
-      [name:string]: string
-      // lib : "lib"  -> import lib
-      //   x : "lib"  -> import lib as x
-    },
-    // symbols imported from modules
-    nsMap : {
-      [name:string]: string
-      // x : "lib$x"  -> from lib import x / *
-      // y : "lib$x"  -> from lib import x as y
-    },
-    // symbols exported from this module
-    globals : string[]
-    // ["vars1", ..., "func1", ..., "class1"]
-  }
+
+// module import & export info
+export type ModuleData =  {
+  // imported modules
+  modMap : {
+    [name:string]: string
+    // lib : "lib"  -> import lib
+    //   x : "lib"  -> import lib as x
+  },
+  // symbols imported from modules
+  nsMap : {
+    [name:string]: string
+    // x : "lib$x"  -> from lib import x / *
+    // y : "lib$x"  -> from lib import x as y
+  },
+  // symbols exported from this module
+  globals : string[]
+  // ["vars1", ..., "func1", ..., "class1"]
 }
+
+// module name -> corresponding info
+export type ModulesContext = {
+  [name:string] : ModuleData
+}
+
 export type SourceLocation = { line: number, module?: string }
 
 export type Parameter<A> = { name: string, type: Type }

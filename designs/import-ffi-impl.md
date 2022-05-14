@@ -23,6 +23,8 @@ REQUIREMENTS
   - Right type of errors (ParseError vs TCError vs CompilerErr)
   - Right information (module name + line num + err msg)
 
+Note : No code will executed when a module is imported. i.e. if any of the modules
+have code in the global space, they won't be executed when imported.
 
 IMPLEMENTATION
 ==============
