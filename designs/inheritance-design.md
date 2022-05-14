@@ -124,7 +124,7 @@ def test(arg: A):
     print(arg.x)
 x : B = None
 x = B()
-test(x)
+print(test(x))
 ```
 Expected output -> 1 
 

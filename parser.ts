@@ -442,7 +442,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<null> {
       }
       
     } else {
-      throw new Error(`Parse Error near token ${s.substring(c.from, c.to)}`);
+      throw new Error(`Parse TYPE ERROR: near token ${s.substring(c.from, c.to)}`);
     }
     c.nextSibling(); // Skip comma
   })
