@@ -95,11 +95,10 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
-      const freeStmts = decRefcount(stmt.name, env);
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat(freeStmts).concat([`(local.set $${stmt.name})`]);
+        return [...valStmts, `(local.set $${stmt.name})`];
       } else {
-        return valStmts.concat(freeStmts).concat([`(global.set $${stmt.name})`]); 
+        return [...valStmts, `(global.set $${stmt.name})`];
       }
 
     case "return":
@@ -203,13 +202,10 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "none":
       return [`(i32.const 0)`];
     case "id":
-      const incStmts = incRefcount(val.name, env);
       if (env.locals.has(val.name)) {
-        return [...incStmts, `(local.get $${val.name})`];
-        // return incStmts.concat([`(local.get $${val.name})`]);
+        return [`(local.get $${val.name})`];
       } else {
-        return [...incStmts, `(global.get $${val.name})`];
-        // return incStmts.concat([`(global.get $${val.name})`]);
+        return [`(global.get $${val.name})`];
       }
   }
 }
