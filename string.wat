@@ -9,34 +9,23 @@
     (return))
 (func $str$lessthan (param $self i32) (param $rhs i32) (result i32)
     (local $selfLength i32)
-    (local $rhsLength i32)
     (local $i i32)
     (local.get $self)
     (i32.load)
     (local.set $selfLength)
-    (local.get $rhs)
-    (i32.load)
-    (local.set $rhsLength)
-    (i32.lt_s  (local.get $rhsLength)(local.get $selfLength))
-    (if
-      (then
-        i32.const 0
-        return ;; if length is not equal, return false
-      )
-    )
     (i32.const 1)
     (local.set $i)
     (block 
         (loop 
             (br_if 1 (i32.le_s (local.get $i) (local.get $selfLength) )(i32.eqz) )
-            (i32.load (i32.add (local.get $rhs) (local.get $i)))
             (i32.load (i32.add (local.get $self) (local.get $i)))
-            (i32.lt_s)  ;;check if left and right character values are not equal
+            (i32.load (i32.add (local.get $rhs) (local.get $i)))
+            (i32.gt_s)  ;;return false if l >= r
             (if (then (i32.const 0) (return)))
             (i32.add (local.get $i) (i32.const 1))(local.set $i)
             (br 0)
         )
-    ) ;;end block and loop
+    ) ;;end block and loop otherwise return 1
     (i32.const 1)
     (return))
 (func $str$greaterthan (param $self i32) (param $rhs i32) (result i32)
@@ -46,29 +35,20 @@
     (local.get $self)
     (i32.load)
     (local.set $selfLength)
-    (local.get $rhs)
-    (i32.load)
-    (local.set $rhsLength)
-    (i32.gt_s  (local.get $rhsLength) (local.get $selfLength))
-    (if
-      (then
-        i32.const 0
-        return ;; if length is not equal, return false
-      )
-    )
+    
     (i32.const 1)
     (local.set $i)
     (block 
         (loop 
             (br_if 1 (i32.le_s (local.get $i) (local.get $selfLength) )(i32.eqz) )
-            (i32.load (i32.add (local.get $rhs) (local.get $i)))
             (i32.load (i32.add (local.get $self) (local.get $i)))
-            (i32.gt_s)  ;;check if left and right character values are not equal
+            (i32.load (i32.add (local.get $rhs) (local.get $i)))
+            (i32.lt_s)  ;;return false if l < r
             (if (then (i32.const 0) (return)))
             (i32.add (local.get $i) (i32.const 1))(local.set $i)
             (br 0)
         )
-    ) ;;end block and loop
+    ) ;;end block and loop otherwise return 1
     (i32.const 1)
     (return))
 (func $str$equalsto (param $self i32) (param $rhs i32) (result i32)

@@ -45,6 +45,9 @@ describe("string test", () => {
   //7.5
   assertPrint("test case 7.5: compare two strings using their ascii values",
     `print("abcd" < "abc")`, [`False`])
+  //7.6
+  assertPrint("test case 7.6: compare two strings using their ascii values",
+    `print("abcd" > "abc")`, [`True`])
   //8
   assertPrint("test case 8: check if two strings are equal",
     `s1:str = "ab"
@@ -65,13 +68,13 @@ describe("string test", () => {
   assertTCFail("test case 10: should report type error ", `s:int = "asd"`);
 
   //11
-  assertPrint("test case 11: use string as function parameters", 
-  `def f(s:str)->str:
+  assertPrint("test case 11: use string as function parameters",
+    `def f(s:str)->str:
     return s
   print(f("asd"))`,
-   [`asd`]);
+    [`asd`]);
 
-`
+  `
 b:str = ""
 {
   a = "asdf"
@@ -85,8 +88,8 @@ destroy temp
 `
 
   //12
-  assertPrint("test case 12: use string as class fields", 
-  `class C(object):
+  assertPrint("test case 12: use string as class fields",
+    `class C(object):
     s:str = "asd"
     def gets(self: C)->str:
       return self.s
