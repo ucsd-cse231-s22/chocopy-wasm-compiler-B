@@ -46,20 +46,38 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
+  const newClassesMethods = new Map(env.classesMethods);
+  const newClassVTableOffsets = new Map(env.classVTableOffsets);
 
   var newOffset = env.offset;
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
   });
+  // compute offsets into vtable for each class
+  var tableOffset = 0;
+  prog.classes.forEach(cls => {
+    newClassVTableOffsets.set(cls.name, tableOffset);
+    tableOffset += cls.methods.length;
+  });
+  // add $offset field into each class as its first member
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i+1, field.value]));
+    classFields.set("$offset", [0, {tag: "num", value: newClassVTableOffsets.get(cls.name)}])
     newClasses.set(cls.name, classFields);
+
+    const classMethods = new Map();
+    cls.methods.forEach((methoddef, i) => {
+      classMethods.set(methoddef.name, [i, methoddef.ret]);
+    });
+    newClassesMethods.set(cls.name, classMethods);
   });
-  
+
   return {
     globals: newGlobals,
     classes: newClasses,
+    classesMethods: newClassesMethods,
+    classVTableOffsets: newClassVTableOffsets,
     locals: env.locals,
     labels: env.labels,
     offset: newOffset
@@ -72,7 +90,10 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const parsed = parse(source);
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
+  console.log(globalEnv);
   const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log("global env after lower", globalEnv);
+  console.log("irprogram", irprogram);
   const progTyp = tprogram.a;
   var returnType = "";
   var returnExpr = "";
@@ -115,6 +136,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     ${globalImports}
     ${globalDecls}
+
+    ${compiled.methodsVTable}
     ${config.functions}
     ${compiled.functions}
     (func (export "exported_func") ${returnType}
