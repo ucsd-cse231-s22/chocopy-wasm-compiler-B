@@ -81,6 +81,41 @@ function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   return curAddress;
 }
 
+function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  var bigIntComp:boolean
+  switch (op) {
+    case BinOp.Eq:
+      bigIntComp = bigInt1 === bigInt2 
+      break
+    case BinOp.Neq:
+      bigIntComp = bigInt1 !== bigInt2
+      break
+    case BinOp.Lte:
+      bigIntComp = bigInt1 <= bigInt2
+      break
+    case BinOp.Gte:
+      bigIntComp = bigInt1 >= bigInt2
+      break
+    case BinOp.Lt: 
+      bigIntComp = bigInt1 < bigInt2
+      break
+    case BinOp.Gt: 
+      bigIntComp = bigInt1 > bigInt2
+      break
+  }
+  var currAddress = alloc(0)
+  var returnBool = 0
+  
+  if (bigIntComp === true) {
+    returnBool = 1
+  } 
+  
+  store(currAddress, 0, returnBool)
+  return returnBool
+}
+
 function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -126,6 +161,12 @@ function webStart() {
         mul: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store),
         iDiv: (arg1: number, arg2: number) => arithmeticOp(BinOp.IDiv, arg1, arg2, alloc, load, store),
         mod: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mod, arg1, arg2, alloc, load, store),
+        eq: (arg1: number, arg2: number) => comparisonOp(BinOp.Eq,arg1, arg2, alloc, load, store), 
+        neq: (arg1: number, arg2: number) => comparisonOp(BinOp.Neq,arg1, arg2, alloc, load, store), 
+        lte: (arg1: number, arg2: number) => comparisonOp(BinOp.Lte,arg1, arg2, alloc, load, store), 
+        gte: (arg1: number, arg2: number) => comparisonOp(BinOp.Gte,arg1, arg2, alloc, load, store), 
+        lt: (arg1: number, arg2: number) => comparisonOp(BinOp.Lt,arg1, arg2, alloc, load, store),
+        gt: (arg1: number, arg2: number) => comparisonOp(BinOp.Gt,arg1, arg2, alloc, load, store), 
         abs: Math.abs,
         min: Math.min,
         max: Math.max,

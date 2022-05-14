@@ -7,7 +7,7 @@ import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Program, Type, Value } from './ast';
+import { Program, Type, Value, SourceLocation } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
 
@@ -43,7 +43,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<Type>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
@@ -72,9 +72,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
-  var progTyp = tprogram.a; 
-
-  // progTyp === NONE
+  let progTyp = tprogram.a[0];
   var returnType = "";
   var returnExpr = "";
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
@@ -115,6 +113,12 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $mul (import "imports" "mul") (param i32) (param i32) (result i32))
     (func $iDiv (import "imports" "iDiv") (param i32) (param i32) (result i32))
     (func $mod (import "imports" "mod") (param i32) (param i32) (result i32))
+    (func $eq (import "imports" "eq") (param i32) (param i32) (result i32))
+    (func $neq (import "imports" "neq") (param i32) (param i32) (result i32))
+    (func $lte (import "imports" "lte") (param i32) (param i32) (result i32))
+    (func $gte (import "imports" "gte") (param i32) (param i32) (result i32))
+    (func $lt (import "imports" "lt") (param i32) (param i32) (result i32))
+    (func $gt (import "imports" "gt") (param i32) (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
