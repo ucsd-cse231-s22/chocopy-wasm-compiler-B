@@ -6,18 +6,24 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
-  i: int = 0
+class Node(object):
+  prev: Node = None
+  next: Node = None
     
-c: C = None
-d: C = None
-c = C()
-test_refcount(c, 1)
-d = c
-test_refcount(c, 2)
-d = None
-test_refcount(c, 1)
-c = None`
+node0: Node = None
+node1: Node = None
+node2: Node = None
+node0 = Node()
+node1 = Node()
+node2 = Node()
+  
+node0.prev = node2
+node0.next = node1
+node1.prev = node0
+node1.next = node2
+node2.prev = node1
+node2.next = node0
+`
   const ast = parse(source);
   
   const repl = new BasicREPL(await addLibs());
