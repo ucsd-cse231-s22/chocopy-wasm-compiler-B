@@ -78,6 +78,41 @@ function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   return curAddress;
 }
 
+function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  var bigIntComp:boolean
+  switch (op) {
+    case BinOp.Eq:
+      bigIntComp = bigInt1 === bigInt2 
+      break
+    case BinOp.Neq:
+      bigIntComp = bigInt1 !== bigInt2
+      break
+    case BinOp.Lte:
+      bigIntComp = bigInt1 <= bigInt2
+      break
+    case BinOp.Gte:
+      bigIntComp = bigInt1 >= bigInt2
+      break
+    case BinOp.Lt: 
+      bigIntComp = bigInt1 < bigInt2
+      break
+    case BinOp.Gt: 
+      bigIntComp = bigInt1 > bigInt2
+      break
+  }
+  var currAddress = alloc(0)
+  var returnBool = 0
+  
+  if (bigIntComp === true) {
+    returnBool = 1
+  } 
+  
+  store(currAddress, 0, returnBool)
+  return returnBool
+}
+
 function print(typ: Type, arg : number, load : any) : any {
   importObject.output = stringify(typ, arg) + "\n";
   if (typ === Type.Num) {
@@ -116,6 +151,15 @@ export async function addLibs() {
   importObject.imports.mul = (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store);
   importObject.imports.iDiv = (arg1: number, arg2: number) => arithmeticOp(BinOp.IDiv, arg1, arg2, alloc, load, store);
   importObject.imports.mod = (arg1: number, arg2: number) => arithmeticOp(BinOp.Mod, arg1, arg2, alloc, load, store);
+
+  // comparison operators
+  importObject.imports.eq = (arg1: number, arg2: number) => comparisonOp(BinOp.Eq,arg1, arg2, alloc, load, store);
+  importObject.imports.neq = (arg1: number, arg2: number) => comparisonOp(BinOp.Neq,arg1, arg2, alloc, load, store); 
+  importObject.imports.lte = (arg1: number, arg2: number) => comparisonOp(BinOp.Lte,arg1, arg2, alloc, load, store); 
+  importObject.imports.gte = (arg1: number, arg2: number) => comparisonOp(BinOp.Gte,arg1, arg2, alloc, load, store); 
+  importObject.imports.lt = (arg1: number, arg2: number) => comparisonOp(BinOp.Lt,arg1, arg2, alloc, load, store);
+  importObject.imports.gt = (arg1: number, arg2: number) => comparisonOp(BinOp.Gt,arg1, arg2, alloc, load, store); 
+
   return importObject;
 }
 
