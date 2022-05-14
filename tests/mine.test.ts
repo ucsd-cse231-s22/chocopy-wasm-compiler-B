@@ -50,7 +50,7 @@ describe("my tests", () => {
   assertPrint(
     "Modulo", 
     `print(100000000000000000000000000000 % 6)`, 
-    [`6`]
+    [`4`]
   );
   // 9
   assertPrint(
