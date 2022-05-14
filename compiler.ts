@@ -146,7 +146,7 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
       var zeroExprStmts = codeGenValue(zeroLiteral, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [...zeroExprStmts, ...exprStmts, `(call  $minus)`];
+          return [...zeroExprStmts, ...exprStmts, `(call $minus)`];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
