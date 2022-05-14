@@ -136,12 +136,8 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "value":
       return codeGenValue(expr.value, env)
     case "binop":
-
-      const lhsStmts = codeGenValue(expr.left, env);
-        
+      const lhsStmts = codeGenValue(expr.left, env); 
       const rhsStmts = codeGenValue(expr.right, env);
-      
-
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":

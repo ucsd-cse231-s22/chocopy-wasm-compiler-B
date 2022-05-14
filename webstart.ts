@@ -167,7 +167,6 @@ function webStart() {
         gte: (arg1: number, arg2: number) => comparisonOp(BinOp.Gte,arg1, arg2, alloc, load, store), 
         lt: (arg1: number, arg2: number) => comparisonOp(BinOp.Lt,arg1, arg2, alloc, load, store),
         gt: (arg1: number, arg2: number) => comparisonOp(BinOp.Gt,arg1, arg2, alloc, load, store), 
-        is: (arg1: number, arg2: number) => comparisonOp(BinOp.Is,arg1, arg2, alloc, load, store),  
         abs: Math.abs,
         min: Math.min,
         max: Math.max,

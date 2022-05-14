@@ -119,7 +119,6 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $gte (import "imports" "gte") (param i32) (param i32) (result i32))
     (func $lt (import "imports" "lt") (param i32) (param i32) (result i32))
     (func $gt (import "imports" "gt") (param i32) (param i32) (result i32))
-    (func $is (import "imports" "is") (param i32) (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
