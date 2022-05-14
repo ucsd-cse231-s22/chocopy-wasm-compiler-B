@@ -262,7 +262,7 @@ function codeGenBinOp(op : BinOp) : string {
     case BinOp.Gt:
       return "(call $gt)"
     case BinOp.Is:
-      return "(i32.is)";
+      return "(i32.eq)";
     case BinOp.And:
       return "(i32.and)"
     case BinOp.Or:
