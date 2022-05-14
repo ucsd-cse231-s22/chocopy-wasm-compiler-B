@@ -30,9 +30,9 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 // entry point for debugging
 async function debug() {
   var source =
-    `
-    s:str = "asdf"
-    print(s == "asdf")
+    `def f(s:str)->str:
+      return s
+    print(f("asd"))
     `
 
   // const t = parser.parse(source);
