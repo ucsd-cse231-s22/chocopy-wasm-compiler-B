@@ -69,7 +69,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
             `
   })
   bodyCommands += blockCommands;
-  bodyCommands += ") ;; end $loop"
+  bodyCommands += ") ;; end $loop\n\n"
   bodyCommands += freeAllLocals(env).join('\n');
 
   const destructorTable = makeDestructorTable(env);
@@ -284,7 +284,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
             `
   })
   bodyCommands += blockCommands;
-  bodyCommands += ") ;; end $loop"
+  bodyCommands += ") ;; end $loop\n\n"
+  bodyCommands += freeAllLocals(env).join('\n');
   env.locals.clear();
   return [`(func $${def.name} ${params} (result i32)
     ${locals}
@@ -407,7 +408,7 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called on all exit paths from a function
  */
 function freeAllLocals(env: GlobalEnv): Array<string> {
-  return Array.from(env.locals.keys()).flatMap((name) => decRefcount(name, env));
+  return Array.from(env.locals.keys()).flatMap(name => decRefcount(name, env));
 }
 
 /** Make the destructor table
