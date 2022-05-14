@@ -6,3 +6,5 @@ cli
 *.sw*
 mochawesome-report
 *lock*
+*.js
+.vscode

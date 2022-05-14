@@ -1,13 +1,14 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp } from "./ast"
+import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
+import { EnvironmentPlugin } from "webpack";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<Type>]>>;  
+  classes: Map<string, Map<string, [bigint, Value<[Type, SourceLocation]>]>>;  
   locals: Set<string>;
   labels: Array<string>;
-  offset: number;
+  offset: bigint;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -15,7 +16,7 @@ export const emptyEnv : GlobalEnv = {
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: BigInt(0) 
 };
 
 type CompileResult = {
@@ -33,7 +34,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
   return localDefines;
 }
 
-export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
+export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
@@ -78,7 +79,7 @@ export function compile(ast: Program<Type>, env: GlobalEnv) : CompileResult {
   };
 }
 
-function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
+function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
       return [
@@ -130,27 +131,28 @@ function codeGenStmt(stmt: Stmt<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
+function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (expr.tag) {
     case "value":
       return codeGenValue(expr.value, env)
-
     case "binop":
-      const lhsStmts = codeGenValue(expr.left, env);
+      const lhsStmts = codeGenValue(expr.left, env); 
       const rhsStmts = codeGenValue(expr.right, env);
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
+      var zeroLiteral : Value<[Type, SourceLocation]> = { a: expr.expr.a, tag: "num", value: BigInt(0) } ;
+      var zeroExprStmts = codeGenValue(zeroLiteral, env);
       switch(expr.op){
         case UniOp.Neg:
-          return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
+          return [...zeroExprStmts, ...exprStmts, `(call $minus)`];
         case UniOp.Not:
           return [`(i32.const 0)`, ...exprStmts, `(i32.eq)`];
       }
 
     case "builtin1":
-      const argTyp = expr.a;
+      const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
       if (expr.name === "print" && argTyp === NUM) {
@@ -187,14 +189,39 @@ function codeGenExpr(expr: Expr<Type>, env: GlobalEnv): Array<string> {
   }
 }
 
-function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
+function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (val.tag) {
     case "num":
-      return ["(i32.const " + val.value + ")"];
+      var generatedString = ``;
+      var curVal = val.value;
+      var i = 1; // the first field is preserved for the size
+      const base = BigInt(2 ** 31);
+
+      // use a do-while loop to address the edge case of initial curVal == 0
+      do {
+        var remainder = curVal % base;
+
+        generatedString += `(i32.const ${i})\n(i32.const ${remainder})\n(call $store)`; // call the store function with address, offset, and val
+
+        i += 1; // next iteration
+        curVal /= base; // default to use floor() 
+      } while (curVal > 0);
+
+      // "i" represents the number of fields
+      var prefix = ``;
+      var allocation = `(i32.const ${i})\n(call $alloc)\n`; // allocate spaces for the number
+      var storeSize = `(i32.const 0)\n(i32.const ${i - 1})\n(call $store)\n`; // store the number of digits of the number at the first field
+      while (i > 0) {
+        prefix += `(i32.const 0)\n(call $alloc)\n`; // prepare the addresses for the store calls
+        i -= 1;
+      }
+      // We call $alloc (n + 1) times, call $store n times, and return 1 time.
+      prefix += allocation + storeSize;
+      return [prefix + generatedString];
     case "wasmint":
       return ["(i32.const " + val.value + ")"];
     case "bool":
-      return [`(i32.const ${Number(val.value)})`];
+      return [`(i32.const ${BigInt(val.value)})`];
     case "none":
       return [`(i32.const 0)`];
     case "id":
@@ -209,27 +236,27 @@ function codeGenValue(val: Value<Type>, env: GlobalEnv): Array<string> {
 function codeGenBinOp(op : BinOp) : string {
   switch(op) {
     case BinOp.Plus:
-      return "(i32.add)"
+      return "(call $plus)"
     case BinOp.Minus:
-      return "(i32.sub)"
+      return "(call $minus)"
     case BinOp.Mul:
-      return "(i32.mul)"
+      return "(call $mul)"
     case BinOp.IDiv:
-      return "(i32.div_s)"
+      return "(call $iDiv)"
     case BinOp.Mod:
-      return "(i32.rem_s)"
+      return "(call $mod)"
     case BinOp.Eq:
-      return "(i32.eq)"
+      return "(call $eq)"
     case BinOp.Neq:
-      return "(i32.ne)"
+      return "(call $neq)"
     case BinOp.Lte:
-      return "(i32.le_s)"
+      return "(call $lte)"
     case BinOp.Gte:
-      return "(i32.ge_s)"
+      return "(call $gte)"
     case BinOp.Lt:
-      return "(i32.lt_s)"
+      return "(call $lt)"
     case BinOp.Gt:
-      return "(i32.gt_s)"
+      return "(call $gt)"
     case BinOp.Is:
       return "(i32.eq)";
     case BinOp.And:
@@ -239,7 +266,7 @@ function codeGenBinOp(op : BinOp) : string {
   }
 }
 
-function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
+function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
     return [...value, `(local.set $${init.name})`]; 
@@ -248,7 +275,7 @@ function codeGenInit(init : VarInit<Type>, env : GlobalEnv) : Array<string> {
   }
 }
 
-function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
+function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
@@ -284,9 +311,10 @@ function codeGenDef(def : FunDef<Type>, env : GlobalEnv) : Array<string> {
     (return))`];
 }
 
-function codeGenClass(cls : Class<Type>, env : GlobalEnv) : Array<string> {
+function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
   }
+
