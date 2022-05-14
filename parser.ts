@@ -1,9 +1,19 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
+
+let ModuleContext : any = {
+  name : "",
+  nsMap : { // expand var => $mod-name$var
+    "x" : "mod-name1",
+    "a" : "mod-name1",
+    "y" : "mod-name2"
+    // if it's a "*", expand to include all
+  }
+}
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -553,8 +563,18 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
   }
 }
 
-export function parse(source : string) : Program<SourceLocation> {
-  const t = parser.parse(source);
-  const str = stringifyTree(t.cursor(), source, 0);
-  return traverse(t.cursor(), source);
+export function parse(modules : Modules) : Program<SourceLocation> {
+  let parsedModules = []
+  for(let modName in modules){
+    const src = modules[modName]
+    // update global ModuleContext object
+    const t = parser.parse(src);
+    parsedModules.push(traverse(t.cursor(), src));
+  }
+  return mergeModules(parsedModules);
+}
+
+
+export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
+  return null
 }
