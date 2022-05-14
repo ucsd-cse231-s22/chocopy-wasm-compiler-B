@@ -5,12 +5,13 @@
 class A(object):
     a : int = 1
 class B(A):
-    pass
+    b : int = 2
 x : B = None
 x = B()
 print(x.a)
+print(x.b)
 ```
-Expected Output -> 1
+Expected Output -> 1, 2
 
 # No.2: method call
 ```
@@ -19,7 +20,9 @@ class A(object):
     def get(self: A)->int:
         return self.a
 class B(A):
-    pass
+    c : int = 3
+    b : int = 2
+    
 x : B = None
 x = B()
 print(x.get())
@@ -47,40 +50,36 @@ Expected Output -> TYPE ERROR: Parent-child cannot have same field
 ```
 class Person(object):
     age:int = 0
-    # Constructor
-    def __init__(self:Person,age:int):
+    def new(self:Person,age:int) -> Person:
         self.age = age
+        return self
   
-    # To get age
     def getAge(self:Person)->int:
         return self.age
   
-    # To check if this person is employee
     def isEmployee(self:Person)->bool:
         return False
-  
-  
-# Inherited or Sub class (Note Person in bracket)
+
 class Employee(Person):
 
-    def __init__(self:Employee,age:int):
+    def new(self:Employee,age:int) -> Person:
         self.age = age
+        return self
 
-    # Here we return true
     def isEmployee(self:Employee)->bool:
         return True
   
-# Driver code
-emp1:Person = None
-emp1 = Person(40)  # An Object of Person
+emp1: Person = None
+emp2: Person = None
+
+emp1 = Person().new(40)
 print(emp1.getAge())
 print(emp1.isEmployee())
 
 
-
-emp = Employee(30) # An Object of Employee
-print(emp.getAge())
-print(emp.isEmployee())
+emp2 = Employee().new(30)
+print(emp2.getAge())
+print(emp2.isEmployee())
 ```
 
 Expected output:
@@ -90,7 +89,7 @@ False
 30
 True
 ```
-
+The point of this test is to show that Employee can override new (in a pointless way) and isEmployee (in a meaningful way).
 
 # No.6: method overwrite with different signature (TC)
 ```
@@ -120,7 +119,7 @@ Expected output -> TYPE ERROR: Method overriden with different return
 class A(object):
     x : int = 1
 class B(A):
-    x: int = 0
+    y : int = 2
 def test(arg: A):
     print(arg.x)
 x : B = None
@@ -131,17 +130,16 @@ Expected output -> 1
 
 
 
-# No.9: type conversion from superclass to subclass (TC)
+# No.9: cannot assign instance of superclass to variable of type subclass (TC)
 ```
 class A(object):
     a : int = 1
 class B(A):
-    a: int = 0
+    b : int = 2
 def test(arg: B):
     pass
-x : A = None
+x : B = None
 x = A()
-test(x)
 ```
 
 Expected output -> TYPE ERROR: Assigning super class to subclass
