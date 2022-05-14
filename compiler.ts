@@ -359,7 +359,7 @@ function codeGenDestructor(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): 
       return [];
     return [
       `(i32.load (i32.add (local.get $obj) (i32.const ${index * 4 + HEADER_SIZE})))`,
-      `(call dec_refcount)`
+      `(call $dec_refcount)`
     ];
   });
   return [` (func ${name} (param $obj i32) \n${stmts.join('\n')})`];
@@ -378,8 +378,8 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
   if (!isPointer(ty))
     return [];
   return [
-    `(local.get $${name})`,
-    "(call dec_refcount)"
+    `(${env.locals.has(name) ? "local" : "global"}.get $${name})`,
+    "(call $dec_refcount)"
   ];
 }
 
@@ -395,8 +395,8 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
   if (!isPointer(ty))
     return [];
   return [
-    `(local.get $${name})`,
-    "(call inc_refcount)"
+    `(${env.locals.has(name) ? "local" : "global"}.get $${name})`,
+    "(call $inc_refcount)"
   ];
 }
 

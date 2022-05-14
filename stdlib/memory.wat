@@ -34,15 +34,17 @@
   )
 
   (func $inc_refcount (export "inc_refcount") (param $addr i32)
-    (local $refcount_addr)
+    (local $refcount_addr i32)
     (local.set $refcount_addr (i32.add (local.get $addr) (i32.const 8)))
-    (i32.store $refcount_addr (i32.add (i32.load $refcount_addr) (i32.const 1)))
+    (i32.store (local.get $refcount_addr)
+               (i32.add (i32.load (local.get $refcount_addr)) (i32.const 1)))
   )
 
   (func $dec_refcount (export "dec_refcount") (param $addr i32)
-    (local $refcount_addr)
+    (local $refcount_addr i32)
     (local.set $refcount_addr (i32.add (local.get $addr) (i32.const 8)))
-    (i32.store $refcount_addr (i32.sub (i32.load $refcount_addr) (i32.const 1)))
+    (i32.store (local.get $refcount_addr)
+               (i32.sub (i32.load (local.get $refcount_addr)) (i32.const 1)))
   )
 
   (func (export "test_refcount") (param $addr i32) (param $n i32) (result i32)
