@@ -2,7 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
-import { jsopen, jsclose, jsread, jswrite } from './io';
+import { jsopen, jsclose, jsread, jswrite, fileObjectDefinition } from './io';
 import { isJsxAttribute } from 'typescript';
 
 declare global {
@@ -61,7 +61,8 @@ function webStart() {
     ).then(bytes => 
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-
+    const s = document.getElementById("user-code") as HTMLTextAreaElement;
+    s.value = fileObjectDefinition;
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
