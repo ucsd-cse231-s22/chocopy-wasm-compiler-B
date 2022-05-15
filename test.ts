@@ -1,12 +1,15 @@
 import {parse} from './parser'
 
 let main = `
-from lib import *
+from lib import updateXYZ as update
 from math import add, sub
 import deps
-
-print(x) # prints 10
-print(deps.x) # prints 15
+x: int = 0
+y: int = 0
+x = add(1,2)
+y = sub(3,1)
+deps.p2(x,y)
+update(20)
 `
 
 let lib = `

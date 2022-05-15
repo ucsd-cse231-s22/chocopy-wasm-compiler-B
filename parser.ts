@@ -628,7 +628,7 @@ export function traverseImport(c : TreeCursor, s : string) : ModuleData {
     while(hasNext){
       // c -> variable name
       let name = s.substring(c.from, c.to)
-      let resolve = module? `module$${name}` : name
+      let resolve = module? `${module}$${name}` : name
 
       // move on to 'as' or VariableName or ","
       hasNext = c.nextSibling()
@@ -672,6 +672,7 @@ export function traverseImport(c : TreeCursor, s : string) : ModuleData {
 export function buildModulesContext(modules : Modules){
   // build the maps & globals for every object
   for(let modName in modules){
+    currentModule = modName
     const s = modules[modName];
     const c = parser.parse(s).cursor();
     let mData : ModuleData = {
@@ -679,6 +680,7 @@ export function buildModulesContext(modules : Modules){
       nsMap: {},
       globals : []
     }
+    modulesContext[modName] = mData;
     var hasChild = c.firstChild();
 
     // populate modMap & nsMap from import statements
@@ -696,6 +698,7 @@ export function buildModulesContext(modules : Modules){
       hasChild = c.nextSibling();
     }
     // consume the globals
+    // TODO - should replace with just top level parsing
     while(hasChild) {
       if (isVarInit(c, s)) {
         mData.globals.push(traverseVarInit(c, s).name);
