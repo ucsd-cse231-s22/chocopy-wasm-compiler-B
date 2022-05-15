@@ -1,15 +1,17 @@
 import {parse} from './parser'
 
 let main = `
-from lib import updateXYZ as update
+from lib import p3, updateXYZ as update
 from math import add, sub
 import deps
 x: int = 0
 y: int = 0
-x = add(1,2)
-y = sub(3,1)
-deps.p2(x,y)
+def do_stuff():
+  x = add(1,2)
+  y = sub(3,1)
+do_stuff()
 update(20)
+p3(x, y, deps.XYZ)
 `
 
 let lib = `
@@ -35,6 +37,9 @@ def sub(x:int, y:int) -> int:
 
 let deps = `
 XYZ:int = 10
+class Bar(object):
+  def foo(self:Bar):
+    pass
 `
 
 let prog = parse({main, lib, math, deps})
