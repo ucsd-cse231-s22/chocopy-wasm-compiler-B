@@ -7,7 +7,7 @@ import { assert } from "console";
 export type GlobalEnv = {
   globals: Map<string, boolean>;
   global_type: Map<string, Type>;
-  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
+  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  // store classname -> {field_name: field_id, init_value}
   locals: Set<string>;
   local_type: Map<string, Type>;
   labels: Array<string>;
@@ -87,18 +87,37 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
 function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
+      var is_pointer : Value<[Type, SourceLocation]> = {tag: "bool", value: false};
+      if(stmt.offset.tag == "wasmint"){
+        if(stmt.offset.is_pointer){
+          is_pointer = {tag: "bool", value: true};
+        }
+      }
       return [
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
+        ...codeGenValue(is_pointer, env),
         `call $store`
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
+      const decPreRefStmts = decRefcount(stmt.name, env);
+      const incNowRefStmts = incRefcount(stmt.name, env);
       if (env.locals.has(stmt.name)) {
-        return [...valStmts, `(local.set $${stmt.name})`];
+        return [
+          ...decPreRefStmts,
+          ...valStmts, 
+          `(local.set $${stmt.name})`,
+          ...incNowRefStmts
+        ];
       } else {
-        return [...valStmts, `(global.set $${stmt.name})`];
+        return [
+          ...decPreRefStmts,
+          ...valStmts, 
+          `(global.set $${stmt.name})`,
+          ...incNowRefStmts
+        ];
       }
 
     case "return":
@@ -273,7 +292,37 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   const locals = localDefines.join("\n");
   const inits = def.inits.map(init => codeGenInit(init, env)).flat().join("\n");
   var params = def.parameters.map(p => `(param $${p.name} i32)`).join(" ");
+  var inc_params: string[] = [];
+  def.parameters.forEach(p => { //inc ref_count: the param 
+    if(p.type.tag == "class"){
+      inc_params = [
+        ...inc_params,
+        `(local.get $${p.name}) ;; inc ref_count of parma $${p.name}`,
+        `(call $inc_refcount)`
+      ]
+    }
+  });
+  var dec_params: string[] = [];
+  def.parameters.forEach(p => { //dec refcount: the param and local_var
+    if(p.type.tag == "class"){
+      dec_params = [
+        ...dec_params,
+        `(local.get $${p.name})`,
+        `(call $dec_refcount) ;; dec ref_count of param $${p.name}`
+      ]
+    }
+  });
+  def.inits.forEach(init => {
+    if(init.type.tag == "class" && !init.name.includes("newObj")){
+      dec_params = [
+        ...dec_params,
+        `(local.get $${init.name})`,
+        `(call $dec_refcount) ;; dec ref_count of field $${init.name}`,
+      ]
+    }
+  })
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
+  // bodyCommands += inc_params.join("\n");
   bodyCommands += "(loop $loop\n"
 
   var blockCommands = "(local.get $$selector)\n"
@@ -282,11 +331,21 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     blockCommands = `(block ${block.label}
               ${blockCommands}    
             ) ;; end ${block.label}
-            ${block.stmts.map(stmt => codeGenStmt(stmt, env).join('\n')).join('\n')}
             `
+            // ${block.stmts.map(stmt => codeGenStmt(stmt, env).join('\n')).join('\n')}
+    var stmtsCommands = block.stmts.map(stmt => codeGenStmt(stmt, env).join('\n'));
+    // if(block.stmts.length > 0 && block.stmts[block.stmts.length-1].tag == "return"){
+    //   stmtsCommands = [
+    //     ...stmtsCommands.slice(0, -1),
+    //     "\n;; dec ref_count of params and fields before each return \n" + dec_params.join("\n"),
+    //     stmtsCommands[-1]
+    //   ]
+    // }
+    blockCommands += stmtsCommands.join("\n");
   })
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
+  // bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_params.join("\n");
   env.locals.clear();
   env.local_type.clear();
   return [`(func $${def.name} ${params} (result i32)
@@ -332,8 +391,25 @@ function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
  * the end of a function
  */
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  if(name.includes("newObj") || name.includes("valname")){
+    return [];
+  }
+  const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
+  switch(type.tag){
+    case "number":
+    case "bool":
+      return [];
+    case "none":
+    case "class":
+      return [
+        `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
+        `call $dec_refcount`
+      ]
+    case "either":
+      throw new Error("Not good for either");
+    default:
+      throw new Error("Unexpect Error");
+  }
 }
 
 /** Generate code to increase the refcount, if that variable is a pointer
@@ -341,8 +417,25 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called when values are loaded from fields or variables
  */
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
+  if(name.includes("newObj") || name.includes("valname")){
+    return [];
+  }
+  const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
+  switch(type.tag){
+    case "number":
+    case "bool":
+      return [];
+    case "none":
+    case "class":
+      return [
+        `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
+        `call $inc_refcount`
+      ]
+    case "either":
+      throw new Error("Not good for either");
+    default:
+      throw new Error("Unexpect Error");
+  }
 }
 
 /** Generate code to decrease the reference counts of all local variables

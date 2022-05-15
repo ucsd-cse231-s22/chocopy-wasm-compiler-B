@@ -38,58 +38,55 @@ print(test_refcount(c, 2))
 d = None
 print(test_refcount(c, 1))
 c = None`, ["True", "True", "True"]);
-  // 
-//   assertPrint("Test refcount in function", `
-// class C(object):
-//   i: int = 0
+// Refcount of var in func
+// first we alloc C(), then it's not assigned, so its refcount will be 0
+// then we call method foo(10), it's binded to self, its refcount will be 1
+// we create a C in foo, it's normal
+// after C().foo(10). both objects would be free
+  assertPrint("Refcount of var in func", `
+class C(object):
+  i: int = 0
     
-// def foo(x: int) -> int:
-//   c: C = None
-//   c = C()
-//   test_refcount(c, 1)
-//   return 1
+  def foo(self: C, x: int) -> int:
+    c: C = None
+    c = C()
+    print(test_refcount(self, 1))
+    print(test_refcount(c, 1))
+    return 1
 
-// foo(10)`, ["True"]);
-  // 
-//   assertPrint("Test refcount in function param", `
-// class C(object):
-//   i: int = 0
-
-// def foo(c: C):
-//   test_refcount(c, 2)
-
-// c: C = None
-// c = C()
-// test_refcount(c, 1)
-// foo(c)
-// test_refcount(c, 1)`, ["True", "True", "True"]);
-  // 
-  assertPrint("Test refcount in method call", `
+C().foo(10)`, ["True", "True"]);
+// Refcount of var in func param
+// first we alloc C(), then assign it to c, its ref_count = 1
+// then we call c.foo(c), then c will be binded to fc in the function, and c will bind it to self, its ref_count = 3
+// When we exit c.foo(c), then fc is disappear. The ref_count goes back to 1.
+  assertPrint("Refcount of var in func param", `
 class C(object):
   i: int = 0
 
-  def foo(self: C, c: C):
-    print(test_refcount(c, 2))
+  def foo(self: C, fc: C):
+    print(test_refcount(fc, 3))
 
 c: C = None
 c = C()
 print(test_refcount(c, 1))
 c.foo(c)
 print(test_refcount(c, 1))`, ["True", "True", "True"]);
-  // 
-//   assertPrint("Return refcount", `
-// class C(object):
-//   i: int = 0
+// Refcount in return
+  assertPrint("Refcount in return", `
+class C(object):
+  i: int = 0
  
-// def foo(x: int) -> C:
-//   c: C = None
-//   c = C()
-//   c.i = x
-//   test_refcount(c, 1)
-//   return c
+  def foo(self: C) -> C:
+    c0: C = None
+    c1: C = None
+    c0 = C()
+    c1 = C()
+    print(test_refcount(c0, 1))
+    return c0
 
-// v: C = foo(1)
-// test_refcount(v, 1)`, ["True", "True"]);
+v: C = None
+v = C().foo()
+print(test_refcount(v, 1))`, ["True", "True"]);
   // 
   assertPrint("Linked", `
 class Node(object):
@@ -109,8 +106,8 @@ node1.prev = node0
 node1.next = node2
 node2.prev = node1
 node2.next = node0
-print(test_refcount(node0, 2))
-print(test_refcount(node1, 2))
-print(test_refcount(node2, 2))
-`, ["True", "True", "True"]);
+print(test_refcount(node0, 3)) 
+print(test_refcount(node1, 3))
+print(test_refcount(node2, 3))
+`, ["True", "True", "True"]); // for node there are three pointers, node0.self, node1.prev, node2.next
 });

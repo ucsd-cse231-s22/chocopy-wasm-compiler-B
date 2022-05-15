@@ -24,6 +24,7 @@ defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("get_refcount", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("test_refcount", [[CLASS("object"), NUM], BOOL]);
 
 export const defaultTypeEnv = {
@@ -312,6 +313,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if(expr.name === "test_refcount"){
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         return {...expr, a: [BOOL, expr.a], arguments: tArgs};
+      }
+      if(expr.name === "get_refcount"){
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        return {...expr, a: [NUM, expr.a], arguments: tArgs};
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor

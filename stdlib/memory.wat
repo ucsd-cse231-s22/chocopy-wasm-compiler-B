@@ -24,9 +24,29 @@
 
   ;; Given an address handle and a new value, update the value at that adress to
   ;; that value
-  (func (export "store") (param $addr i32) (param $offset i32) (param $val i32)
+  (func (export "store") (param $addr i32) (param $offset i32) (param $val i32) (param $is_pointer i32)
     ;; compute new offset: (i32.add (local.get $offset) (i32.const 3))
-    (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val)))
+    (local.get $is_pointer)
+    (i32.const 1)
+    (i32.eq)
+    (if
+      (then
+        (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4)))
+        (i32.load) ;; get the previous pointer and dec_refcount
+        (call $dec_refcount)
+        ;; store the value
+        (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val))
+        ;; inc_refcount of the pointer val
+        (local.get $val)
+        (call $inc_refcount)
+      )
+      (else
+       (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val))
+      )
+    )
+
+    
+  )
 
 
   (func $get_refcount (export "get_refcount") (param $addr i32) (result i32)

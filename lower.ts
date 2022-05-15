@@ -126,9 +126,11 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
     case "field-assign": {
       var [oinits, ostmts, oval] = flattenExprToVal(s.obj, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, env);
+      oval.a = s.obj.a;
       if(s.obj.a[0].tag !== "class") { throw new Error("Compiler's cursed, go home."); }
       const classdata = env.classes.get(s.obj.a[0].name);
-      const offset : IR.Value<[Type, SourceLocation]> = { tag: "wasmint", value: classdata.get(s.field)[0] };
+      const offset : IR.Value<[Type, SourceLocation]> = { tag: "wasmint", value: classdata.get(s.field)[0], is_pointer: classdata.get(s.field)[1].tag == "none"};
+      classdata.get(s.field)[1].tag == "none"
       pushStmtsToLastBlock(blocks,
         ...ostmts, ...nstmts, {
           tag: "store",
@@ -257,11 +259,11 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
       if(e.obj.a[0].tag !== "class") { throw new Error("Compiler's cursed, go home"); }
       const classdata = env.classes.get(e.obj.a[0].name);
-      const [offset, _] = classdata.get(e.field);
+      const [offset, value] = classdata.get(e.field);
       return [oinits, ostmts, {
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset }}];
+        offset: { tag: "wasmint", value: offset, is_pointer: value.tag == "none" }}];
     }
     case "construct":
       const classdata = env.classes.get(e.name);
@@ -272,8 +274,8 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
         const [_, [index, value]] = f;
         return {
           tag: "store",
-          start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          start: { tag: "id", name: newName, a: [{tag: "class", name: e.name}, {line: 0}] },
+          offset: { tag: "wasmint", value: index, is_pointer: value.tag == "none"},
           value: value
         }
       });
