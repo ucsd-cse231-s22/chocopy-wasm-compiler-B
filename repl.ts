@@ -53,7 +53,7 @@ export class BasicREPL {
   }
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
-    const parsed = parse(source);
+    const parsed = parse({main:source});
     const [result, _] = tc(this.currentTypeEnv, parsed);
     return result.a[0];
   }

@@ -8,19 +8,20 @@ import { ParseError} from "./error_reporting";
 // modulesContext[module_name] of current module being parsed
 // let currentModule : ModuleData = null
 let currentModule : string = ""
-
 let modulesContext : ModulesContext = {
-  "module_name" : {
-    modMap : {
-      // lib : "lib"  -> import lib
-      //   x : "lib"  -> import lib as x
-    },
-    nsMap : { 
-      // x : "lib$x"  -> from lib import x / *
-      // y : "lib$x"  -> from lib import x as y
-    },
-    globals: ["vars", "funcs", "classes"]
-  }
+  // "mod_name" : {
+  //   modMap : {
+  //     // lib : "lib"  -> import lib
+  //     //   x : "lib"  -> import lib as x
+  //   },
+  //   nsMap : { 
+  //     // x : "lib$x"  -> from lib import x / *
+  //     // y : "lib$x"  -> from lib import x as y
+  //     // z : "mod_name$z" -> z is a global in mod_name
+  //   },
+  //   globals: []
+  //     // ["vars", "funcs", "classes"]
+  // }
   /* modMap & nsMap work differently
   1. A module can't directly be accessed.
    But when a imported var is accessed, need to replace.
@@ -33,6 +34,9 @@ let modulesContext : ModulesContext = {
     nsMap  : y.x = 10   # lib$y.x ; from lib import y
   */
 }
+
+let localCtx :string[] = [] // variable names of local
+let curCtx :'global'|'func'|'class' = 'global'
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -64,6 +68,8 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> {
   var location = getSourceLocation(c, s);
+  let module = modulesContext[currentModule];
+  let name = ""
   switch(c.type.name) {
     case "Number":
     case "Boolean":
@@ -74,10 +80,15 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         value: traverseLiteral(c, s)
       }      
     case "VariableName":
+      name = s.substring(c.from, c.to)
+      // check if name is there in module.nsMap & not in localCtx
+      if(module.nsMap[name] && !localCtx.includes(name)){
+        name = module.nsMap[name]
+      }
       return {
         a: location,
         tag: "id",
-        name: s.substring(c.from, c.to)
+        name
       }
     case "CallExpression":
       c.firstChild();
@@ -220,6 +231,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
+      // if objExpr.tag = 'id' & id is in module.modMap & hasn't been redefined locally
+      if(objExpr.tag === 'id' 
+          && module.modMap[objExpr.name] 
+          && !localCtx.includes(objExpr.name)) {
+            return {
+              a: location,
+              tag: "id",
+              //eg. import lib as x; x.y -> mod$y
+              name: `${module.modMap[objExpr.name]}${propName}`
+            }
+      }
       return {
         a: location,
         tag: "lookup",
@@ -295,32 +317,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       const expr = traverseExpr(c, s);
       c.parent(); // pop going into stmt
       return { a: location, tag: "expr", expr: expr }
-    // case "FunctionDefinition":
-    //   c.firstChild();  // Focus on def
-    //   c.nextSibling(); // Focus on name of function
-    //   var name = s.substring(c.from, c.to);
-    //   c.nextSibling(); // Focus on ParamList
-    //   var parameters = traverseParameters(c, s)
-    //   c.nextSibling(); // Focus on Body or TypeDef
-    //   let ret : Type = NONE;
-    //   if(c.type.name === "TypeDef") {
-    //     c.firstChild();
-    //     ret = traverseType(c, s);
-    //     c.parent();
-    //   }
-    //   c.firstChild();  // Focus on :
-    //   var body = [];
-    //   while(c.nextSibling()) {
-    //     body.push(traverseStmt(c, s));
-    //   }
-      // console.log("Before pop to body: ", c.type.name);
-    //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
-    //   c.parent();      // Pop to FunctionDefinition
-    //   return {
-    //     tag: "fun",
-    //     name, parameters, body, ret
-    //   }
     case "IfStatement":
       c.firstChild(); // Focus on if
       c.nextSibling(); // Focus on cond
@@ -412,7 +408,8 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
 export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLocation> {
   var location = getSourceLocation(c, s);
   c.firstChild(); // go to name
-  var name = `${currentModule}$${s.substring(c.from, c.to)}`;
+  var name = s.substring(c.from, c.to);
+  name = curCtx === 'global'? `${currentModule}$${name}` : name;
   c.nextSibling(); // go to : type
 
   if(c.type.name !== "TypeDef") {
@@ -436,7 +433,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   var location = getSourceLocation(c, s);
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
-  var name = `${currentModule}$${s.substring(c.from, c.to)}`;
+  var name = s.substring(c.from, c.to)
+  name = curCtx == 'global'? `${currentModule}$${name}`: name;
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
   c.nextSibling(); // Focus on Body or TypeDef
@@ -447,6 +445,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
     c.parent();
     c.nextSibling();
   }
+  let oldCtx = curCtx
+  curCtx = 'func'
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
@@ -461,16 +461,19 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
     }
     hasChild = c.nextSibling();
   }
-
+  // set localCtx - params and inits
+  localCtx = [...parameters.map(p => p.name),
+              ...inits.map(v => v.name) ]
   while(hasChild) {
     body.push(traverseStmt(c, s));
     hasChild = c.nextSibling();
   } 
-  
+  localCtx = []
   // console.log("Before pop to body: ", c.type.name);
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
+  curCtx = oldCtx
   return { a: location, name, parameters, ret, inits, body }
 }
 
@@ -481,6 +484,9 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
+  let name = curCtx === 'global'? `${currentModule}$${className}`:className;
+  let oldCtx = curCtx
+  curCtx = 'class'
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
@@ -499,9 +505,10 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   if (!methods.find(method => method.name === "__init__")) {
     methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
   }
+  curCtx = oldCtx
   return {
     a: location,
-    name: `${currentModule}$${className}`,
+    name,
     fields,
     methods
   };
@@ -568,6 +575,8 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
         hasChild = c.nextSibling();
       }
       while(hasChild) {
+        curCtx = "global"
+        localCtx = []
         if (isVarInit(c, s)) {
           inits.push(traverseVarInit(c, s));
         } else if (isFunDef(c, s)) {
@@ -579,7 +588,8 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
         }
         hasChild = c.nextSibling();
       }
-
+      curCtx = "global"
+      localCtx = []
       while(hasChild) {
         stmts.push(traverseStmt(c, s));
         hasChild = c.nextSibling();
@@ -698,6 +708,9 @@ export function buildModulesContext(modules : Modules){
       }
       hasChild = c.nextSibling();
     }
+
+    // update nsMap with globals of modName
+    mData.globals.forEach(g => mData.nsMap[g] = `${modName}$${g}`)
     modulesContext[modName] = mData;
   }
 

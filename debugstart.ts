@@ -12,7 +12,7 @@ class C(object):
       return 0
     else:
       return`
-  const ast = parse(source);
+  const ast = parse({main:source});
   
   const repl = new BasicREPL(await addLibs());
   const result = repl.run(source).then(result => {

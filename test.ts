@@ -34,5 +34,5 @@ let deps = `
 XYZ:int = 10
 `
 
-parse({main, lib, math, deps})
-
+let prog = parse({main, lib, math, deps})
+console.log(JSON.stringify(prog, null, 4))

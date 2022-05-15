@@ -26,6 +26,7 @@ export type ModuleData =  {
     [name:string]: string
     // x : "lib$x"  -> from lib import x / *
     // y : "lib$x"  -> from lib import x as y
+    // z : "main$z" -> z is a global in 'main'
   },
   // symbols exported from this module
   globals : string[]
