@@ -412,7 +412,7 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
 export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLocation> {
   var location = getSourceLocation(c, s);
   c.firstChild(); // go to name
-  var name = s.substring(c.from, c.to);
+  var name = `${currentModule}$${s.substring(c.from, c.to)}`;
   c.nextSibling(); // go to : type
 
   if(c.type.name !== "TypeDef") {
@@ -436,7 +436,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   var location = getSourceLocation(c, s);
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
-  var name = s.substring(c.from, c.to);
+  var name = `${currentModule}$${s.substring(c.from, c.to)}`;
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
   c.nextSibling(); // Focus on Body or TypeDef
@@ -501,7 +501,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   }
   return {
     a: location,
-    name: className,
+    name: `${currentModule}$${className}`,
     fields,
     methods
   };
@@ -562,6 +562,11 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
       const stmts : Array<Stmt<SourceLocation>> = [];
       var hasChild = c.firstChild();
 
+      // skip all the imports
+      while(hasChild) {
+        if (!isImportStmt(c,s)) break;
+        hasChild = c.nextSibling();
+      }
       while(hasChild) {
         if (isVarInit(c, s)) {
           inits.push(traverseVarInit(c, s));
@@ -587,6 +592,8 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
 }
 
 export function parse(modules : Modules) : Program<SourceLocation> {
+  // need to do this first to support "import *"
+  // else we could have parsed all the imports with the module itself
   buildModulesContext(modules)
   let parsedModules : Program<SourceLocation>[] = []
   for(let modName in modules){
@@ -594,7 +601,9 @@ export function parse(modules : Modules) : Program<SourceLocation> {
     // update global currentModule
     currentModule = modName;
     const t = parser.parse(src);
-    parsedModules.push(traverse(t.cursor(), src));
+    let mod = traverse(t.cursor(), src)
+    mod.name = modName
+    parsedModules.push(mod);
   }
   return mergeModules(parsedModules);
 }
@@ -698,5 +707,17 @@ export function buildModulesContext(modules : Modules){
 
 
 export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
-  return null
+  let prog : Program<SourceLocation> = {
+    funs: [],
+    inits : [],
+    classes : [],
+    stmts : []
+  }
+  modules.forEach(module => prog.inits = [...prog.inits, ...module.inits])
+  modules.forEach(module => prog.funs = [...prog.funs, ...module.funs])
+  modules.forEach(module => prog.classes = [...prog.classes, ...module.classes])
+
+  // statements only from main module
+  prog.stmts = modules.filter(mod => mod.name === 'main')[0].stmts
+  return prog
 }

@@ -23,8 +23,12 @@ REQUIREMENTS
   - Right type of errors (ParseError vs TCError vs CompilerErr)
   - Right information (module name + line num + err msg)
 
-Note : No code will executed when a module is imported. i.e. if any of the modules
-have code in the global space, they won't be executed when imported.
+NOTE
+====
+- No code will executed when a module is imported. i.e. if any of the modules
+    have statements in the global space, they won't be executed when imported.
+- The main module will have to be named "main" these are the only module whose
+    statements will be executed.
 
 IMPLEMENTATION
 ==============
@@ -51,7 +55,7 @@ This removes the need for having import statements/types in the AST.
     - Note : no name mangling if the variable is redefined in a local context.
         (i.e. if y was redefined inside a function, don't convert it to $x$y as above)
 
-4. The traversal returns Program<SourceLocation> object for each module
+4. The traversal returns `Program<SourceLocation>` object for each module
 
 5. All of this is stitched to make one large program. This is done in mergeModules().
 
