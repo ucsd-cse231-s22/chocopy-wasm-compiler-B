@@ -51,6 +51,7 @@
 
   (func $get_refcount (export "get_refcount") (param $addr i32) (result i32)
     (i32.load (i32.add (local.get $addr) (i32.const 8)))
+    ;; (local.get $addr)
   )
 
   (func $inc_refcount (export "inc_refcount") (param $addr i32)

@@ -293,7 +293,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   const inits = def.inits.map(init => codeGenInit(init, env)).flat().join("\n");
   var params = def.parameters.map(p => `(param $${p.name} i32)`).join(" ");
   var inc_params: string[] = [];
-  def.parameters.forEach(p => { //inc ref_count: the param 
+  //inc ref_count: the param 
+  def.parameters.forEach(p => { 
     if(p.type.tag == "class"){
       inc_params = [
         ...inc_params,
@@ -303,7 +304,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     }
   });
   var dec_params: string[] = [];
-  def.parameters.forEach(p => { //dec refcount: the param and local_var
+  //dec refcount: the param and local_var
+  def.parameters.forEach(p => { //dec refcount: the func param
     if(p.type.tag == "class"){
       dec_params = [
         ...dec_params,
@@ -312,7 +314,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
       ]
     }
   });
-  def.inits.forEach(init => {
+  def.inits.forEach(init => { //dec refcount: the local_var defined in the function
     if(init.type.tag == "class" && !init.name.includes("newObj")){
       dec_params = [
         ...dec_params,
@@ -322,7 +324,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     }
   })
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
-  // bodyCommands += inc_params.join("\n");
+  bodyCommands += inc_params.join("\n");
   bodyCommands += "(loop $loop\n"
 
   var blockCommands = "(local.get $$selector)\n"
@@ -333,19 +335,24 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
             ) ;; end ${block.label}
             `
             // ${block.stmts.map(stmt => codeGenStmt(stmt, env).join('\n')).join('\n')}
-    var stmtsCommands = block.stmts.map(stmt => codeGenStmt(stmt, env).join('\n'));
-    // if(block.stmts.length > 0 && block.stmts[block.stmts.length-1].tag == "return"){
-    //   stmtsCommands = [
-    //     ...stmtsCommands.slice(0, -1),
-    //     "\n;; dec ref_count of params and fields before each return \n" + dec_params.join("\n"),
-    //     stmtsCommands[-1]
-    //   ]
-    // }
+    const stmtsCommands: string[] = [];
+    // add dec ref_count before return
+    for (let i = 0; i < block.stmts.length; i++){
+      let stmt = block.stmts[i];
+      if(stmt.tag == "return"){
+        stmtsCommands.push("\n;; dec ref_count of params and fields before each return \n" + dec_params.join("\n"));
+      } 
+      stmtsCommands.push(codeGenStmt(stmt, env).join("\n"));
+    }
+    
+    // console.log("====" + stmtsCommands + "====");
+    
     blockCommands += stmtsCommands.join("\n");
   })
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
-  // bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_params.join("\n");
+  // add dec ref_count if there is no return
+  bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_params.join("\n");
   env.locals.clear();
   env.local_type.clear();
   return [`(func $${def.name} ${params} (result i32)
