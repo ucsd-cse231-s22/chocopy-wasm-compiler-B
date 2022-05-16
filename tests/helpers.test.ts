@@ -10,7 +10,7 @@ export function typeCheck(source: string) : Type {
 
 export async function run(source: string) {
   const repl = new BasicREPL(await addLibs());
-  const v = await repl.run(source);
+  const v = await repl.run({main:source});
 }
 
 export const NUM : Type = {tag: "number"}

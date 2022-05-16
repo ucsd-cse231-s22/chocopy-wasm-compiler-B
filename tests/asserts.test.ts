@@ -21,7 +21,7 @@ before(function () {
 export function assert(name: string, source: string, expected: Value) {
   it(name, async () => {
     const repl = new BasicREPL(importObject);
-    const result = await repl.run(source);
+    const result = await repl.run({main:source});
     expect(result).to.deep.eq(expected);
   });
 }
@@ -31,7 +31,7 @@ export function asserts(name: string, pairs: Array<[string, Value]>) {
 
   it(name, async () => {
     for (let i = 0; i < pairs.length; i++) {
-      const result = await repl.run(pairs[i][0]);
+      const result = await repl.run({main:pairs[i][0]});
       expect(result).to.deep.eq(pairs[i][1]);
     }
   });

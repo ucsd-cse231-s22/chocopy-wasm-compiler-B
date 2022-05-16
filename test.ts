@@ -1,4 +1,15 @@
+import { Modules } from './ast';
 import {parse} from './parser'
+import { BasicREPL } from "./repl";
+import { addLibs  } from "./tests/import-object.test";
+
+function printSrc(modules:Modules){
+  for(let m in modules){
+    console.log(`# ${m}.py`)
+    console.log(modules[m])
+    console.log('\n### ### ###\n')
+  }
+}
 
 let main = `
 from lib import p3, updateXYZ as update
@@ -42,5 +53,16 @@ class Bar(object):
     pass
 `
 
-let prog = parse({main, lib, math, deps})
-console.log(JSON.stringify(prog, null, 4))
+// let prog = parse({main, lib, math, deps})
+// console.log(JSON.stringify(prog, null, 1))
+
+// entry point for debugging
+async function debug() {
+  const repl = new BasicREPL(await addLibs());
+  printSrc({main, lib, math, deps})
+  repl.run({main, lib, math, deps}).then(result => {
+    console.log("- Execution complete -");
+  })
+}
+
+debug();

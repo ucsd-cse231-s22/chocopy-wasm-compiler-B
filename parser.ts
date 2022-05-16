@@ -349,11 +349,20 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  let module = modulesContext[currentModule]
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
-    default: return CLASS(name);
+    default: { // it's either a classType or module.classType
+      if(c.name === 'VariableName') // classType
+        return CLASS(module.nsMap[name]); // get the mangled name
+      else{ // c -> MemberExpression
+        let exp = traverseExpr(c, s) // will return the mangled name
+        if(exp.tag === 'id')
+          return CLASS(exp.name)
+      }
+    }
   }
 }
 
@@ -477,7 +486,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(name) }], ret: NONE, inits: [], body: [] });
   }
   curCtx = oldCtx
   return {
