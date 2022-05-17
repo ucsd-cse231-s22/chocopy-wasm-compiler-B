@@ -15,7 +15,7 @@ class C(object):
   const ast = parse({main:source});
   
   const repl = new BasicREPL(await addLibs());
-  const result = repl.run(source).then(result => {
+  const result = repl.run({main:source}).then(result => {
     console.log(result);    
   })  
 }

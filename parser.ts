@@ -5,43 +5,17 @@ import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
 
-// modulesContext[module_name] of current module being parsed
-// let currentModule : ModuleData = null
-let currentModule : string = ""
-let modulesContext : ModulesContext = {
-  // "mod_name" : {
-  //   modMap : {
-  //     // lib : "lib"  -> import lib
-  //     //   x : "lib"  -> import lib as x
-  //   },
-  //   nsMap : { 
-  //     // x : "lib$x"  -> from lib import x / *
-  //     // y : "lib$x"  -> from lib import x as y
-  //     // z : "mod_name$z" -> z is a global in mod_name
-  //   },
-  //   globals: []
-  //     // ["vars", "funcs", "classes"]
-  // }
-  /* modMap & nsMap work differently
-  1. A module can't directly be accessed.
-   But when a imported var is accessed, need to replace.
-    modMap : y = 10 # error if 'y' is a module
-    nsMap  : y = 10 # lib$y = 10, if "from lib import y"
-
-  2. When module 'dot' is used, it merges with the rhs,
-   i.e. module.var => module$var
-    modMap : lib.y = 10 # lib$y = 10 ; import lib
-    nsMap  : y.x = 10   # lib$y.x ; from lib import y
-  */
+export let currentModule : string = ""
+export let modulesContext : ModulesContext = {
 }
 
-let localCtx :string[] = [] // variable names of local
-let curCtx :'global'|'func'|'class' = 'global'
+export let localCtx :string[] = [] // variable names available locally
+export let curCtx :'global'|'func'|'class' = 'global' // current scope
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
   var line = s.substring(0, c.from).split("\n").length;
-  return { line }
+  return { line, module: currentModule }
 }
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
@@ -239,7 +213,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
               a: location,
               tag: "id",
               //eg. import lib as x; x.y -> mod$y
-              name: `${module.modMap[objExpr.name]}${propName}`
+              name: `${module.modMap[objExpr.name]}$${propName}`
             }
       }
       return {
@@ -375,11 +349,20 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  let module = modulesContext[currentModule]
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
-    default: return CLASS(name);
+    default: { // it's either a classType or module.classType
+      if(c.name === 'VariableName') // classType
+        return CLASS(module.nsMap[name]); // get the mangled name
+      else{ // c -> MemberExpression
+        let exp = traverseExpr(c, s) // will return the mangled name
+        if(exp.tag === 'id')
+          return CLASS(exp.name)
+      }
+    }
   }
 }
 
@@ -503,7 +486,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(name) }], ret: NONE, inits: [], body: [] });
   }
   curCtx = oldCtx
   return {
@@ -699,21 +682,12 @@ export function buildModulesContext(modules : Modules){
     }
     // consume the globals
     // TODO - should replace with just top level parsing
-    while(hasChild) {
-      if (isVarInit(c, s)) {
-        mData.globals.push(traverseVarInit(c, s).name);
-      } else if (isFunDef(c, s)) {
-        mData.globals.push(traverseFunDef(c, s).name);
-      } else if (isClassDef(c, s)) {
-        mData.globals.push(traverseClass(c, s).name);
-      } else {
-        break;
-      }
-      hasChild = c.nextSibling();
+    if(hasChild) {
+      mData.globals = getModuleGlobals(c,s);
     }
 
     // update nsMap with globals of modName
-    mData.globals.forEach(g => mData.nsMap[g] = `${modName}$${g}`)
+    mData.globals.forEach(g => mData.nsMap[g] = `${modName}$${g}`);
     modulesContext[modName] = mData;
   }
 
@@ -721,6 +695,23 @@ export function buildModulesContext(modules : Modules){
   // TODO - "from lib import *" won't work yet
 }
 
+export function getModuleGlobals(c : TreeCursor, s : string) : string[] {
+  let globals :string[] = []
+  let hasNext = true
+  while(hasNext){
+    if(isVarInit(c,s) || isFunDef(c,s) || isClassDef(c,s)){
+      // add name to globals - always 1st VariableName node
+      c.firstChild()
+      while(c.name !== 'VariableName') c.nextSibling()
+      globals.push(s.substring(c.from, c.to))
+      c.parent()
+    } else {
+      break;
+    }
+    hasNext = c.nextSibling()
+  }
+  return globals
+}
 
 export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
   let prog : Program<SourceLocation> = {
