@@ -5,12 +5,12 @@ import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
 
-let currentModule : string = ""
-let modulesContext : ModulesContext = {
+export let currentModule : string = ""
+export let modulesContext : ModulesContext = {
 }
 
-let localCtx :string[] = [] // variable names available locally
-let curCtx :'global'|'func'|'class' = 'global' // current scope
+export let localCtx :string[] = [] // variable names available locally
+export let curCtx :'global'|'func'|'class' = 'global' // current scope
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {

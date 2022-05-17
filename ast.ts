@@ -28,7 +28,7 @@ export type ModuleData =  {
     // y : "lib$x"  -> from lib import x as y
     // z : "main$z" -> z is a global in 'main'
   },
-  // symbols exported from this module
+  // symbols exported from this module (useful to expand "import *")
   globals : string[]
   // ["vars1", ..., "func1", ..., "class1"]
 }
