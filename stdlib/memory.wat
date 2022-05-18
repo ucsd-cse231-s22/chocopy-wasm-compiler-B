@@ -34,11 +34,13 @@
         (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4)))
         (i32.load) ;; get the previous pointer and dec_refcount
         (call $dec_refcount)
+        (drop)
         ;; store the value
         (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val))
         ;; inc_refcount of the pointer val
         (local.get $val)
         (call $inc_refcount)
+        (drop)
       )
       (else
        (i32.store (i32.add (local.get $addr) (i32.mul (i32.add (local.get $offset) (i32.const 3)) (i32.const 4))) (local.get $val))
@@ -54,17 +56,14 @@
     ;; (local.get $addr)
   )
 
-  (func $inc_refcount (export "inc_refcount") (param $addr i32)
+  (func $inc_refcount (export "inc_refcount") (param $addr i32) (result i32)
     (local $refcount_addr i32)
     (local.set $refcount_addr (i32.add (local.get $addr) (i32.const 8)))
     (local.get $addr)
     (i32.const 0)
-    (i32.eq)
+    (i32.ne)
     (if  ;; if the $addr == 0, it's None, we don't need to do anything
       (then
-        return
-      )
-      (else
         (local.get $refcount_addr)
         (local.get $refcount_addr)
         (i32.load)
@@ -73,19 +72,18 @@
         (i32.store)
       )
     )
+    (local.get $addr)
+    return
   )
 
-  (func $dec_refcount (export "dec_refcount") (param $addr i32)
+  (func $dec_refcount (export "dec_refcount") (param $addr i32) (result i32)
     (local $refcount_addr i32)
     (local.set $refcount_addr (i32.add (local.get $addr) (i32.const 8)))
     (local.get $addr)
     (i32.const 0)
-    (i32.eq)
+    (i32.ne)
     (if ;; if the $addr == 0, it's None, we don't need to do anything
       (then
-        return
-      )
-      (else
         (local.get $refcount_addr)
         (local.get $refcount_addr)
         (i32.load)
@@ -94,6 +92,8 @@
         (i32.store)
       )
     )
+    (local.get $addr)
+    return
   )
 
   (func (export "test_refcount") (param $addr i32) (param $n i32) (result i32)

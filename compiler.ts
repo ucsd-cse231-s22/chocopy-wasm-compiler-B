@@ -299,7 +299,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
       inc_params = [
         ...inc_params,
         `(local.get $${p.name}) ;; inc ref_count of parma $${p.name}`,
-        `(call $inc_refcount)`
+        `(call $inc_refcount)`,
+        `(drop)`
       ]
     }
   });
@@ -310,7 +311,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
       dec_params = [
         ...dec_params,
         `(local.get $${p.name})`,
-        `(call $dec_refcount) ;; dec ref_count of param $${p.name}`
+        `(call $dec_refcount) ;; dec ref_count of param $${p.name}`,
+        `(drop)`
       ]
     }
   });
@@ -320,6 +322,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
         ...dec_params,
         `(local.get $${init.name})`,
         `(call $dec_refcount) ;; dec ref_count of field $${init.name}`,
+        `(drop)`
       ]
     }
   })
@@ -410,7 +413,8 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
     case "class":
       return [
         `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-        `call $dec_refcount`
+        `call $dec_refcount`,
+        `drop`
       ]
     case "either":
       throw new Error("Not good for either");
@@ -436,7 +440,8 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
     case "class":
       return [
         `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-        `call $inc_refcount`
+        `call $inc_refcount`,
+        `drop`
       ]
     case "either":
       throw new Error("Not good for either");
