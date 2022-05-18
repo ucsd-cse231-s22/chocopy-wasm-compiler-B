@@ -9,6 +9,9 @@ REQUIREMENTS
   - from mod import x as y
   - from mod import *
 
+Update : only one module import per line.
+This is because lezer can't parse `import x, y` although it can parse `from mod import x, y`.
+
 2. Catch all cases that shouldn't work
   - Calling non existant imports
       (mod.x when imported module 'mod' has no property(?) 'x')
@@ -34,6 +37,12 @@ IMPLEMENTATION
 ==============
 
 At the high level, the parser does most of the work and concatenates everything together.
+We basically get treat the whole thing as a giant program, and any global variables in any
+module are name mangled. The name mangled form of `<global_name>` in `<module_name>` is 
+just `<module_name>$<global_name>`. i.e. The function `foo()` in module `lib` gets 
+transformed to `lib$foo()`. All globals in a module are importable. Globals are variables,
+functions and classes defined at a global scope in any given module.
+
 This removes the need for having import statements/types in the AST.
 
 1. The parser takes in a object of type Modules (see ast.ts)
@@ -42,10 +51,17 @@ This removes the need for having import statements/types in the AST.
     - one by one each module is traversed()
     - Before traversing a module, global ModuleContext is updated
 
-2. The global ModuleContext has 
-    - the name of the current module being parsed
-    - the object of imported references to the modules they belong to
-        (eg. from x import y => ModuleContext.nsMap[y] = 'x')
+2. The global modulesContext has 
+    - the mapping of module name to some info about the module (modMap, nsMap and globals)
+    - the modMap contain the mapping of every module imported into this module.
+        eg. `import lib as bar` would create `modMap : {"bar" : "lib"}`
+    - the nsMap contains mapping of globals to their name mangled form. so any time a global 
+        is defined in a module, or imported into it, a mapping in `nsMap` is created.
+        `nsMap : {x : "lib$x" } // from lib import x / from lib import *`
+        `nsMap : {y : "lib$x" } // from lib import x as y`
+        `nsMap : {z : "main$z"} // z is a global in 'main'`
+    - the `gloabls` array contains a list of global symbols that are defined in the module.
+        This includes global variables, functions and classes.
 
 3. Automatic name conversion
     - During compilation, any global symbol (class/func/variable) is 
@@ -59,7 +75,7 @@ This removes the need for having import statements/types in the AST.
 
 5. All of this is stitched to make one large program. This is done in mergeModules().
 
-Note : We should add the module name along with the line number. See update to SourceLocation.
+Note : We have updated SourceLocation to contain module name alongside the line number.
 
 
 ADVANTAGES
