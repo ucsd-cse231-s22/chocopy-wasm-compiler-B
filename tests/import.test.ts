@@ -248,9 +248,10 @@ describe('buildModulesContext(modules) function', () => {
       }
     });
   })
+})
 
-  // Errors
 
+describe("Testing erroneous conditions", () => {
   it('errors on duplicate symbol import', async () => {
     await expect_error({
       A: "x:int=0",
@@ -280,9 +281,52 @@ describe('buildModulesContext(modules) function', () => {
       main: "from A import y\ny:int=0",
     }, "PARSE ERROR");
   })
+})
 
-  // Outputs
 
+let main = `
+from lib import p3, updateXYZ as update
+from math import add, sub
+import deps
+x: int = 0
+y: int = 0
+def do_stuff():
+  x = add(1,2)
+  y = sub(3,1)
+do_stuff()
+update(20)
+p3(x, y, deps.XYZ)
+`
+
+let lib = `
+import deps as d
+def p2(x:int, y:int):
+  print(x)
+  print(y)
+
+def p3(x:int, y:int, z:int):
+  p2(x, y)
+  print(z)
+
+def updateXYZ(x: int):
+  d.XYZ = x
+`
+
+let math = `
+def add(x:int, y:int) -> int:
+  return x+y
+def sub(x:int, y:int) -> int:
+  return x-y
+`
+
+let deps = `
+XYZ:int = 10
+class Bar(object):
+  def foo(self:Bar):
+    pass
+`
+
+describe("Testing end to end execution", () => {
   it('print imported integer x', async () => {
     importObject.output = "";
     await expect_output({
@@ -326,4 +370,8 @@ describe('buildModulesContext(modules) function', () => {
     }, "20\n");
   })
 
+  it('multiple imports', async () => {
+    importObject.output = "";
+    await expect_output({main, lib, math, deps}, "3\n2\n20\n");
+  })
 })

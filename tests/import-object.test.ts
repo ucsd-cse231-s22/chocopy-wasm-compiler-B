@@ -14,7 +14,6 @@ function stringify(typ: Type, arg: any): string {
 }
 
 function print(typ: Type, arg: any): any {
-  console.log("WASM : ", stringify(typ, arg));
   importObject.output += stringify(typ, arg);
   importObject.output += "\n";
   return arg;
