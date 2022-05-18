@@ -55,11 +55,15 @@ This removes the need for having import statements/types in the AST.
     - the mapping of module name to some info about the module (modMap, nsMap and globals)
     - the modMap contain the mapping of every module imported into this module.
         eg. `import lib as bar` would create `modMap : {"bar" : "lib"}`
+        
     - the nsMap contains mapping of globals to their name mangled form. so any time a global 
         is defined in a module, or imported into it, a mapping in `nsMap` is created.
-        `nsMap : {x : "lib$x" } // from lib import x / from lib import *`
-        `nsMap : {y : "lib$x" } // from lib import x as y`
-        `nsMap : {z : "main$z"} // z is a global in 'main'`
+        
+        ```
+        nsMap : {x : "lib$x" } // from lib import x / from lib import *`
+        nsMap : {y : "lib$x" } // from lib import x as y
+        nsMap : {z : "main$z"} // z is a global in 'main'
+        ```
     - the `gloabls` array contains a list of global symbols that are defined in the module.
         This includes global variables, functions and classes.
 
