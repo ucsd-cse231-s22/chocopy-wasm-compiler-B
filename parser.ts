@@ -624,7 +624,7 @@ export function traverseImport(c : TreeCursor, s : string) : ModuleData {
         hasNext = c.nextSibling() // skip the ','
 
       if (map[name]) {
-        throw new ParseError(`Duplicate import ${name}`);
+        throw new ParseError(`Duplicate import ${name}`, getSourceLocation(c, s).line);
       }
       // update map
       map[name] = resolve;
@@ -674,14 +674,14 @@ export function buildModulesContext(modules : Modules){
         let nData : ModuleData = traverseImport(c,s)
         // If we are importing already imported module, raise an error.
         for (let importedMod in nData.modMap) {
-          if (mData.modMap[importedMod]) {
-            throw new ParseError(`Duplicate import of ${importedMod}`)
+          if (mData.modMap.hasOwnProperty(importedMod)) {
+            throw new ParseError(`Duplicate import of ${importedMod}`, getSourceLocation(c, s).line)
           }
         }
         // If we are importing already imported symbol, raise an error.
         for (let importedName in nData.nsMap) {
-          if (mData.nsMap[importedName]) {
-            throw new ParseError(`Duplicate import of ${importedName}`)
+          if (mData.nsMap.hasOwnProperty(importedName)) {
+            throw new ParseError(`Duplicate import of ${importedName}`, getSourceLocation(c, s).line)
           }
         }
         mData.modMap = {...mData.modMap, ...nData.modMap};
