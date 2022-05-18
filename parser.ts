@@ -623,6 +623,9 @@ export function traverseImport(c : TreeCursor, s : string) : ModuleData {
       if(c.name === ',')
         hasNext = c.nextSibling() // skip the ','
 
+      if (map[name]) {
+        throw new ParseError(`Duplicate import ${name}`);
+      }
       // update map
       map[name] = resolve;
     }
@@ -663,18 +666,26 @@ export function buildModulesContext(modules : Modules){
       nsMap: {},
       globals : []
     }
-    modulesContext[modName] = mData;
     var hasChild = c.firstChild();
 
     // populate modMap & nsMap from import statements
     while(hasChild) {
       if (isImportStmt(c,s)){
         let nData : ModuleData = traverseImport(c,s)
-        mData = {
-          modMap : {...mData.modMap, ...nData.modMap},
-          nsMap : {...mData.nsMap, ...nData.nsMap},
-          globals : []
+        // If we are importing already imported module, raise an error.
+        for (let importedMod in nData.modMap) {
+          if (mData.modMap[importedMod]) {
+            throw new ParseError(`Duplicate import of ${importedMod}`)
+          }
         }
+        // If we are importing already imported symbol, raise an error.
+        for (let importedName in nData.nsMap) {
+          if (mData.nsMap[importedName]) {
+            throw new ParseError(`Duplicate import of ${importedName}`)
+          }
+        }
+        mData.modMap = {...mData.modMap, ...nData.modMap};
+        mData.nsMap = {...mData.nsMap, ...nData.nsMap};
       } else {
         break;
       }
