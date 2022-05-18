@@ -274,6 +274,13 @@ describe('buildModulesContext(modules) function', () => {
     }, "TYPE ERROR");
   })
 
+  it('errors on overriding imported symbol', async () => {
+    await expect_error({
+      A: "y:int=0",
+      main: "from A import y\ny:int=0",
+    }, "PARSE ERROR");
+  })
+
   // Outputs
 
   it('print imported integer x', async () => {

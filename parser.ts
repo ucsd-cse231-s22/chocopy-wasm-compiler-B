@@ -675,13 +675,15 @@ export function buildModulesContext(modules : Modules){
         // If we are importing already imported module, raise an error.
         for (let importedMod in nData.modMap) {
           if (mData.modMap.hasOwnProperty(importedMod)) {
-            throw new ParseError(`Duplicate import of ${importedMod}`, getSourceLocation(c, s).line)
+            throw new ParseError(`Duplicate import of ${importedMod}`,
+                                 getSourceLocation(c, s).line);
           }
         }
         // If we are importing already imported symbol, raise an error.
         for (let importedName in nData.nsMap) {
           if (mData.nsMap.hasOwnProperty(importedName)) {
-            throw new ParseError(`Duplicate import of ${importedName}`, getSourceLocation(c, s).line)
+            throw new ParseError(`Duplicate import of ${importedName}`,
+                                 getSourceLocation(c, s).line);
           }
         }
         mData.modMap = {...mData.modMap, ...nData.modMap};
@@ -698,7 +700,13 @@ export function buildModulesContext(modules : Modules){
     }
 
     // update nsMap with globals of modName
-    mData.globals.forEach(g => mData.nsMap[g] = `${modName}$${g}`);
+    mData.globals.forEach(g => {
+      if (mData.nsMap.hasOwnProperty(g)) {
+        throw new ParseError(`Redefinition of ${g}`,
+                             getSourceLocation(c, s).line);
+      }
+      mData.nsMap[g] = `${modName}$${g}`
+    });
     modulesContext[modName] = mData;
   }
 
