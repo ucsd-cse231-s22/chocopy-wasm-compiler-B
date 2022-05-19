@@ -7,7 +7,6 @@ export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Value<A> }
 
 export type Parameter<A> = { name: string, type: Type }
-
 export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, ret: Type, inits: Array<VarInit<A>>, body: Array<BasicBlock<A>> }
 
 export type BasicBlock<A> = 
