@@ -31,6 +31,31 @@ function reconstructBigint(arg : number, load : any) : bigint {
   return isNegative * consturctedBigint;
 }
 
+function deconstructBigint(bigInt : bigint, alloc : any, store : any) : number {
+  var isNegative = 1;
+  if (bigInt < 0) {
+    isNegative = -1;
+    bigInt *= BigInt(-1);
+  }
+
+  var i = 1; // the first field is preserved for the size
+  const base = BigInt(2 ** 31);
+  var curAddress = alloc(0);
+
+  // use a do-while loop to address the edge case of initial curVal == 0
+  do {
+    var remainder = bigInt % base;
+    store(curAddress, i, Number(remainder)); // call the store function with address, offset, and val
+
+    i += 1; // next iteration
+    bigInt /= base; // default to use floor() 
+  } while (bigInt > 0);
+
+  alloc(i); // alllocate spaces for the fields
+  store(curAddress, 0, isNegative * (i - 1)); // store the number of digits in the first field
+  return curAddress;
+}
+
 function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
@@ -53,64 +78,27 @@ function arithmeticOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
       bigInt3 = bigInt1 % bigInt2;
       break
   }
-
-  var isNegative = 1;
-  if (bigInt3 < 0) {
-    isNegative = -1;
-    bigInt3 *= BigInt(-1);
-  }
-
-  var i = 1; // the first field is preserved for the size
-  const base = BigInt(2 ** 31);
-  var curAddress = alloc(0);
-
-  // use a do-while loop to address the edge case of initial curVal == 0
-  do {
-    var remainder = bigInt3 % base;
-    store(curAddress, i, Number(remainder)); // call the store function with address, offset, and val
-
-    i += 1; // next iteration
-    bigInt3 /= base; // default to use floor() 
-  } while (bigInt3 > 0);
-
-  alloc(i); // alllocate spaces for the fields
-  store(curAddress, 0, isNegative * (i - 1)); // store the number of digits in the first field
-  return curAddress;
+  return deconstructBigint(bigInt3, alloc, store);
 }
 
 function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
-  var bigIntComp:boolean
   switch (op) {
     case BinOp.Eq:
-      bigIntComp = bigInt1 === bigInt2 
-      break
+      return bigInt1 === bigInt2 
     case BinOp.Neq:
-      bigIntComp = bigInt1 !== bigInt2
-      break
+      return bigInt1 !== bigInt2
     case BinOp.Lte:
-      bigIntComp = bigInt1 <= bigInt2
-      break
+      return bigInt1 <= bigInt2
     case BinOp.Gte:
-      bigIntComp = bigInt1 >= bigInt2
-      break
+      return bigInt1 >= bigInt2
     case BinOp.Lt: 
-      bigIntComp = bigInt1 < bigInt2
-      break
+      return bigInt1 < bigInt2
     case BinOp.Gt: 
-      bigIntComp = bigInt1 > bigInt2
-      break
+      return bigInt1 > bigInt2
   }
-  var currAddress = alloc(0)
-  var returnBool = 0
-  
-  if (bigIntComp === true) {
-    returnBool = 1
-  } 
-  
-  store(currAddress, 0, returnBool)
-  return returnBool
+  throw Error("unknown comparison operator")
 }
 
 function print(typ: Type, arg : number, load : any) : any {
