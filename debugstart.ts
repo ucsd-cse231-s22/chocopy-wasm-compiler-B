@@ -5,7 +5,6 @@ import { stringifyTree } from './treeprinter'
 import {parser} from 'lezer-python'
 
 
-
 // entry point for debugging
 async function debug() {
   var source = `
