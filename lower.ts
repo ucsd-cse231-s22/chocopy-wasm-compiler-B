@@ -3,6 +3,8 @@ import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { strictEqual } from 'assert';
+import { equalType } from "./type-check"
+import { CLASS } from "./utils"
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -349,7 +351,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
     case "index":
-      if(JSON.stringify(e.a[0]) == JSON.stringify({tag:"class", name:"str"})){
+      if(equalType(e.a[0], CLASS("str"))){
         const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
         const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
         return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]

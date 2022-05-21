@@ -148,7 +148,7 @@ describe("string test", () => {
   assertPrint("test case 17: index access with method parameter + compare",
     `
   class C(object):
-    def greater(self: C, s1: str, int: i, s2: str, int:j) -> bool:
+    def greater(self: C, s1: str, i: int, s2: str, j: int) -> bool:
       return s1[i] > s2[j]
   
   c: C = None
@@ -160,7 +160,7 @@ describe("string test", () => {
   assertPrint("test case 17.5: index access with method parameter + compare",
     `
   class C(object):
-    def greater(self: C, s1: str, int: i, s2: str, int:j) -> bool:
+    def greater(self: C, s1: str, i: int, s2: str, j: int) -> bool:
       return s1[i] > s2[j]
   
   c: C = None
@@ -173,12 +173,13 @@ describe("string test", () => {
     `
   class C(object):
     i: int = 0
-    def setIndices(self: C, i: int) -> None:
-      self.i = i
-      return
+    def setIndex(self: C, x: int) -> None:
+      self.i = x
+      return None
     def StrIndexValue(self: C, s1: str) -> None:
-      print(s1[self.i])
-      return
+      index: int = self.i
+      print(s1[index])
+      return None
   
   c: C = None
   c = C()
@@ -191,7 +192,7 @@ describe("string test", () => {
     `
   class C(object):
     i: int = 0
-    def setIndices(self: C, i: int) -> None:
+    def setIndex(self: C, i: int) -> None:
       self.i = i
       return
     def StrIndexValue(self: C, s1: str) -> None:

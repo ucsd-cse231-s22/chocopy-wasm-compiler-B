@@ -57,7 +57,9 @@ export type TypeError = {
 export function equalType(t1: Type, t2: Type) {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name)
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "number" && t2.tag === "number") || (t1.tag === "bool" && t2.tag === "bool") ||
+    (t1.tag === "none" && t2.tag === "none")
   );
 }
 
@@ -236,7 +238,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Sour
     case "index-assign":
       var iObj = tcExpr(env, locals, stmt.obj);
       const iVal = tcExpr(env, locals, stmt.value);
-      if (JSON.stringify(iObj.a[0]) == JSON.stringify({ tag: 'class', name: 'str' })) {
+      if (equalType(iObj.a[0], CLASS("str"))) {
         // console.log("inndex assign")
         throw new TypeCheckError("string is immutable")
 
@@ -254,9 +256,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
       const tRight = tcExpr(env, locals, expr.right);
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
-        case BinOp.Plus:
-          if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
-            (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
+        case BinOp.Plus: //equalType
+          if (equalType(tLeft.a[0], CLASS("str")) &&
+          equalType(tRight.a[0], CLASS("str"))) {
             return { a: [{ tag: "class", name: "str" }, expr.a], tag: "method-call", obj: tLeft, method: "concat", arguments: [tRight] }
           }
         case BinOp.Minus:
@@ -266,8 +268,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
           if (equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return { ...tBin, a: [NUM, expr.a] } }
           else { throw new TypeCheckError("Type mismatch for numeric op" + expr.op); }
         case BinOp.Eq:
-          if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
-            (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
+          if (equalType(tLeft.a[0], CLASS("str")) &&
+          equalType(tRight.a[0], CLASS("str"))) {
             return { a: [{ tag: "bool" }, expr.a], tag: "method-call", obj: tLeft, method: "equalsto", arguments: [tRight] }
           }
 
@@ -278,13 +280,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         case BinOp.Lte:
         case BinOp.Gte:
         case BinOp.Lt:
-          if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
-            (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
+          if (equalType(tLeft.a[0], CLASS("str")) &&
+          equalType(tRight.a[0], CLASS("str"))) {
             return { a: [{ tag: "bool" }, expr.a], tag: "method-call", obj: tLeft, method: "lessthan", arguments: [tRight] }
           }
         case BinOp.Gt:
-          if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
-            (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
+          if (equalType(tLeft.a[0], CLASS("str")) &&
+          equalType(tRight.a[0], CLASS("str"))) {
             return { a: [BOOL, expr.a], tag: "method-call", obj: tLeft, method: "greaterthan", arguments: [tRight] }
           }
         case BinOp.And:
@@ -381,7 +383,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         if (targs.length !== 1) {
           throw new TypeCheckError("len() didn't receive the correct number of arguments");
         }
-        if (JSON.stringify(targs[0].a[0]) !== JSON.stringify({ tag: "class", name: "str" })) {
+        if (!equalType(targs[0].a[0], CLASS("str"))) {
           throw new TypeCheckError("len() incorrect arugment type");
         }
         return { a: [{ tag: "number" }, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
@@ -435,7 +437,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
       if (tindex.a[0].tag != "number") {
         throw new TypeError("non integer as index value");
       }
-      if (JSON.stringify(tobj.a[0]) == JSON.stringify({ tag: "class", name: "str" })) {
+      if (equalType(tobj.a[0], CLASS("str"))) {
         return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tobj, index: tindex };
       }
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`);
