@@ -352,7 +352,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       if(JSON.stringify(e.a[0]) == JSON.stringify({tag:"class", name:"str"})){
         const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
         const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
-        return [[], [], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
       }
   }
 }

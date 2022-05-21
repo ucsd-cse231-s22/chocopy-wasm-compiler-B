@@ -285,7 +285,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         case BinOp.Gt:
           if ((JSON.stringify(tLeft.a[0]) === JSON.stringify({ tag: "class", name: "str" })) &&
             (JSON.stringify(tRight.a[0]) === JSON.stringify({ tag: "class", name: "str" }))) {
-            return { a: [{ tag: "bool" }, expr.a], tag: "method-call", obj: tLeft, method: "greaterthan", arguments: [tRight] }
+            return { a: [BOOL, expr.a], tag: "method-call", obj: tLeft, method: "greaterthan", arguments: [tRight] }
           }
         case BinOp.And:
         case BinOp.Or:
