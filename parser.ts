@@ -387,8 +387,6 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
       }
     }
     
-    
-    
     parameters.push({name, type: typ, defaultValue});
     c.nextSibling(); // Focuses on a VariableName
   }
