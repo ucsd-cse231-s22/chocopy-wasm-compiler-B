@@ -1,63 +1,108 @@
+# Bignums Designs#
+
 Jeff Makings and Zach Lee 
 
+## Initial design/ test cases ##
 Test cases: 
-1.
+1:
 Test for initial compilation: 
-“999999999999999999999999999999999999999999999999” 
+
+```
+999999999999999999999999999999999999999999999999
+```
+
 Expected: 999999999999999999999999999999999999999999999999
-2.
+2: 
 Basic assignment and printing: 
-“x: int = 999999999999999999999999999999999999999999999999 
-print(x)” 
+
+```
+x: int = 999999999999999999999999999999999999999999999999 
+print(x)
+```
+
 Expected: “999999999999999999999999999999999999999999999999” 
-3.
+3: 
 Unary operation: 
-“x: int = -999999999999999999999999999999999999999999999999 
-print(x)” 
+
+```
+print(-999999999999999999999999999999999999999999999999)
+
+```
+
 Expected: “-999999999999999999999999999999999999999999999999”
-4.
+4: 
 Basic addition: 
-“x:int = 1000000000000000000000000000 + 1000000000000000000000000000
-print(x)” 
+
+```
+x:int = 1000000000000000000000000000 + 1000000000000000000000000000
+print(x) 
+```
+
 Expected: 2000000000000000000000000000
-5.
+5:
 Basic subtraction: 
-“x:int = 5000000000000000000000000000 - 2000000000000000000000000000
-print(x)” 
+
+```
+x:int = 5000000000000000000000000000 - 2000000000000000000000000000
+print(x)
+```
+
 Expected: 3000000000000000000000000000
-6.
+6:
 Multiply i32s to get BigNum: 
-“x:int = 10000*300000
-print(x)” 
+
+```
+x:int = 10000*300000
+print(x)
+```
+
 Expected: 3000000000
-7.
+7:
 Divide: 
-“x:int = 30000000000000000000000000000 // 30000000000 
-print(x)”
+
+```
+x:int = 30000000000000000000000000000 // 30000000000 
+print(x)
+```
+
 Expected: 1000000000000000000
-8.
+8:
 Comparison Operator: 
-“x:int = 1000000000000000000
+
+```
+x:int = 1000000000000000000
 y: int = 2000000000000000000
 If y > x: 
 	print(True)
 Else: 
 	print(False)
-Expected: True” 
-9.
+```
+
+Expected: True 
+
+
+9:
 Equality Operator: 
-“x:int = 1000000000000000000
+
+```
+x:int = 1000000000000000000
 y: int = 2000000000000000000
 If y == x: 
 	print(True)
 Else: 
 	print(False)
-Expected: False” 
-10.
+Expected: False
+```
+
+10:
 List Test (for when it’s implemented): 
-“x:int = 900000001
+
+```
+x:int = 900000001
 list1 = [3] * x
-print(list1[x-1])”
+print(list1[x-1])
+```
+
 Expected: 3
 
 The below is related to the concerns from instructors.
@@ -86,18 +131,19 @@ The number would be 1 * (2^32) ^ 0 + 333 * (2^32) ^ 1 + 5934739 * (2^32) ^ 2.
 (3)
 We can view all numbers as big numbers, so that we don't need to worry about conversion during arithmetic operations.
 
-Week 7 Milestone: 
+## Week 7 Milestone: ## 
+
 This week, we implemented large numbers in the compiler. There is now no limit on the size of number that can be used in the compiler. We also implemented binary operations operations for these numbers, as well as changing all numbers so that all integers are now stored in the heap instead of the stack. 
 The following is the list of changes we made: 
-ast.ts: 
+### ast.ts: ###
 Changed type Literal.num to have value: bigint from value: int
 Changed type Value.object to have address: bigint from address:int
 
-ir.ts: 
+### ir.ts: ###
 Changed type Value.num to have value: bigint 
 Changed type Value.wasmint to have value: bigint
 
-compiler.ts 
+### compiler.ts ### 
 changed GlobalEnv offset to take bigint
 
 compiler.ts/codeGenExpr: 
@@ -111,10 +157,10 @@ This way, the least significant digits are consistently being stored in memory a
 compiler.ts/codeGenBinOp: 
 Changed Plus, Minus, Mul, IDiv, Mod, Eq, Neq, Lte, Gte, Lt, and Gt so that they call into custom imported javascript functions. 
 
-runner.ts: 
+### runner.ts: ###
 added function declarations for imported javascript functions for arithmetic and comparison operators. 
 
-webstart.ts: 
+### webstart.ts: ### 
 created javascript function that takes the memory address of a bigint and reconstructs it into a javascript bigint. This is useful for printing and handling binary operations. 
 
 created arithmeticOp javascript function that is imported into the wasm module. Takes two values and performs arithmetic binary operations on them (plus, minus, mul, div, mod). Allocates memory for the new bigint that was created and stores the bignumber in memory. 
@@ -125,87 +171,220 @@ importObject.imports:
 created 12 new imported functions (plus, minus, mul, iDiv, mod, eq, neq,lte,gte,lt,gt) from the above arithmeticOp and comparisonOp functions to be imported into wasm. Each performs a binary operation. 
 
 
-Updated test cases: 
+### Updated test cases: ### 
 
 1.
 Test for initial compilation: 
-“999999999999999999999999999999999999999999999999” 
+```
+999999999999999999999999999999999999999999999999
+```
 
 Expected: 999999999999999999999999999999999999999999999999
 
 2.
 Basic assignment and printing: 
-“x: int = 999999999999999999999999999999999999999999999999 
-print(x)” 
+```
+x: int = 999999999999999999999999999999999999999999999999 
+print(x) 
+```
 
-Expected: “999999999999999999999999999999999999999999999999” 
+Expected: 999999999999999999999999999999999999999999999999
 
 3.
 More complex assignment, addition, and printing: 
-“x: int = 999999999999999999999999999999999999999999999999
-y: int =  1
-print(x+y)” 
 
-Expected: “1000000000000000000000000000000000000000000000000”
+```
+x: int = 999999999999999999999999999999999999999999999999
+y: int =  1
+print(x+y)
+```
+
+Expected: 1000000000000000000000000000000000000000000000000
 
 4.
 Basic addition: 
-“1000000000000000000000000000 + 1000000000000000000000000000” 
+
+```
+1000000000000000000000000000 + 1000000000000000000000000000 
+```
 
 Expected: 2000000000000000000000000000
 
 5.
 Basic subtraction: 
-“5000000000000000000000000000 - 2000000000000000000000000000” 
+
+```
+5000000000000000000000000000 - 2000000000000000000000000000” 
+```
 
 Expected: 3000000000000000000000000000
 
 6.
 Multiply i32s to get BigNum: 
-“10000*300000” 
+
+```
+10000*300000” 
+```
 
 Expected: 3000000000
 
 7.
 Divide: 
-“30000000000000000000000000000 // 30000000000”
+
+```
+30000000000000000000000000000 // 30000000000
+```
 
 Expected: 1000000000000000000
 
 8: 
 Modulo: 
-"100000000000000000000000000000 % 6"
+
+```
+100000000000000000000000000000 % 6
+```
 
 Expected: 4
 
 9: 
 Complex operations: 
-"x:int = 5000000000000000
+
+```
+x:int = 5000000000000000
 x = x * x * x - x
-print(x)" 
+print(x)
+```
 
 Expected: 124999999999999999999999999999995000000000000000
 
-10.
+10:
 Comparison Operator: 
-“x:int = 1000000000000000000
+
+```
+x:int = 1000000000000000000
 y: int = 2000000000000000000
-y > x" 
+y > x
+```
 
 Expected: True 
 
-11.
+11:
 Equality Operator: 
-“x:int = 1000000000000000000
+
+```
+x:int = 1000000000000000000
 y: int = 2000000000000000000
-y == x" 
+y == x
+```
 
 Expected: False
 
-12.
+12:
 Inequality Operator: 
-"x:int = 1000000000000000000
+
+```
+x:int = 1000000000000000000
 y: int = 2000000000000000000
-y != x"
+y != x
+```
 
 Expected: True
+
+13: 
+Negative number: 
+
+```
+x:int = 10
+y:int = 20
+x = -10 
+print(x + y)
+```
+
+Expected: 10
+
+14: 
+Multiplying negative number: 
+
+```
+x : int = 10
+y : int = 20
+x = -x
+y = -y
+print(x * y)
+```
+Expected: 200
+
+15: 
+Dividing negative number: 
+
+```
+x : int = 10
+y : int = 20
+x = -x
+y = -y
+print(y // x)
+```
+Expected: 2
+
+16: 
+Subtract negative number: 
+
+```
+x : int = 10
+y : int = 20
+x = -x
+y = -y
+print(x - y)
+```
+Expected: 10 
+
+17: 
+adding tests on bignums where the majority of the digits are not 0s 
+
+```
+x : int = 12345678900987654321
+y : int = 11223344556677889900
+print(x + y)
+```
+
+Expected: 23569023457665544221
+
+18: 
+Subtract tests on bignums where the majority of digits are not 0s: 
+
+```
+x : int = 12345678900987654321
+y : int = 11223344556677889900
+print(x - y)
+```
+
+Expected: 1122334344309764421
+
+19: 
+Multiplying tests on bignums where the majority of the digits are not 0s: 
+
+```
+x : int = 12345678900987654321
+y : int = 11223344556677889900
+print(x * y)
+```
+
+Expected: 138559808091892864182427857364897257900
+
+20: 
+Divide bignums to get i32: 
+
+```
+x : int = 12345678900987654321
+y : int = 11223344556677889900
+print(x // y)
+```
+
+Expected: 1 
+
+## Week 9 Milestone ## 
+
+In week 9, we will continue to work with each group to ensure they are able to use our new implementation of numbers.
+Other implementations: 
+
+## Test cases ## 
