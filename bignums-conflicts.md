@@ -54,5 +54,65 @@ x:int = 5
 
 due to the way we have changed the representation of numbers. 
 
-2: The comprehension "Range" and "generator" classes in repl will need to be updated so each "number" is now a bigint type. Furthermore, any function or class taking input (ie Range in this case) will need to be updated to reconstruct any numerical parameters from the memory representation of integers into a javascript bigint for correct behavior. Otherwise, the range in the comprehension would be the numerical value of x, as opposed to its value of 5. 
+2: The comprehension "Range" and "generator" classes in repl will need to be updated so each "number" is now a bigint type. A function or class taking input (ie Range in this case) may need to be updated to reconstruct any numerical parameters from the memory representation of integers into a javascript bigint for correct behavior. Otherwise, the range in the comprehension would be the numerical value of x, as opposed to its value of 5. 
+
+## Destructing assignment ##
+
+Could not find a pull request for destructuring assignment. 
+
+## Error reporting ##
+
+Our current implementation includes many of the merged changes from error reporting, including the SourceLocation type in the AST, and the changes including the SourceLocation in the parser and type-checker. 
+
+The following program
+
+x: int = 4
+	
+if (x == 4)::
+	print(x)
+
+Currently throws "Error: PARSE ERROR: Could not parse stmt at 25 26: :at line 3", and the error reporting group plans to update the error that's printed if anything. There is little to no interaction with bignums. 
+
+## Calling Conventions ##
+
+Calling conventions is concerned with allowing default values for function parameters, and is unlikely to interact with bignums.
+The following function showcases this: 
+
+def test(x : int, y : int = 1+5) -> int:
+    return x + y
+
+print(test(3))
+
+Expected = 9
+
+In this function, our implementation of numbers and our binop function would be used to add the default function parameters and the arguments in the return statement. However, this is done in the compiler, whereas calling convention's changes to default variables mostly occurs in the AST/lower/IR. Therefore, there is unlikely to be interaction with these changes. 
+
+## for Loops/Iterators##
+
+Similar to the builtins group, for loops/iterators will have a conflict with bignums and will have to change their imported javascript functions. 
+
+Take the function: 
+
+x:int = 5
+
+for i in range(0,x,1): 
+    print(i)
+
+Expected = [0,1,2,3,4] 
+Actual = [0,1,2,3]
+
+I'm unsure when the imported functions such as $range$__init__, $range$__hasnext__, etc. functions are called specifically, but we will have to be very careful to make sure that if these functions are calling numbers from memory (in this case, "x"), that they are first converted from their WASM memory representation into their javascript bigint representation in the $range functions.
+
+Currently, the $range$index function would accept the memory address of x (4), as opposed to the value. We will need to work on this with them. 
+
+## Front-end user interface ##
+
+Bignums has not changed the UI of anything in the compiiler, and the Front-end group has not made significant changes to the areas to the areas we updated (compiler's codeGen of binop/numbers, imports from webstart, functions in runner, etc.). The most relevant example: 
+
+x:int = 5
+print(x)
+
+expected = 5
+
+The Front End group had discussed in their designs that they would like to display what space has been used by the heap, so this is a possible source of collaboration between Front End/Memory Management/Bignums. Otherwise, it seems that Front-End/bignum interactions will not break anything. 
 
