@@ -17,8 +17,8 @@
   (i32.const 1)
   (call $store)
   ;; get char from self and set it as the string for new string
-  (local.get $self)
-  (i32.add (i32.const 1) (local.get $index))
+  (i32.add (local.get $index) (local.get $self))
+  (i32.const 1)
   (call $load)
   (local.set $buffer)
   (local.get $newstr)

@@ -13,10 +13,8 @@ describe("string test", () => {
     "test case 3: index accessing",
     `
     s:str = "asdf"
-    j:str = "jjj"
-    j = s[0]
-    print(j)`,
-    ["a"]
+    print(s[1])`,
+    ["s"]
   );
 
   // 4
@@ -76,19 +74,6 @@ describe("string test", () => {
   print(f("asd"))`,
     [`asd`]);
 
-  `
-b:str = ""
-{
-  a = "asdf"
-  b = a
-}
-print(b)->?
-a[0]
-b = a[0]
-temp = str(a[0])
-destroy temp
-`
-
   //12
   assertPrint("test case 12: use string as class fields",
     `class C(object):
@@ -98,4 +83,71 @@ destroy temp
   c:C = None
   c = C()
   print(c.gets())`, [`asd`]);
+
+  //13 index access + compare
+  assertPrint("test case 13: index access + compare",
+  `s1:str = "abcd"
+  s2:str = "bcde"
+  print(s1[3]==s2[3])`, [`False`]);
+
+  assertPrint("test case 13.5: index access + compare",
+  `s1:str = "abcd"
+  s2:str = "bcde"
+  print(s1[3]==s2[2])`, [`True`]);
+  
+  //14 index access with funciton parameter
+  assertPrint("test case 14: index access with funciton parameter",
+    `def f(s:str, i:int)->str:
+    return s[i]
+  print(f("asd", 2))`,
+    [`d`]);
+  
+  assertFail("test case 14.5: index access out of range with funciton parameter",
+    `
+  def f(s:str, i:int)->str:
+    return s[i]
+  f("asd", 3)`);
+
+  //15 index access with method parameter
+  assertPrint("test case 15: index access with method parameter",
+    `
+  class C(object):
+    s:str = "asd"
+    def gets(self: C, i:int)->str:
+      return self.s[i]
+  c:C = None
+  c = C()
+  print(c.gets(1))`, [`s`]);
+
+  assertFail("test case 15.5: index access out of range with method parameter",
+    `
+  class C(object):
+    s:str = "asd"
+    def gets(self: C, i:int)->str:
+      return self.s[i]
+  c:C = None
+  c = C()
+  print(c.gets(10))`);
+
+  //16 index access with function parameter + compare
+  assertPrint("test case 16: index access with function parameter + compare",
+    `
+  def f(s:str, i:int, t:str, j:int)->bool:
+    return s[i] > t[j]
+  print(f("asd", 1, "fgh", 1))`,
+    [`True`])
+  
+  assertPrint("test case 16.5: index access with function parameter + compare",
+    `
+  def f(s:str, i:int, t:str, j:int)->bool:
+    return s[i] > t[j]
+  print(f("asd", 2, "fgh", 1))`,
+    [`False`])
+  
+
 });
+
+  //17 index access with method parameter + compare
+
+
+

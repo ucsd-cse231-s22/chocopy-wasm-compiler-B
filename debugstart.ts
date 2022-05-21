@@ -6,6 +6,7 @@ import { BasicREPL } from "./repl";
 import { importObject, addLibs } from "./tests/string-import-object.test";
 import { augmentEnv, Config } from "./runner";
 import { lowerProgram } from "./lower";
+import { compile } from "./compiler";
 
 
 export function stringifyTree(t: TreeCursor, source: string, d: number) {
@@ -31,9 +32,9 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
     `
-  s1:str = "abc"
-  s2:str = "def"
-  print(len(s1+s2))
+    def f(s:str, i:int, t:str, j:int)->bool:
+      return s[i] > t[j]
+    print(f("asd", 1, "fgh", 1))
     `
 
   // const t = parser.parse(source);
@@ -50,6 +51,8 @@ async function debug() {
   // const globalEnv = augmentEnv(config.env, tprogram);
   // const irprogram = lowerProgram(tprogram, globalEnv);
   // console.log(JSON.stringify(irprogram, null,2))
+  // const compiled = compile(irprogram, globalEnv);
+  // console.log(compiled)
   // const result = repl.run(source).then(result => {
   //   console.log("hello")
   //   console.log(result);
