@@ -148,6 +148,9 @@ describe("string test", () => {
 });
 
   //17 index access with method parameter + compare
+  //18 index access with class member as index
+  //19 index access with class member as index + compare
+  //20-?? compare + index access + concat
 
 
 
