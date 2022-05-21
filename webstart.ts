@@ -104,6 +104,8 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   throw Error("unknown comparison operator")
 }
 
+
+
 function print(typ: Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
