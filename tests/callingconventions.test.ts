@@ -217,14 +217,6 @@ class C(object):
     
 C().test()`, ["10"])
 
-// assertPrint("Can use globals in default args", `
-// x : int = 5`)
-
-// de
-//   print(param)
-  
-// globalAsDef()
-// ""5[] ,:) x= tni  :marapf()DeAslaobgl
 assertPrint("can use the NOT uniop in default args", `
 b : bool = True
 
