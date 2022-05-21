@@ -1,9 +1,10 @@
-# Bignums Designs#
+# Bignums Designs #
 
 Jeff Makings and Zach Lee 
 
 ## Initial design/ test cases ##
 Test cases: 
+
 1:
 Test for initial compilation: 
 
@@ -12,6 +13,7 @@ Test for initial compilation:
 ```
 
 Expected: 999999999999999999999999999999999999999999999999
+
 2: 
 Basic assignment and printing: 
 
@@ -21,6 +23,7 @@ print(x)
 ```
 
 Expected: “999999999999999999999999999999999999999999999999” 
+
 3: 
 Unary operation: 
 
@@ -30,6 +33,7 @@ print(-999999999999999999999999999999999999999999999999)
 ```
 
 Expected: “-999999999999999999999999999999999999999999999999”
+
 4: 
 Basic addition: 
 
@@ -39,6 +43,7 @@ print(x)
 ```
 
 Expected: 2000000000000000000000000000
+
 5:
 Basic subtraction: 
 
@@ -48,6 +53,7 @@ print(x)
 ```
 
 Expected: 3000000000000000000000000000
+
 6:
 Multiply i32s to get BigNum: 
 
@@ -57,6 +63,7 @@ print(x)
 ```
 
 Expected: 3000000000
+
 7:
 Divide: 
 
@@ -66,6 +73,7 @@ print(x)
 ```
 
 Expected: 1000000000000000000
+
 8:
 Comparison Operator: 
 
