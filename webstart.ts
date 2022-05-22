@@ -34,6 +34,7 @@ function reconstructBigint(arg : number, load : any) : bigint {
   return isNegative * consturctedBigint;
 }
 
+// allocate the bigint
 function deconstructBigint(bigInt : bigint, alloc : any, store : any) : number {
   var isNegative = 1;
   if (bigInt < 0) {
@@ -104,7 +105,7 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   throw Error("unknown comparison operator")
 }
 
-function print(typ: Type, arg : number, load : any) : any {
+function print(typ : Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
@@ -114,6 +115,42 @@ function print(typ: Type, arg : number, load : any) : any {
     elt.innerText = reconstructBigint(arg, load).toString();
   }
   return arg;
+}
+
+function abs_big(arg : number, alloc : any, load : any, store : any) : any {
+  var bigInt = reconstructBigint(arg, load);
+  if (bigInt >= BigInt(0)) {
+    return arg;
+  }
+  return deconstructBigint(-bigInt, alloc, store);
+}
+
+function min_big(arg1 : number, arg2 : number, load : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  if (bigInt1 > bigInt2) {
+    return arg2;
+  }
+  return arg1;
+}
+
+function max_big(arg1 : number, arg2 : number, load : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  if (bigInt1 > bigInt2) {
+    return arg1;
+  }
+  return arg2;
+}
+
+function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+
+  // "**"" returns the result of raising the first operand to the power of the second operand. 
+  // It is equivalent to Math. pow , except it also accepts BigInts as operands.
+  var bigInt3 = bigInt1 ** bigInt2;
+  return deconstructBigint(bigInt3, alloc, store);
 }
 
 function assert_not_none(arg: any) : any {
@@ -156,10 +193,10 @@ function webStart() {
         gte: (arg1: number, arg2: number) => comparisonOp(BinOp.Gte,arg1, arg2, alloc, load, store), 
         lt: (arg1: number, arg2: number) => comparisonOp(BinOp.Lt,arg1, arg2, alloc, load, store),
         gt: (arg1: number, arg2: number) => comparisonOp(BinOp.Gt,arg1, arg2, alloc, load, store), 
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
+        abs: (arg: number) => abs_big(arg, alloc, load, store),
+        min: (arg1: number, arg2: number) => min_big(arg1, arg2, load),
+        max: (arg1: number, arg2: number) => max_big(arg1, arg2, load),
+        pow: (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store)
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

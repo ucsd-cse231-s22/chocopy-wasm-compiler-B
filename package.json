@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "big-integer": "^1.6.51",
     "chai-as-promised": "^7.1.1",
     "lezer": "^0.13.5",
     "lezer-python": "^0.13.7",

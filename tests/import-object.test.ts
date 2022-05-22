@@ -114,6 +114,42 @@ function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
+function abs_big(arg : number, alloc : any, load : any, store : any) : any {
+  var bigInt = reconstructBigint(arg, load);
+  if (bigInt >= BigInt(0)) {
+    return arg;
+  }
+  return deconstructBigint(-bigInt, alloc, store);
+}
+
+function min_big(arg1 : number, arg2 : number, load : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  if (bigInt1 > bigInt2) {
+    return arg2;
+  }
+  return arg1;
+}
+
+function max_big(arg1 : number, arg2 : number, load : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+  if (bigInt1 > bigInt2) {
+    return arg1;
+  }
+  return arg2;
+}
+
+function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+  var bigInt1 = reconstructBigint(arg1, load);
+  var bigInt2 = reconstructBigint(arg2, load);
+
+  // "**"" returns the result of raising the first operand to the power of the second operand. 
+  // It is equivalent to Math. pow , except it also accepts BigInts as operands.
+  var bigInt3 = bigInt1 ** bigInt2;
+  return deconstructBigint(bigInt3, alloc, store);
+}
+
 function assert_not_none(arg: any) : any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
@@ -154,6 +190,12 @@ export async function addLibs() {
   importObject.imports.lt = (arg1: number, arg2: number) => comparisonOp(BinOp.Lt,arg1, arg2, alloc, load, store);
   importObject.imports.gt = (arg1: number, arg2: number) => comparisonOp(BinOp.Gt,arg1, arg2, alloc, load, store); 
 
+  // builtin functions
+  importObject.imports.abs = (arg: number) => abs_big(arg, alloc, load, store);
+  importObject.imports.min = (arg1: number, arg2: number) => min_big(arg1, arg2, load);
+  importObject.imports.max = (arg1: number, arg2: number) => max_big(arg1, arg2, load);
+  importObject.imports.pow = (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store);
+
   return importObject;
 }
 
@@ -164,10 +206,6 @@ export const importObject : any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    abs: Math.abs,
-    min: Math.min,
-    max: Math.max,
-    pow: Math.pow,
   },
 
   output: "",
