@@ -1,8 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
-import { ftruncateSync } from "fs";
-import { assert } from "console";
+import { valueIsPointer } from "./memory_management";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -87,26 +86,21 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
 function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   switch (stmt.tag) {
     case "store":
-      var is_pointer : Value<[Type, SourceLocation]> = {tag: "bool", value: false};
-      if(stmt.offset.tag == "wasmint"){
-        if(stmt.offset.is_pointer){
-          is_pointer = {tag: "bool", value: true};
-        }
-      }
-      if(!is_pointer.value){
-        return [
-          ...codeGenValue(stmt.start, env),
-          ...codeGenValue(stmt.offset, env),
-          ...codeGenValue(stmt.value, env),
-          ...codeGenValue(is_pointer, env),
+      var encode_stmts: string[] = [];
+      // if value is not a pointer, we need encode them
+      // if value is a pointer, it's already encoded
+      if(!valueIsPointer(stmt.value, env)){
+        encode_stmts = [
+          `;; encode num/bool`,
+          `(i32.const 0)`,
           `call $encode_value`,
-          `call $store`
-        ]
+        ];
       }
       return [
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
+        ...encode_stmts,
         `call $store`
       ]
     case "assign":
@@ -292,12 +286,12 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   definedVars.forEach(env.locals.add, env.locals);
   def.inits.forEach(v => {
     env.local_type.set(v.name, v.type);
-    assert(v.type !== undefined);
+    // assert(v.type !== undefined);
   })
   def.parameters.forEach(p => env.locals.add(p.name));
   def.parameters.forEach(p => {
     env.local_type.set(p.name, p.type);
-    assert(p.type !== undefined);
+    // assert(p.type !== undefined);
   })
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
