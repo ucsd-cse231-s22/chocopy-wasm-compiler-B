@@ -21,13 +21,9 @@ class File(object):
         if pos < 0:
             print(88888)
             return
-        else:
-            pass
         if pos >= self.filelength:
             print(55555)
             return
-        else:
-            pass
         self.pointer = pos
         
     def close(self : File):
