@@ -177,7 +177,8 @@ describe("string test", () => {
       self.i = x
       return None
     def StrIndexValue(self: C, s1: str) -> None:
-      index: int = self.i
+      index: int = 0
+      index = self.i
       print(s1[index])
       return None
   

@@ -288,26 +288,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       return { a: location, tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-      if (c.type.name === 'MemberExpression') {
-        c.firstChild(); // go to variableName
-        const objName = traverseExpr(c, s);
-        c.nextSibling(); // focus on "["
-        c.nextSibling(); // focus on index
-        const index = traverseExpr(c, s);
-
-        c.parent(); // back to MemberExpression
-        c.nextSibling(); // focus on equals
-        c.nextSibling(); // go to value
-        var value = traverseExpr(c, s);
-        c.parent();
-
-        return {
-          tag: "index-assign",
-          obj: objName,
-          index: index,
-          value: value
-        }
-      }
       const target = traverseExpr(c, s);
       c.nextSibling(); // go to equals
       c.nextSibling(); // go to value
@@ -329,7 +309,14 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
           name: target.name,
           value: value
         }
-      } else {
+      } else if (target.tag == "index"){
+        return {
+          tag: "index-assign",
+          obj: target.obj,
+          index: target.index,
+          value: value
+        }
+      }else {
         throw new ParseError("Unknown target while parsing assignment", location.line);
       }
     case "ExpressionStatement":
