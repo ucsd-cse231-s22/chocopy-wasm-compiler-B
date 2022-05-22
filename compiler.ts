@@ -1,7 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
-import { valueIsPointer } from "./memory_management";
+import { typeIsPointer, valueIsPointer } from "./memory_management";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -107,21 +107,12 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
       var valStmts = codeGenExpr(stmt.value, env);
       const decPreRefStmts = decRefcount(stmt.name, env);
       const incNowRefStmts = incRefcount(stmt.name, env);
-      if (env.locals.has(stmt.name)) {
-        return [
-          ...decPreRefStmts,
-          ...valStmts, 
-          `(local.set $${stmt.name})`,
-          ...incNowRefStmts
-        ];
-      } else {
-        return [
-          ...decPreRefStmts,
-          ...valStmts, 
-          `(global.set $${stmt.name})`,
-          ...incNowRefStmts
-        ];
-      }
+      return [
+        ...decPreRefStmts,
+        ...valStmts, 
+        `(${env.locals.has(stmt.name) ? `local` : `global`}.set $${stmt.name})`,
+        ...incNowRefStmts
+      ];
 
     case "return":
       var valStmts = codeGenValue(stmt.value, env);
@@ -411,22 +402,14 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
     return [];
   }
   const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
-  switch(type.tag){
-    case "number":
-    case "bool":
-      return [];
-    case "none":
-    case "class":
-      return [
-        `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-        `call $dec_refcount`,
-        `drop`
-      ]
-    case "either":
-      throw new Error("Not good for either");
-    default:
-      throw new Error("Unexpect Error");
+  if(!typeIsPointer(type)){
+    return [];
   }
+  return [
+    `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
+    `call $dec_refcount`,
+    `drop`
+  ]
 }
 
 /** Generate code to increase the refcount, if that variable is a pointer
@@ -438,22 +421,14 @@ function incRefcount(name: string, env: GlobalEnv): Array<string> {
     return [];
   }
   const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
-  switch(type.tag){
-    case "number":
-    case "bool":
-      return [];
-    case "none":
-    case "class":
-      return [
-        `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-        `call $inc_refcount`,
-        `drop`
-      ]
-    case "either":
-      throw new Error("Not good for either");
-    default:
-      throw new Error("Unexpect Error");
+  if(!typeIsPointer(type)){
+    return [];
   }
+  return [
+    `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
+    `call $inc_refcount`,
+    `drop`
+  ]
 }
 
 /** Generate code to decrease the reference counts of all local variables
