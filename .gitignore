@@ -6,4 +6,4 @@ cli
 *.sw*
 mochawesome-report
 *lock*
-debugstart.ts
+*debugstart.ts

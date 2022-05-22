@@ -1,6 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BOOL, CLASS, NONE, NUM } from "./utils";
 import { ftruncateSync } from "fs";
 import { assert } from "console";
 
@@ -93,11 +93,20 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
           is_pointer = {tag: "bool", value: true};
         }
       }
+      if(!is_pointer.value){
+        return [
+          ...codeGenValue(stmt.start, env),
+          ...codeGenValue(stmt.offset, env),
+          ...codeGenValue(stmt.value, env),
+          ...codeGenValue(is_pointer, env),
+          `call $encode_value`,
+          `call $store`
+        ]
+      }
       return [
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
-        ...codeGenValue(is_pointer, env),
         `call $store`
       ]
     case "assign":
@@ -184,6 +193,9 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         callName = "print_bool";
       } else if (expr.name === "print" && argTyp === NONE) {
         callName = "print_none";
+      } else if (expr.name == "print" && argTyp.tag == "class"){
+        callName = "print_num";
+        return argStmts.concat([`(call $decode_value)`, `(call $${callName})`]);
       }
       return argStmts.concat([`(call $${callName})`]);
 
@@ -219,7 +231,7 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
     case "none":
-      return [`(i32.const 0)`];
+      return [`(i32.const 1)`];
     case "id":
       if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];
