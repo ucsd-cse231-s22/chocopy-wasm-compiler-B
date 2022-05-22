@@ -216,7 +216,7 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "bool":
       return [`(i32.const ${Number(val.value)})`];
     case "none":
-      return [`(i32.const 1)`];
+      return [`(i32.const 0)`];
     case "id":
       if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];

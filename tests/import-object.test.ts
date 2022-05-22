@@ -20,7 +20,7 @@ function print(typ: Type, arg: any): any {
 }
 
 function assert_not_none(arg: any) : any {
-  if (arg === 1)
+  if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
 }
