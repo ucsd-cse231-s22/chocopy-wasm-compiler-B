@@ -1,19 +1,21 @@
 import { readFileSync } from "fs";
+import { BOOL, CLASS, NONE, NUM } from "../utils";
+import { Type } from "../ast";
 
-enum Type { Num, Bool, None }
+//enum Type { Num, Bool, None }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
-    case Type.Num:
+    case NUM:
       return (arg as number).toString();
-    case Type.Bool:
+    case BOOL:
       return (arg as boolean) ? "True" : "False";
-    case Type.None:
+    case NONE:
       return "None";
   }
 }
 
-function print(typ: Type, arg: any): any {
+function print(typ: Type, arg: any, mem?: WebAssembly.Memory): any {
   importObject.output += stringify(typ, arg);
   importObject.output += "\n";
   return arg;
@@ -25,9 +27,19 @@ function assert_not_none(arg: any): any {
   return arg;
 }
 
+function assert_in_range(length: any, index: any): any {
+  if (index < 0) {
+    throw new Error("RUNTIME ERROR: index less than 0");
+  }
+  if (length <= index) {
+    throw new Error("RUNTIME ERROR: index not in range");
+  }
+  return index;
+}
+const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
-  const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+  //const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports,
     importObject.memory_values = memory;
@@ -42,10 +54,12 @@ export const importObject: any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    print: (arg: any) => print(Type.Num, arg),
-    print_num: (arg: number) => print(Type.Num, arg),
-    print_bool: (arg: number) => print(Type.Bool, arg),
-    print_none: (arg: number) => print(Type.None, arg),
+    assert_in_range: (arg1: any, arg2: any) => assert_in_range(arg1, arg2),
+    print: (arg: any) => print(NUM, arg),
+    print_num: (arg: number) => print(NUM, arg),
+    print_bool: (arg: number) => print(BOOL, arg),
+    print_none: (arg: number) => print(NONE, arg),
+    print_str: (arg: number) => print(CLASS("str"), arg, memory),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

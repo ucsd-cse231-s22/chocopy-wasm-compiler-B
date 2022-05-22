@@ -257,6 +257,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
       const tBin = { ...expr, left: tLeft, right: tRight };
       switch (expr.op) {
         case BinOp.Plus: //equalType
+          if (equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return { ...tBin, a: [NUM, expr.a] } }
           if (equalType(tLeft.a[0], CLASS("str")) &&
           equalType(tRight.a[0], CLASS("str"))) {
             return { a: [{ tag: "class", name: "str" }, expr.a], tag: "method-call", obj: tLeft, method: "concat", arguments: [tRight] }
@@ -280,11 +281,13 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         case BinOp.Lte:
         case BinOp.Gte:
         case BinOp.Lt:
+          if (equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return { ...tBin, a: [BOOL, expr.a] } }
           if (equalType(tLeft.a[0], CLASS("str")) &&
           equalType(tRight.a[0], CLASS("str"))) {
-            return { a: [{ tag: "bool" }, expr.a], tag: "method-call", obj: tLeft, method: "lessthan", arguments: [tRight] }
+            return { a: [BOOL, expr.a], tag: "method-call", obj: tLeft, method: "lessthan", arguments: [tRight] }
           }
         case BinOp.Gt:
+          if (equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return { ...tBin, a: [BOOL, expr.a] } }
           if (equalType(tLeft.a[0], CLASS("str")) &&
           equalType(tRight.a[0], CLASS("str"))) {
             return { a: [BOOL, expr.a], tag: "method-call", obj: tLeft, method: "greaterthan", arguments: [tRight] }

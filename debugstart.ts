@@ -32,7 +32,13 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
   `
-  c[0] = 1
+  x : int = 1
+y : int = 2
+if x < y:
+  pass
+else:
+  x = -x
+print(x)
   `
   // var source = 
   // `
@@ -52,11 +58,11 @@ async function debug() {
   // const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 
-  // const repl = new BasicREPL(await addLibs());
-  // const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
-  // const parsed = parse(source);
-  // console.log(JSON.stringify(parsed, null, 2))
-  // const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  const repl = new BasicREPL(await addLibs());
+  const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
+  const parsed = parse(source);
+  console.log(JSON.stringify(parsed, null, 2))
+  const [tprogram, tenv] = tc(config.typeEnv, parsed);
   // console.log(JSON.stringify(tprogram, null, 2))
   // const globalEnv = augmentEnv(config.env, tprogram);
   // const irprogram = lowerProgram(tprogram, globalEnv);
