@@ -32,6 +32,7 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
   `
+<<<<<<< HEAD
   x : int = 1
 y : int = 2
 if x < y:
@@ -39,22 +40,17 @@ if x < y:
 else:
   x = -x
 print(x)
+=======
+def f(a:int)->int:
+  if a > 0:
+    return 1
+  else a < 0:
+    return 2
+>>>>>>> 5aa543ac3d31f3f0fa93c93e9332ac252f509892
   `
-  // var source = 
-  // `
-  // class C(object):
-  //   i: int = 0
-  //   def printVal(self: C) -> None:
-  //     print(self.i)
-  //     return None
-  
-  // c: C = None
-  // c = C()
-  // c.printVal()
-  // `
 
-  const t = parser.parse(source);
-  console.log(stringifyTree(t.cursor(), source, null))
+  // const t = parser.parse(source);
+  // console.log(stringifyTree(t.cursor(), source, null))
   // const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 
