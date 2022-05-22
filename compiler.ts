@@ -2,6 +2,8 @@ import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
 import { readFileSync } from "fs";
+import { equalType } from "./type-check";
+import { equal } from "assert";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -156,13 +158,13 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const argTyp = expr.a[0];
       const argStmts = codeGenValue(expr.arg, env);
       var callName = expr.name;
-      if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(NUM)) {
+      if (expr.name === "print" && equalType(argTyp, NUM)) {
         callName = "print_num";
-      } else if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(BOOL)) {
+      } else if (expr.name === "print" && equalType(argTyp, BOOL)) {
         callName = "print_bool";
-      } else if (expr.name === "print" && argTyp === NONE) {
+      } else if (expr.name === "print" && equalType(argTyp, NONE)) {
         callName = "print_none";
-      } else if (expr.name === "print" && JSON.stringify(argTyp) === JSON.stringify(CLASS("str"))){
+      } else if (expr.name === "print" && equalType(argTyp, CLASS("str"))){
         callName = "print_str";
       }
       return argStmts.concat([`(call $${callName})`]);

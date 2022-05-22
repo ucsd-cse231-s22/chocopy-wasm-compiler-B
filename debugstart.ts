@@ -31,14 +31,35 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 // entry point for debugging
 async function debug() {
   var source =
-    `
-    def f(s:str, i:int, t:str, j:int)->bool:
-      return s[i] > t[j]
-    print(f("asd", 1, "fgh", 1))
-    `
+  `
+  class C(object):
+    i: int = 0
+    def setIndex(self: C, x: int) -> None:
+      self.i = x
+      return None
+    def StrIndexValue(self: C, s1: str) -> None:
+      print(s1[self.i])
+      return None
+  
+  c: C = None
+  c = C()
+  c.setIndex(0)
+  c.StrIndexValue("asd")`
+  // var source = 
+  // `
+  // class C(object):
+  //   i: int = 0
+  //   def printVal(self: C) -> None:
+  //     print(self.i)
+  //     return None
+  
+  // c: C = None
+  // c = C()
+  // c.printVal()
+  // `
 
-  // const t = parser.parse(source);
-  // console.log(stringifyTree(t.cursor(), source, null))
+  const t = parser.parse(source);
+  console.log(stringifyTree(t.cursor(), source, null))
   // const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 

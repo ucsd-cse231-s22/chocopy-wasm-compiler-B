@@ -4,6 +4,7 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
+import { equalType } from "./type-check"
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -511,7 +512,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   while(hasChild) {
     if (isVarInit(c, s)) {
       let temp = traverseVarInit(c, s)
-      if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
+      if (equalType(temp.type, CLASS("str"))) {
         body.push(initToConsturct(temp))
         temp.value = { tag: "none" };
       }
@@ -548,7 +549,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   while (c.nextSibling()) { // Focuses first field
     if (isVarInit(c, s)) {
       let temp = traverseVarInit(c, s)
-      if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
+      if (equalType(temp.type, CLASS("str"))) {
         initBody.push(initToConsturct({...temp, name:"self"+"." +temp.name}))
         temp.value = { tag: "none" };
       }
@@ -631,7 +632,7 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
       while(hasChild) {
         if (isVarInit(c, s)) {
           let temp = traverseVarInit(c, s)
-          if (JSON.stringify(temp.type) === JSON.stringify({ tag: "class", name: "str" })) {
+          if (equalType(temp.type, CLASS("str"))) {
             stmts.push(initToConsturct(temp))
             temp.value = { tag: "none" };
           }
