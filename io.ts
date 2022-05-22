@@ -1,38 +1,17 @@
 export const fileObjectDefinition : string = 
-`class File(object):
+`
+class File(object):
     fd : int = 0          
-    mode : int = 0
-    closed : bool = False
     pointer : int = 0
     filelength : int = 0
 
     def __init__(self : File):
         pass
-    
+
     def read(self : File) -> int:
-        if self.mode != 0:
-            print(44444)
-            return -1
-        else:
-            pass
-        if self.closed:
-            print(33333)
-            return -1
-        else:
-            pass
         return jsread(self.fd)
-    
+
     def write(self : File, s : int) -> int:
-        if self.mode != 1:
-            print(77777)
-            return -1
-        else:
-            pass
-        if self.closed:
-            print(66666)
-            return -1
-        else:
-            pass
         return jswrite(self.fd, s)
 
     def tell(self : File) -> int:
@@ -51,23 +30,13 @@ export const fileObjectDefinition : string =
             pass
         self.pointer = pos
         
-        
     def close(self : File):
-        if self.closed:
-            print(99999)
-            print(self.closed)
-            return
-        else:
-            pass
         jsclose(self.fd)
-        self.closed = True
 
 def open(mode : int) -> File:
     newFile : File = None
     newFile = File()
     newFile.fd = jsopen(mode)
-    newFile.closed = False
-    newFile.mode = mode
     return newFile
 
 f : File = None

@@ -555,10 +555,6 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
 
 export function parse(source : string) : Program<SourceLocation> {
   const t = parser.parse(source);
-
   const str = stringifyTree(t.cursor(), source, 0);
-
-  // console.log(str);
-
   return traverse(t.cursor(), source);
 }
