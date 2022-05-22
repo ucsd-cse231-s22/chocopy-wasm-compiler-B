@@ -284,11 +284,14 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
           equalType(tRight.a[0], CLASS("str"))) {
             return { a: [{ tag: "bool" }, expr.a], tag: "method-call", obj: tLeft, method: "lessthan", arguments: [tRight] }
           }
+
         case BinOp.Gt:
           if (equalType(tLeft.a[0], CLASS("str")) &&
           equalType(tRight.a[0], CLASS("str"))) {
             return { a: [BOOL, expr.a], tag: "method-call", obj: tLeft, method: "greaterthan", arguments: [tRight] }
           }
+          if(equalType(tLeft.a[0], NUM) && equalType(tRight.a[0], NUM)) { return {...tBin, a: [BOOL, expr.a]} ; }
+          else { throw new TypeCheckError("Type mismatch for op" + expr.op) }
         case BinOp.And:
         case BinOp.Or:
           if (equalType(tLeft.a[0], BOOL) && equalType(tRight.a[0], BOOL)) { return { ...tBin, a: [BOOL, expr.a] }; }

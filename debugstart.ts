@@ -32,31 +32,23 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
   `
-  c[0] = 1
+def f(a:int)->int:
+  if a > 0:
+    return 1
+  else a < 0:
+    return 2
   `
-  // var source = 
-  // `
-  // class C(object):
-  //   i: int = 0
-  //   def printVal(self: C) -> None:
-  //     print(self.i)
-  //     return None
-  
-  // c: C = None
-  // c = C()
-  // c.printVal()
-  // `
 
-  const t = parser.parse(source);
-  console.log(stringifyTree(t.cursor(), source, null))
+  // const t = parser.parse(source);
+  // console.log(stringifyTree(t.cursor(), source, null))
   // const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 
-  // const repl = new BasicREPL(await addLibs());
-  // const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
-  // const parsed = parse(source);
-  // console.log(JSON.stringify(parsed, null, 2))
-  // const [tprogram, tenv] = tc(config.typeEnv, parsed);
+  const repl = new BasicREPL(await addLibs());
+  const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
+  const parsed = parse(source);
+  console.log(JSON.stringify(parsed, null, 2))
+  const [tprogram, tenv] = tc(config.typeEnv, parsed);
   // console.log(JSON.stringify(tprogram, null, 2))
   // const globalEnv = augmentEnv(config.env, tprogram);
   // const irprogram = lowerProgram(tprogram, globalEnv);

@@ -253,7 +253,7 @@ describe("string test", () => {
       self.i = i
       self.j = j
       return
-    def greater(self: C, s1: str, s2: str) -> str:
+    def greater(self: C, s1: str, s2: str) -> int:
       if s1[self.i] > s2[self.j]:
         return s1+s2
       else:
