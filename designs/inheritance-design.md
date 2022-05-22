@@ -23,21 +23,21 @@ The first is stored on a per-object basis as the first field in its struct. To d
 
 The method offsets are also added to the global environment during ```augmentEnv```. As mentioned above, we enforce an ordering of the fields and methods, so the method offsets are simply the methods' indices in the order they appear in.
 
-Then, we also added the "call-indirect" type to the IR to support generating code for method calls. This way, each method call gets populated with its corresponding method offset by the IR, making code generation easier.
+Then, we also added the ```call_indirect``` type to the IR to support generating code for method calls. In ```lower.ts```, upon seeing an AST expr of type ```method-call```, we basically kept the initial lowering logic except changed the output to be ```call_indirect``` instead of ```call```. In particular, since the global environment has been populated by class offsets at this point, we can simply do a lookup to set the method offset.
 
 ## Compiler (code gen)
-The two main parts of code gen that we had to implement were the vtable and handling ```call_indirect```.
+The two main parts of code gen that we had to implement were the vtable and handling the ```call_indirect``` IR expr.
 
 The vtable was essentially built by iterating over the classes and just adding each one's methods in according to the order set by the typechecker.
 There is some redundancy here in that we compute the class offsets in ```augmentEnv``` but only set up the actual table structure in ```compiler.ts```.
 
-For ```call_indirect```, we were able to load the address of the object twice without using a local temp variable by just running ```codeGenValue``` twice on the argument mapping to ```self```. From there, we followed the professor's writeup on vtables. The main caveat here was setting up the ```type``` constructs for each method. For this, we simply created one per class method according to WASM documentation.
+For ```call_indirect```, we push the method call arguments onto the stack as one would for any function call. Then, we push another copy of the calling object's address onto the stack by pushing the result of ```codeGenValue(<the self argument's value>)``` again. From here, we followed the professor's writeup on vtables, where we load the class offset of the object (the first field, at offset 0), add the method offset (grabbing this from the ```call_indirect``` expr), and then doing the actual ```call_indirect``` WASM call. The main caveat here was setting up the ```type``` constructs for each method. For this, we simply created one per class method according to WASM documentation.
 
 # Week 7 Testing Updates
 
 We had to clean up the tests we wrote for ourselves since many of them didn't actually compile the first time due to our own mistakes in writing them.
 
-Some tests we ran manually (not in the suite) out of curiosity included the List/Empty/Link example from one of the lectures:
+Some tests we added to the suite included the List/Empty/Link example from one of the lectures:
 ```
 class List(object):
     def sum(self : List) -> int:
@@ -78,7 +78,7 @@ class C(B):
     def foo3(self : C, arg : int):
         self.foo()
         self.foo2()
-        print(self.x + self.arg)
+        print(self.x + arg)
 c : C = None
 c = C()
 c.foo3(3)

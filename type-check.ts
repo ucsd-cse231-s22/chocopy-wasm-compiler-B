@@ -339,7 +339,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
   });
   
   
-  const newClassMap : Class<[Type, SourceLocation]> = {a: [NONE, cls.a], name: cls.name, fields: tFields, methods: orderMethod};
+  const newClassMap : Class<[Type, SourceLocation]> = {a: [NONE, cls.a], supers: cls.supers, name: cls.name, fields: tFields, methods: orderMethod};
   env.classMap.set(cls.name,newClassMap);
   return newClassMap;
 }
