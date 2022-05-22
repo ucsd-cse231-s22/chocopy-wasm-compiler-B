@@ -156,3 +156,124 @@ We do not require any new library functionality - this feature only impacts func
 ## Memory Layout
 
 We do not need to modify or use memory - as mentioned before, our feature only changes function/method definitions and calls.
+
+# Week 9: Named Arguments Milestone
+
+## Testcases
+1. Checks that the ordering of arguments is positional arguments before named arguments
+
+   ```python
+   def test(a : int, b : int, c : int = 5):
+      print(a-b+c)
+   test(7, c = 3, 5)
+   ```
+   
+   _Expected result: Parse Error: positional argument follows keyword argument_
+
+2. Checks that there are no double definitions of a single argument
+   ```python
+   def test(a : int, b : int, c : int = 5):
+      print(a-b+c)
+   test(7, 3, a = 5)
+   ```
+
+   _Expected result: Type Check Error: test() got multiple values for argument 'a'_
+
+3. Checks that named arguments exist in the function argument definition
+
+   ```python
+   def test(a : int, b : int, c : int = 5)
+      print(a-b+c)
+   test(7, 3, f = 5)
+   ```
+
+   _Expected result: Type Check Error: test() got an unexpected keyword argument ‘f’_
+
+4. Normal calls with unnamed arguments and default values still works
+
+   ```python
+   def test(a : int, b : int, c : int = 5)
+	   return a + b + c
+   test(7, 3)
+   ```
+   
+   _Expected result: 15_
+
+5. Named arguments can override non default arguments without needing to override default arguments
+
+   ```python
+   def test(a : int, b : int, c : int = 5)
+	   return a - b + c
+   test(b = 7, a = 3)
+   ```
+
+   _Expected result: 1_
+
+6. Named arguments can override default arguments
+
+   ```python
+   def test(a : int, b : int, c : int = 5)
+	   return a - b + c
+   test(b = 7, a = 3, c = 0)
+   ```
+   
+   _Expected result: -4_
+
+7. Checks that all of the non default arguments are defined
+
+   ```python
+   def test(a : int, b : int, c : int = 5)
+	   return a - b + c
+
+   test(b = 7, c = 0)
+   ```
+   
+   _Expected result: Type Check Error: test() missing 1 required argument: 'a'_
+
+8. Correctly type checks named arguments overriding default arguments
+
+   ```python
+   def test(a : int, b : int, c : bool = True):
+	   if(c):
+		   return a
+	   else:
+		   return b
+   test(c = 5, b = 1, a = 2)
+   ```
+
+   _Expected result: Type Check Error: argument ‘c’ expected ‘bool’ but got ‘int’_
+
+9. Correctly type checks named arguments overriding non default arguments
+
+   ```python
+   def test(a : int, b : int, c : bool = True):
+      if(c):
+         return a
+      else:
+         return b
+
+   test(b = True, a = 2)
+   ```
+
+   _Expected result: Type Check Error: argument ‘b’ expected ‘int’ but got ‘bool’_
+
+10. Named arguments can take expressions as their value
+   
+      ```python
+      def test(a : int, b : int):
+         return a + b
+      test(a = 1+2, b = 5-2)
+      ```
+
+      _Expected result: 6_
+      
+## Changes
+
+### AST
+* Call will be updated to hold an optional value `namedArguments?` of type `Map<string, Expr<A>>`, which will map named arguments to the corresponding expressions.
+
+### IR
+* Nothing needs to be changed in the IR. `Call` in IR already holds arguments of Value<A>, which will be provided.
+
+### Built-in Libraries
+We do not need to modify or use any builtin libraries, as this feature only impacts function/method calls.
