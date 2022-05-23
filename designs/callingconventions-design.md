@@ -270,10 +270,36 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 ## Changes
 
 ### AST
-* Call will be updated to hold an optional value `namedArguments?` of type `Map<string, Expr<A>>`, which will map named arguments to the corresponding expressions.
+- Call will be updated to hold an optional value `namedArguments?` of type `Map<string, Expr<A>>`, which will map named arguments to the corresponding expressions.
 
 ### IR
-* Nothing needs to be changed in the IR. `Call` in IR already holds arguments of Value<A>, which will be provided.
+- Nothing needs to be changed in the IR. `Call` in IR already holds arguments of Value<A>, which will be provided.
 
 ### Built-in Libraries
 We do not need to modify or use any builtin libraries, as this feature only impacts function/method calls.
+
+### Value Representation and Memory Layout
+We do not create any new values or use the memory layout - our feature only impacts function/method calls.
+
+## Functions, Datatypes and Files
+
+### Parsing
+- Allow for the parsing of named arguments and their expressions into the namedArguments map
+- Throw a ParseError if there are positional/non-named arguments after a named argument - this is not allowed in Python, and prevents ambiguity. An example is shown in test case 1 - if we define the third argument earlier as a named argument, then have a non-named argument in the third position, what parameter does it represent?
+
+### Typechecking
+- Make sure positional/non-named args are first
+- Make sure that there are no duplicate named args, or that an unnamed arg isn’t named later in the list
+- Typecheck named arguments (if `c` is type int, make sure the value is int)
+- TypecheckEnv will be updated to hold a Map of string -> Types instead of an Array of Types, to allow for easier typechecking of named variables.
+	
+### Lowering
+
+- Add the string name of each parameter to our global function and method variables so that we can know the name of the parameters along with their values. 
+
+- Check for the use of named arguments and act accordingly with some different logic. 
+
+- Take positional arguments as normal but then focus on named arguments and add default values that are not defined by the named arguments. Because the type checker already checks that all of the non default arguments are defined, we don’t need to worry about them not being there so we can simply define all of the positional arguments and then go one by one from where the positional arguments end, check if the current parameter exists in the named arguments and then act accordingly by either adding the named argument or filling in the default argument. 
+
+- Once again, we will pass in the new set of arguments as if they were the original arguments.
+
