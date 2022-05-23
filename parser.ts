@@ -213,8 +213,11 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Sourc
   const args = [];
   c.nextSibling();
   while(c.type.name !== ")") {
-    let expr = traverseExpr(c, s);
-    args.push(expr);
+    // To skip generic definitions
+    if (!s.substring(c.from, c.to).includes("Generic")) {
+      let expr = traverseExpr(c, s);
+      args.push(expr);
+    }
     c.nextSibling(); // Focuses on either "," or ")"
     c.nextSibling(); // Focuses on a VariableName
   } 
@@ -445,6 +448,10 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   return { a: location, name, parameters, ret, inits, body }
 }
 
+export function traverseGenerics(c : TreeCursor, s : string) : Array<string> {
+  return undefined;
+}
+
 export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation> {
   var location = getSourceLocation(c, s);
   const fields : Array<VarInit<SourceLocation>> = [];
@@ -453,8 +460,9 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
+  var generics = traverseGenerics(c,s);
   var superExpr = traverseArguments(c,s);
-  if (superExpr.length == 0) {
+  if (superExpr.length == 0 && generics.length == 0) {
     throw new Error(`Class must have at least one super class: ${className}`);
   }
   var supers:Array<string> = [];
@@ -489,11 +497,12 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
 
   if (!methods.find(method => method.name === "__init__")) {
     methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
-  }
+  }  
   return {
     a: location,
     name: className,
     supers:supers,
+    generics: generics,
     fields,
     methods,
   };

@@ -6,7 +6,7 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-class C(object):
+class C(Generic[T],A):
   def f(self: C) -> int:
     if True:
       return 0

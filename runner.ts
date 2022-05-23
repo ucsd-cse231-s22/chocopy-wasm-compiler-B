@@ -57,13 +57,14 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
   var tableOffset = 0;
   prog.classes.forEach(cls => {
     newClassVTableOffsets.set(cls.name, tableOffset);
-    tableOffset += cls.methods.length;
+    tableOffset += cls.methods.length; // Inheritance: Add 1 for the destructor at the first place
   });
   // add $offset field into each class as its first member
+  // 3 extra field at first // <> <> <vtable offset> <x> <y>
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i+1, field.value]));
-    classFields.set("$offset", [0, {tag: "num", value: newClassVTableOffsets.get(cls.name)}])
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i+1, field.value])); // Inheritance: field offset add by 1 -> 3
+    classFields.set("$offset", [0, {tag: "num", value: newClassVTableOffsets.get(cls.name)}]) // Inheritance: make 0 -> 2 as vtable offset starts at 2 now
     newClasses.set(cls.name, classFields);
 
     const classMethods = new Map();

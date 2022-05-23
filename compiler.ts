@@ -58,7 +58,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   // set up vtable
   var tableOffset = 0;
   ast.classes.forEach(cls => {
-    tableOffset += cls.methods.length;
+    tableOffset += cls.methods.length; // Inheritance: make it +1 as destructor is the first method
   });
   const vTable : Array<string> = [
     `(table ${tableOffset} funcref)`,
@@ -66,6 +66,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   ];
   let orderedMethods : Array<string> = [];
   ast.classes.forEach(cls => {
+    // Inheritance: Add an item for the destructor
     cls.methods.forEach(methodDef => {
       orderedMethods.push(`$${methodDef.name}`);
     });
