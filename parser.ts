@@ -1,14 +1,21 @@
-import {parser} from "lezer-python";
-import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation } from "./ast";
+import {parser} from "@lezer/python";
+import { TreeCursor} from "@lezer/common";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, Modules, ModuleData, ModulesContext } from "./ast";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
 
+export let currentModule : string = ""
+export let modulesContext : ModulesContext = {
+}
+
+export let localCtx :string[] = [] // variable names available locally
+export let curCtx :'global'|'func'|'class' = 'global' // current scope
+
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
   var line = s.substring(0, c.from).split("\n").length;
-  return { line }
+  return { line, module: currentModule }
 }
 
 export function traverseLiteral(c : TreeCursor, s : string) : Literal {
@@ -35,6 +42,8 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> {
   var location = getSourceLocation(c, s);
+  let module = modulesContext[currentModule];
+  let name = ""
   switch(c.type.name) {
     case "Number":
     case "Boolean":
@@ -45,10 +54,15 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         value: traverseLiteral(c, s)
       }      
     case "VariableName":
+      name = s.substring(c.from, c.to)
+      // check if name is there in module.nsMap & not in localCtx
+      if(module.nsMap[name] && !localCtx.includes(name)){
+        name = module.nsMap[name]
+      }
       return {
         a: location,
         tag: "id",
-        name: s.substring(c.from, c.to)
+        name
       }
     case "CallExpression":
       c.firstChild();
@@ -191,6 +205,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
+      // if objExpr.tag = 'id' & id is in module.modMap & hasn't been redefined locally
+      if(objExpr.tag === 'id' 
+          && module.modMap[objExpr.name] 
+          && !localCtx.includes(objExpr.name)) {
+            return {
+              a: location,
+              tag: "id",
+              //eg. import lib as x; x.y -> mod$y
+              name: `${module.modMap[objExpr.name]}$${propName}`
+            }
+      }
       return {
         a: location,
         tag: "lookup",
@@ -266,32 +291,6 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       const expr = traverseExpr(c, s);
       c.parent(); // pop going into stmt
       return { a: location, tag: "expr", expr: expr }
-    // case "FunctionDefinition":
-    //   c.firstChild();  // Focus on def
-    //   c.nextSibling(); // Focus on name of function
-    //   var name = s.substring(c.from, c.to);
-    //   c.nextSibling(); // Focus on ParamList
-    //   var parameters = traverseParameters(c, s)
-    //   c.nextSibling(); // Focus on Body or TypeDef
-    //   let ret : Type = NONE;
-    //   if(c.type.name === "TypeDef") {
-    //     c.firstChild();
-    //     ret = traverseType(c, s);
-    //     c.parent();
-    //   }
-    //   c.firstChild();  // Focus on :
-    //   var body = [];
-    //   while(c.nextSibling()) {
-    //     body.push(traverseStmt(c, s));
-    //   }
-      // console.log("Before pop to body: ", c.type.name);
-    //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
-    //   c.parent();      // Pop to FunctionDefinition
-    //   return {
-    //     tag: "fun",
-    //     name, parameters, body, ret
-    //   }
     case "IfStatement":
       c.firstChild(); // Focus on if
       c.nextSibling(); // Focus on cond
@@ -351,11 +350,20 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  let module = modulesContext[currentModule]
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
     case "bool": return BOOL;
-    default: return CLASS(name);
+    default: { // it's either a classType or module.classType
+      if(c.name === 'VariableName') // classType
+        return CLASS(module.nsMap[name]); // get the mangled name
+      else{ // c -> MemberExpression
+        let exp = traverseExpr(c, s) // will return the mangled name
+        if(exp.tag === 'id')
+          return CLASS(exp.name)
+      }
+    }
   }
 }
 
@@ -385,6 +393,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLoca
   var location = getSourceLocation(c, s);
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
+  name = curCtx === 'global'? `${currentModule}$${name}` : name;
   c.nextSibling(); // go to : type
 
   if(c.type.name !== "TypeDef") {
@@ -408,7 +417,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   var location = getSourceLocation(c, s);
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
-  var name = s.substring(c.from, c.to);
+  var name = s.substring(c.from, c.to)
+  name = curCtx == 'global'? `${currentModule}$${name}`: name;
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
   c.nextSibling(); // Focus on Body or TypeDef
@@ -419,6 +429,8 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
     c.parent();
     c.nextSibling();
   }
+  let oldCtx = curCtx
+  curCtx = 'func'
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
@@ -433,16 +445,19 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
     }
     hasChild = c.nextSibling();
   }
-
+  // set localCtx - params and inits
+  localCtx = [...parameters.map(p => p.name),
+              ...inits.map(v => v.name) ]
   while(hasChild) {
     body.push(traverseStmt(c, s));
     hasChild = c.nextSibling();
   } 
-  
+  localCtx = []
   // console.log("Before pop to body: ", c.type.name);
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
   c.parent();      // Pop to FunctionDefinition
+  curCtx = oldCtx
   return { a: location, name, parameters, ret, inits, body }
 }
 
@@ -453,6 +468,9 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
+  let name = curCtx === 'global'? `${currentModule}$${className}`:className;
+  let oldCtx = curCtx
+  curCtx = 'class'
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
@@ -469,11 +487,12 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(name) }], ret: NONE, inits: [], body: [] });
   }
+  curCtx = oldCtx
   return {
     a: location,
-    name: className,
+    name,
     fields,
     methods
   };
@@ -520,6 +539,10 @@ export function isClassDef(c : TreeCursor, s : string) : Boolean {
   return c.type.name === "ClassDefinition";
 }
 
+export function isImportStmt(c : TreeCursor, s : string) : Boolean {
+  return c.type.name === "ImportStatement";
+}
+
 export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
   var location = getSourceLocation(c, s);
   switch(c.node.type.name) {
@@ -530,7 +553,14 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
       const stmts : Array<Stmt<SourceLocation>> = [];
       var hasChild = c.firstChild();
 
+      // skip all the imports
       while(hasChild) {
+        if (!isImportStmt(c,s)) break;
+        hasChild = c.nextSibling();
+      }
+      while(hasChild) {
+        curCtx = "global"
+        localCtx = []
         if (isVarInit(c, s)) {
           inits.push(traverseVarInit(c, s));
         } else if (isFunDef(c, s)) {
@@ -542,7 +572,8 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
         }
         hasChild = c.nextSibling();
       }
-
+      curCtx = "global"
+      localCtx = []
       while(hasChild) {
         stmts.push(traverseStmt(c, s));
         hasChild = c.nextSibling();
@@ -554,8 +585,166 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
   }
 }
 
-export function parse(source : string) : Program<SourceLocation> {
-  const t = parser.parse(source);
-  const str = stringifyTree(t.cursor(), source, 0);
-  return traverse(t.cursor(), source);
+export function parse(modules : Modules) : Program<SourceLocation> {
+  // need to do this first to support "import *"
+  // else we could have parsed all the imports with the module itself
+  buildModulesContext(modules)
+  let parsedModules : Program<SourceLocation>[] = []
+  for(let modName in modules){
+    const src = modules[modName];
+    // update global currentModule
+    currentModule = modName;
+    const t = parser.parse(src);
+    let mod = traverse(t.cursor(), src)
+    mod.name = modName
+    parsedModules.push(mod);
+  }
+  return mergeModules(parsedModules);
+}
+
+export function traverseImport(c : TreeCursor, s : string) : ModuleData {
+
+  // parseList parses the import list and populates the map
+  // <list> = mod1 [[as v1], mod2 [as v2]...]
+  let parseList = (module:string, map:any) => {
+    // c -> "import"
+    let hasNext = true
+    while(hasNext){
+      // c -> variable name
+      let name = s.substring(c.from, c.to)
+      let resolve = module? `${module}$${name}` : name
+
+      // move on to 'as' or VariableName or ","
+      hasNext = c.nextSibling()
+      if(c.name === 'as'){ // module aliased
+        c.nextSibling() // VariableName ("alias")
+        name = s.substring(c.from, c.to)
+        hasNext = c.nextSibling()
+      }
+      if(c.name === ',')
+        hasNext = c.nextSibling() // skip the ','
+
+      if (map[name]) {
+        throw new ParseError(`Duplicate import ${name}`, getSourceLocation(c, s).line);
+      }
+      // update map
+      map[name] = resolve;
+    }
+  }
+
+  let nData : ModuleData = {
+    modMap: {},
+    nsMap: {},
+    globals : []
+  }
+
+  // c -> ImportStatement
+  c.firstChild() // point to from or import
+  if(c.name === "from"){ // from VarName import <list>
+    c.nextSibling() // VariableName ("mod_name")
+    let mod_name = s.substring(c.from, c.to)
+    c.nextSibling() // import
+    c.nextSibling() // first VariableName of <list>
+    parseList(mod_name, nData.nsMap)
+  } else if (c.name === "import"){ // import <list>
+    c.nextSibling() // first VariableName of <list>
+    parseList("", nData.modMap)
+  }
+
+  c.parent() // point back to ImportStatement
+  return nData
+}
+
+// takes in the modules and populates the global ModulesContext
+export function buildModulesContext(modules : Modules){
+  // build the maps & globals for every object
+  for(let modName in modules){
+    currentModule = modName
+    const s = modules[modName];
+    const c = parser.parse(s).cursor();
+    let mData : ModuleData = {
+      modMap: {},
+      nsMap: {},
+      globals : []
+    }
+    var hasChild = c.firstChild();
+
+    // populate modMap & nsMap from import statements
+    while(hasChild) {
+      if (isImportStmt(c,s)){
+        let nData : ModuleData = traverseImport(c,s)
+        // If we are importing already imported module, raise an error.
+        for (let importedMod in nData.modMap) {
+          if (mData.modMap.hasOwnProperty(importedMod)) {
+            throw new ParseError(`Duplicate import of ${importedMod}`,
+                                 getSourceLocation(c, s).line);
+          }
+        }
+        // If we are importing already imported symbol, raise an error.
+        for (let importedName in nData.nsMap) {
+          if (mData.nsMap.hasOwnProperty(importedName)) {
+            throw new ParseError(`Duplicate import of ${importedName}`,
+                                 getSourceLocation(c, s).line);
+          }
+        }
+        mData.modMap = {...mData.modMap, ...nData.modMap};
+        mData.nsMap = {...mData.nsMap, ...nData.nsMap};
+      } else {
+        break;
+      }
+      hasChild = c.nextSibling();
+    }
+    // consume the globals
+    // TODO - should replace with just top level parsing
+    if(hasChild) {
+      mData.globals = getModuleGlobals(c,s);
+    }
+
+    // update nsMap with globals of modName
+    mData.globals.forEach(g => {
+      if (mData.nsMap.hasOwnProperty(g)) {
+        throw new ParseError(`Redefinition of ${g}`,
+                             getSourceLocation(c, s).line);
+      }
+      mData.nsMap[g] = `${modName}$${g}`
+    });
+    modulesContext[modName] = mData;
+  }
+
+  // expand "*" in nsMap
+  // TODO - "from lib import *" won't work yet
+}
+
+export function getModuleGlobals(c : TreeCursor, s : string) : string[] {
+  let globals :string[] = []
+  let hasNext = true
+  while(hasNext){
+    if(isVarInit(c,s) || isFunDef(c,s) || isClassDef(c,s)){
+      // add name to globals - always 1st VariableName node
+      c.firstChild()
+      while(c.name !== 'VariableName') c.nextSibling()
+      globals.push(s.substring(c.from, c.to))
+      c.parent()
+    } else {
+      break;
+    }
+    hasNext = c.nextSibling()
+  }
+  return globals
+}
+
+export function mergeModules(modules : Program<SourceLocation>[]) : Program<SourceLocation>{
+  let prog : Program<SourceLocation> = {
+    funs: [],
+    inits : [],
+    classes : [],
+    stmts : []
+  }
+  modules.forEach(module => prog.inits = [...prog.inits, ...module.inits])
+  modules.forEach(module => prog.funs = [...prog.funs, ...module.funs])
+  modules.forEach(module => prog.classes = [...prog.classes, ...module.classes])
+
+  // statements only from main module
+  prog.stmts = modules.filter(mod => mod.name === 'main')[0].stmts
+  return prog
 }

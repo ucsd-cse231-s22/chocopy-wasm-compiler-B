@@ -2,7 +2,7 @@ import { run, Config } from "./runner";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
 import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
-import { Value, Type } from "./ast";
+import { Value, Type, Modules } from "./ast";
 import { parse } from "./parser";
 
 interface REPL {
@@ -33,16 +33,16 @@ export class BasicREPL {
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
   }
-  async run(source : string) : Promise<Value> {
+  async run(modules:Modules) : Promise<Value> {
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
-    const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(source, config);
+    const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(modules, config);
     this.currentEnv = newEnv;
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;
     const currentGlobals = this.importObject.env || {};
-    console.log(instance);
+    // console.log(instance);
     Object.keys(instance.instance.exports).forEach(k => {
-      console.log("Consider key ", k);
+      // console.log("Consider key ", k);
       const maybeGlobal = instance.instance.exports[k];
       if(maybeGlobal instanceof WebAssembly.Global) {
         currentGlobals[k] = maybeGlobal;
@@ -53,7 +53,7 @@ export class BasicREPL {
   }
   tc(source: string): Type {
     const config: Config = { importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions };
-    const parsed = parse(source);
+    const parsed = parse({main:source});
     const [result, _] = tc(this.currentTypeEnv, parsed);
     return result.a[0];
   }

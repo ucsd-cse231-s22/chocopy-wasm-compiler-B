@@ -8,11 +8,41 @@ export type Type =
   | {tag: "class", name: string}
   | {tag: "either", left: Type, right: Type }
 
-export type SourceLocation = { line: number }
+// module name -> module source
+export type Modules = {
+  [name:string]: string,
+}
+
+// module import & export info
+export type ModuleData =  {
+  // imported modules
+  modMap : {
+    [name:string]: string
+    // lib : "lib"  -> import lib
+    //   x : "lib"  -> import lib as x
+  },
+  // symbols imported from modules
+  nsMap : {
+    [name:string]: string
+    // x : "lib$x"  -> from lib import x / *
+    // y : "lib$x"  -> from lib import x as y
+    // z : "main$z" -> z is a global in 'main'
+  },
+  // symbols exported from this module (useful to expand "import *")
+  globals : string[]
+  // ["vars1", ..., "func1", ..., "class1"]
+}
+
+// module name -> corresponding info
+export type ModulesContext = {
+  [name:string] : ModuleData
+}
+
+export type SourceLocation = { line: number, module?: string }
 
 export type Parameter<A> = { name: string, type: Type }
 
-export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
+export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>>, name?:string }
 
 export type Class<A> = { a?: A, name: string, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
@@ -29,6 +59,11 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "import", mod: string, names: Array<ImportName> | "*" }
+
+export type ImportName =
+  // from mod import x as y --> name=x, alias=y
+  { tag: "import-name", name: string, alias: string }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal }
