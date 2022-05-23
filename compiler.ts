@@ -1,7 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
-import { typeIsPointer, valueIsPointer } from "./memory_management";
+import { getTypeBits, typeIsPointer, valueIsPointer, incRefcount, decRefcount } from "./memory_management";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -195,7 +195,8 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       return valStmts;
 
     case "alloc":
-      return codeGenAlloc(NONE, expr.amount, env); //expr.a[0]
+      // We don't know what class it is, but we know it's a class
+      return codeGenAlloc({tag: "class", name: "unknown"}, expr.amount, env);
 
     case "load":
       return [
@@ -378,7 +379,7 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
 function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   return [
     ...codeGenValue(amount, env),
-    `(i32.const 0)`, // type info
+    `(i32.const ${getTypeBits(type)})`, // type info
     `call $alloc`
   ];
 }
@@ -390,45 +391,6 @@ function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: Gl
 function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
   const ret_stmt: Array<string> = [];
   return ret_stmt;
-}
-
-/** Generate code to decrease the refcount, if that variable is a pointer
- * (and don't do anything, if it's not a pointer)
- * This will get called when values are overwritten, and on local variables at
- * the end of a function
- */
-function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  if(name.includes("newObj") || name.includes("valname")){
-    return [];
-  }
-  const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
-  if(!typeIsPointer(type)){
-    return [];
-  }
-  return [
-    `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-    `call $dec_refcount`,
-    `drop`
-  ]
-}
-
-/** Generate code to increase the refcount, if that variable is a pointer
- * (and don't do anything, if it's not a pointer)
- * This will get called when values are loaded from fields or variables
- */
-function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  if(name.includes("newObj") || name.includes("valname")){
-    return [];
-  }
-  const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
-  if(!typeIsPointer(type)){
-    return [];
-  }
-  return [
-    `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
-    `call $inc_refcount`,
-    `drop`
-  ]
 }
 
 /** Generate code to decrease the reference counts of all local variables

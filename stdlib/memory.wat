@@ -117,16 +117,6 @@
     (drop)    
   )
 
-
-  (func $get_refcount (export "get_refcount") (param $addr i32) (result i32)
-    ;; decode address
-    (local.get $addr)
-    (call $decode_value)
-    (local.set $addr)
-    ;; load refcount
-    (i32.load (i32.add (local.get $addr) (i32.const 8)))
-  )
-
   (func $inc_refcount (export "inc_refcount") (param $addr i32) (result i32)
     (local $decoded_addr i32)
     (local $refcount_addr i32)
@@ -193,6 +183,33 @@
     )
     (local.get $addr)
     return
+  )
+
+  (func $get_size (export "get_size") (param $addr i32) (result i32)
+    ;; decode address
+    (local.get $addr)
+    (call $decode_value)
+    (local.set $addr)
+    ;; load size
+    (i32.load (i32.add (local.get $addr) (i32.const 0)))
+  )
+
+  (func $get_type (export "get_type") (param $addr i32) (result i32)
+    ;; decode address
+    (local.get $addr)
+    (call $decode_value)
+    (local.set $addr)
+    ;; load type
+    (i32.load (i32.add (local.get $addr) (i32.const 4)))
+  )
+
+  (func $get_refcount (export "get_refcount") (param $addr i32) (result i32)
+    ;; decode address
+    (local.get $addr)
+    (call $decode_value)
+    (local.set $addr)
+    ;; load refcount
+    (i32.load (i32.add (local.get $addr) (i32.const 8)))
   )
 
   (func (export "test_refcount") (param $addr i32) (param $n i32) (result i32)

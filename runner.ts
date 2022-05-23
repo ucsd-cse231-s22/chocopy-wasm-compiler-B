@@ -47,9 +47,6 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const global_type = new Map();
-  // console.log("----------------");
-  // console.log(newGlobals);
-  // console.log("----------------");
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
@@ -125,6 +122,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $inc_refcount (import "libmemory" "inc_refcount") (param i32) (result i32))
     (func $dec_refcount (import "libmemory" "dec_refcount") (param i32) (result i32))
+    (func $get_size (import "libmemory" "get_size") (param i32) (result i32))
+    (func $get_type (import "libmemory" "get_type") (param i32) (result i32))
     (func $get_refcount (import "libmemory" "get_refcount") (param i32) (result i32))
     (func $test_refcount (import "libmemory" "test_refcount") (param i32) (param i32) (result i32))
     ${globalImports}
