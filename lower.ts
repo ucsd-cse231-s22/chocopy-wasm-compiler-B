@@ -246,7 +246,13 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       }
       const className = objTyp.name;
       const checkObj : IR.Stmt<[Type, SourceLocation]> = { tag: "expr", expr: { tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<[Type, SourceLocation]> = { tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const callMethod : IR.Expr<[Type, SourceLocation]> = {
+        tag: "call_indirect",
+        method_offset: env.classesMethods.get(className).get(e.method)[0],
+        name: `${className}$${e.method}`,
+        arguments: [objval, ...argvals],
+        ret: env.classesMethods.get(className).get(e.method)[1],
+      }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],

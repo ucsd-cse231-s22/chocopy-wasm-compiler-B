@@ -21,4 +21,3 @@ class C(object):
 }
 
 debug();
-
