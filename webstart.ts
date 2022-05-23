@@ -153,6 +153,19 @@ function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : 
   return deconstructBigint(bigInt3, alloc, store);
 }
 
+// This function is proposed by the string group.
+function big_to_i32(arg : number, load : any) : any {
+  var bigInt = reconstructBigint(arg, load);
+  const min_value = -2147483648;
+  const max_value = 2147483647;
+
+  if (bigInt > BigInt(max_value) || bigInt < BigInt(min_value)) {
+    throw Error("caanot conver the bigint to i32");
+  } else {
+    return Number(bigInt);
+  }
+}
+
 function assert_not_none(arg: any) : any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
@@ -196,7 +209,8 @@ function webStart() {
         abs: (arg: number) => abs_big(arg, alloc, load, store),
         min: (arg1: number, arg2: number) => min_big(arg1, arg2, load),
         max: (arg1: number, arg2: number) => max_big(arg1, arg2, load),
-        pow: (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store)
+        pow: (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store),
+        get_num: (arg: number) => big_to_i32(arg, load)
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
