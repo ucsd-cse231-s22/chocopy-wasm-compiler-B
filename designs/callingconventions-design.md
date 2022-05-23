@@ -273,7 +273,7 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 - Call will be updated to hold an optional value `namedArguments?` of type `Map<string, Expr<A>>`, which will map named arguments to the corresponding expressions.
 
 ### IR
-- Nothing needs to be changed in the IR. `Call` in IR already holds arguments of Value<A>, which will be provided.
+- Nothing needs to be changed in the IR. `Call` in IR already holds arguments of `Value<A>`, which will be provided.
 
 ### Built-in Libraries
 We do not need to modify or use any builtin libraries, as this feature only impacts function/method calls.
