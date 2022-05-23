@@ -1,5 +1,7 @@
-## Testcases
-    
+# Mile Stones
+
+## Week 1
+
 First of all, there is a binary file `test` in the file system, with the following content:
     
 ```
@@ -191,7 +193,7 @@ Expected Output:
 Runtime Error: Tried to read past end of file
 ```
     
-## Change List
+### Change List
     
 We will not touch AST/IR.
     
@@ -217,3 +219,107 @@ class File(object):
 ```
     
 We plan to implement most of the I/O functionalities in JavaScript.
+
+## Week 2
+
+With the implemenation of the string class, we can now extend the following functionality:
+
+```python=
+class File:
+    fd : int = 0
+    pointer : int = 0
+    filelength : int = 0
+    
+    def read(self : File) -> str:
+        if self.pointer == self.filelength:
+            print("Error: read() exceeds filelength")
+        return ""
+        res : str = jsread(self.fd, self.pointer)
+        self.pointer = self.pointer + 1
+        return res
+    
+    def write(self : File, s : str):
+        n : int = 0
+        n = jswrite(self.fd, s, self.pointer)
+        self.pointer = self.pointer + n
+        self.filelength = max(self.filelength, self.pointer)
+
+    def seek(self : File, pos : int):
+        if pos < 0 or pos >= self.filelength:
+            print("Error: invalid pointer position")
+            return
+        self.pointer = pos
+```
+
+### 1. 
+`open()` function that allows the user to specify the path to the file
+```python=
+file_name : str = "some_file.txt"
+f = open(file_name, mode="w")
+```
+
+Expected behavior
+```python=
+# creates a new file "some_file.txt" in the filesystem
+# stores the file_descriptor and file_length information in the object
+```
+
+### 2.
+
+```python=
+f.read()
+```
+Expected behavior:
+
+```python=
+# returns an error if read() exceeds f.filelength
+# read the one-character content of the file at position f.pointer
+# adds 1 to f.pointer
+# returns a string
+```
+
+### 3.
+```python=
+f.write("1234")
+```
+Expected behavior:
+```python=
+# writes string "1234" into the file at position f.pointer
+# adds 4 to f.pointer
+# update f.filelength if necessary
+```
+
+### 4.
+```python=
+f : File = None
+f = open("path.txt", "r")
+f.seek(2)
+```
+Expected behavior:
+
+```python=
+# moves the pointer to 2
+# if position less than 0 or greater than f.filelength, report error
+```
+
+### 5.
+We plan to implement the iterator characteristic of file objects
+
+```python=
+# Let file.txt have the following content:
+# > Hello
+
+f : File = None
+f = open('file.txt', 'r')
+for l in f:
+    print(l)
+```
+
+Expected output:
+```python=
+H
+e
+l
+l
+o
+```
