@@ -160,5 +160,52 @@ print(Single().getval())
 
 
 
+    assertPrint(
+        "LinkedList example from class",
+        `
+        class List(object):
+            def sum(self : List) -> int:
+                return 1 // 0
+        class Empty(List):
+            def sum(self : Empty) -> int:
+                return 0
+        class Link(List):
+            val : int = 0
+            next : List = None
+            def sum(self : Link) -> int:
+                return self.val + self.next.sum()
+            def new(self : Link, val : int, next : List) -> Link:
+                self.val = val
+                self.next = next
+                return self
+    
+        l : List = None
+        l = Link().new(5, Link().new(13, Empty()))
+        print(l.sum())
+        `,
+        ["18"]
+    );
 
+    assertPrint("chained inheritance",
+    `
+    class A(object):
+        x : int = 1
+        def foo(self : A):
+            print(self.x)
+
+    class B(A):
+        def foo2(self : B):
+            print(self.x * 2)
+
+    class C(B):
+        def foo3(self : C, arg : int):
+            self.foo()
+            self.foo2()
+            print(self.x + arg)
+    c : C = None
+    c = C()
+    c.foo3(3)
+    `,
+    ["1","2","4"]
+    );
 })

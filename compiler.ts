@@ -198,7 +198,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
-    case "call-indirect":
+    case "call_indirect":
     /*
     e.g. obj.foo(1, 2), returns a bool
     (type $C$foo (func (param i32) (param i32) (result f32)) <-- do this as part of codeGenClass
