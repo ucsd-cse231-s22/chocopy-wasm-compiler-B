@@ -38,6 +38,24 @@ print(test_refcount(c, 2))
 d = None
 print(test_refcount(c, 1))
 c = None`, ["True", "True", "True"]);
+  // 
+  assertPrint("Test refcount in store", `
+class C(object):
+  c: C = None
+    
+c: C = None
+d: C = None
+e: C = None
+c = C()
+d = C()
+e = C()
+d.c = c
+print(test_refcount(c, 2))
+d.c = e
+print(test_refcount(c, 1))
+print(test_refcount(d, 1))
+print(test_refcount(e, 2))
+`, ["True", "True", "True", "True"]);
 // Refcount of var in func
 // first we alloc C(), then it's not assigned, so its refcount will be 0
 // then we call method foo(10), it's binded to self, its refcount will be 1
