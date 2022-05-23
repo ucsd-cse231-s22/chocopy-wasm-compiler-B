@@ -1,4 +1,5 @@
 import { BasicREPL } from "../repl";
+import { Modules } from "../ast"
 
 import { Type } from "../ast";
 import { importObject, addLibs } from "./import-object.test";
@@ -10,7 +11,13 @@ export function typeCheck(source: string) : Type {
 
 export async function run(source: string) {
   const repl = new BasicREPL(await addLibs());
-  const v = await repl.run(source);
+  const v = await repl.run({main:source});
+}
+
+// runModules to run source broken into multiple modules
+export async function runModules(modules: Modules) {
+  const repl = new BasicREPL(await addLibs());
+  const v = await repl.run(modules);
 }
 
 export const NUM : Type = {tag: "number"}
