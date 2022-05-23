@@ -27,7 +27,7 @@ function assert_not_none(arg: any): any {
   return arg;
 }
 
-function assert_in_range(length: any, index: any): any {
+function index_out_of_bounds(length: any, index: any): any {
   if (index < 0) {
     throw new Error("RUNTIME ERROR: index less than 0");
   }
@@ -57,7 +57,7 @@ export const importObject: any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    assert_in_range: (arg1: any, arg2: any) => assert_in_range(arg1, arg2),
+    index_out_of_bounds: (arg1: any, arg2: any) => index_out_of_bounds(arg1, arg2),
     print: (arg: any) => print(NUM, arg),
     print_num: (arg: number) => print(NUM, arg),
     print_bool: (arg: number) => print(BOOL, arg),
