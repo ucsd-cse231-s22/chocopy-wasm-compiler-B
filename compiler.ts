@@ -1,7 +1,6 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, CLASS, NONE, NUM } from "./utils";
-import { readFileSync } from "fs";
 import { equalType } from "./type-check";
 import { equal } from "assert";
 
@@ -51,9 +50,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
-  // add string library to allFuns
-  const strLib:string = readFileSync("string.wat").toString();
-  const allFuns = strLib.concat(funs.concat(classes).join("\n\n"));
+  const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);

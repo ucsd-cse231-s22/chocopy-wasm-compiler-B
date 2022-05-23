@@ -71,7 +71,7 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
 
-    var importObject = {
+    var importObject:any = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
         assert_in_range: (arg1: any, arg2: any) => assert_in_range(arg1, arg2),
@@ -88,6 +88,15 @@ function webStart() {
       memory_values: memory,
       js: { memory: memory }
     };
+
+    const stringModule = await fetch('string.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(strings =>
+      WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
+    );
+
+    importObject.libstring = stringModule.instance.exports;
+
     var repl = new BasicREPL(importObject);
 
     function renderResult(result: Value): void {

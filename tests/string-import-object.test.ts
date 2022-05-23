@@ -47,9 +47,12 @@ function assert_in_range(length: any, index: any): any {
 const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
+  const strings = readFileSync("build/string.wasm");
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
-  importObject.libmemory = memoryModule.instance.exports,
-    importObject.memory_values = memory;
+  importObject.libmemory = memoryModule.instance.exports;
+  const stringModule = await WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
+  importObject.libstring = stringModule.instance.exports;
+  importObject.memory_values = memory;
   importObject.js = { memory };
   return importObject;
 }

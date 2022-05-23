@@ -114,6 +114,13 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $str$access (import "libstring" "str$access") (param $self i32) (param $index i32) (result i32))
+    (func $str$length (import "libstring" "str$length") (param $self i32) (result i32))
+    (func $str$lessthan (import "libstring" "str$lessthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$greaterthan (import "libstring" "str$greaterthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$equalsto (import "libstring" "str$equalsto") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$concat (import "libstring" "str$concat") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$copyconstructor (import "libstring" "str$copyconstructor") (param $self i32) (param $rhs i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
