@@ -1,3 +1,20 @@
+# Week 9 Update
+We are planning on adding more features and integrating our designs with other groups, especially with lists and bingnums.
+
+## Integration
+We will be using the provided function that converts a bignum to an `i32` primitive in our indexing method. We will be modifying parts of our parsers that deal with indexing and index assignment together with the list group so we don't have any conflicts there.
+
+## Additional Functionalities
+We wish to add the following functionalities to strings:
+    * Slicing (extending index access)
+    * Reverse (negative) indexing
+    * .lower() method
+    * .upper() method
+    * .split(delim) method (which is interesting since it returns a list)
+Slicing and reverse indexing are simple to implement as they only require some simple arithmetic processing of the indices. 
+lower and upper method would require us to do some ascii arithmetic but should also be relatively simple.
+The split method on the other hand would require us to interface with the list group and should be the most challenging but also most interesting functionality to implement.
+
 # Week 8 Update
 We have flushed out our design and managed to pass all the tests. The output of the tests are shown below. The updated design section is shown after the tests.
 ## TEST CASES and output:
