@@ -27,11 +27,11 @@ function reconstructBigint(arg : number, load : any) : bigint {
     digitNum *= -1;
   }
 
-  var consturctedBigint = BigInt(0);
+  var constructedBigint = BigInt(0);
   for (let i = 1; i < digitNum + 1; i++) {
-    consturctedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
+    constructedBigint += BigInt(load(arg, i)) * (base ** BigInt(i - 1));
   }
-  return isNegative * consturctedBigint;
+  return isNegative * constructedBigint;
 }
 
 // allocate the bigint
@@ -90,19 +90,19 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   var bigInt2 = reconstructBigint(arg2, load);
   switch (op) {
     case BinOp.Eq:
-      return bigInt1 === bigInt2 
+      return bigInt1 === bigInt2;
     case BinOp.Neq:
-      return bigInt1 !== bigInt2
+      return bigInt1 !== bigInt2;
     case BinOp.Lte:
-      return bigInt1 <= bigInt2
+      return bigInt1 <= bigInt2;
     case BinOp.Gte:
-      return bigInt1 >= bigInt2
+      return bigInt1 >= bigInt2;
     case BinOp.Lt: 
-      return bigInt1 < bigInt2
+      return bigInt1 < bigInt2;
     case BinOp.Gt: 
-      return bigInt1 > bigInt2
+      return bigInt1 > bigInt2;
   }
-  throw Error("unknown comparison operator")
+  throw Error("RUNTIME ERROR: Unknown bigint comparison operator");
 }
 
 function print(typ : Type, arg : number, load : any) : any {
@@ -160,7 +160,7 @@ function big_to_i32(arg : number, load : any) : any {
   const max_value = 2147483647;
 
   if (bigInt > BigInt(max_value) || bigInt < BigInt(min_value)) {
-    throw Error("caanot conver the bigint to i32");
+    throw Error("RUNTIME ERROR: Cannot convert bigint to i32");
   } else {
     return Number(bigInt);
   }
