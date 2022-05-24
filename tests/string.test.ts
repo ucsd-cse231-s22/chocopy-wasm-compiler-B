@@ -253,7 +253,7 @@ describe("string test", () => {
       self.i = i
       self.j = j
       return
-    def greater(self: C, s1: str, s2: str) -> int:
+    def greater(self: C, s1: str, s2: str) -> str:
       if s1[self.i] > s2[self.j]:
         return s1+s2
       else:
@@ -266,7 +266,7 @@ describe("string test", () => {
     [`asd`]);
   
   //20.5  compare + index access + concat
-  assertPrint("test case 20: compare + index access + concat",
+  assertPrint("test case 20.5: compare + index access + concat",
     `
   class C(object):
     i: int = 0
