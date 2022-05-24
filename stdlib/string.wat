@@ -1,7 +1,7 @@
 (module
   (memory (import "js" "mem") 1)
   (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
-  (func $assert_in_range (import "imports" "assert_in_range") (param i32) (param i32) (result i32))
+  (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
   (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
   (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
   (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
@@ -13,7 +13,7 @@
     (i32.const 0) ;;0
     (call $load)
     (local.get $index)
-    (call $assert_in_range)
+    (call $index_out_of_bounds)
     (local.set $newstr) ;; just scraping up the return
     ;; alloc space for new string and set 1 as length
     (i32.const 2)

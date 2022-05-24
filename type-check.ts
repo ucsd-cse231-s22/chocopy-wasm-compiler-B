@@ -202,7 +202,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Sour
       const elsTyp = locals.actualRet;
       if (tCond.a[0] !== BOOL)
         throw new TypeCheckError("Condition Expression Must be a bool");
-      if (thnTyp !== elsTyp)
+      if (!equalType(thnTyp, elsTyp))
         locals.actualRet = { tag: "either", left: thnTyp, right: elsTyp }
       return { a: [thnTyp, stmt.a], tag: stmt.tag, cond: tCond, thn: tThn, els: tEls };
     case "return":

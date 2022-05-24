@@ -34,13 +34,9 @@ function assert_not_none(arg: any): any {
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
 }
-function assert_in_range(length: any, index: any): any {
-  if (index < 0) {
-    throw new Error("RUNTIME ERROR: index less than 0");
-  }
-  if (length <= index) {
-    throw new Error("RUNTIME ERROR: index not in range");
-  }
+function index_out_of_bounds(length: any, index: any): any {
+  if (index < 0 || index >= length)
+    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
   return index;
 }
 
@@ -64,7 +60,7 @@ export const importObject: any = {
     //  We can then examine output to see what would have been printed in the
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
-    assert_in_range: (arg1: any, arg2: any) => assert_in_range(arg1, arg2),
+    index_out_of_bounds: (arg1: any, arg2: any) => index_out_of_bounds(arg1, arg2),
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),

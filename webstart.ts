@@ -49,13 +49,9 @@ function assert_not_none(arg: any): any {
   return arg;
 }
 
-function assert_in_range(length: any, index: any): any {
-  if (index < 0) {
-    throw new Error("RUNTIME ERROR: index less than 0");
-  }
-  if (length <= index) {
-    throw new Error("RUNTIME ERROR: index not in range");
-  }
+function index_out_of_bounds(length: any, index: any): any {
+  if (index < 0 || index >= length)
+    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
   return index;
 }
 
@@ -74,7 +70,7 @@ function webStart() {
     var importObject:any = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
-        assert_in_range: (arg1: any, arg2: any) => assert_in_range(arg1, arg2),
+        index_out_of_bounds: (arg1: any, arg2: any) => index_out_of_bounds(arg1, arg2),
         print_num: (arg: number) => print(NUM, arg),
         print_bool: (arg: number) => print(BOOL, arg),
         print_none: (arg: number) => print(NONE, arg),
