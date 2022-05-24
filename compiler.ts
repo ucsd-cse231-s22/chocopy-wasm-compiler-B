@@ -5,7 +5,7 @@ import { EnvironmentPlugin } from "webpack";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [bigint, Value<[Type, SourceLocation]>]>>;  
+  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
   locals: Set<string>;
   labels: Array<string>;
   offset: bigint;

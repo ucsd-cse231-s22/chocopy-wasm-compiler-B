@@ -392,7 +392,128 @@ Expected: 1
 
 ## Week 9 Milestone ## 
 
-In week 9, we will continue to work with each group to ensure they are able to use our new implementation of numbers.
-Other implementations: 
+In week 9, our primary focus will be to ensure that our implementation of bignums works in conjunction with other groups's new additions. In week 7, we made sure that large integers could be stored on the heap, and that binary and unary operations could be performed on these large numbers. This week, we will expand to support large numbers in other data structures such as arbitrarily large strings, lists, sets, comprehensions, etc. 
+
+We have already been in contact or are getting in touch with the strings, lists, memory management, sets, builtins, comprehensions, and for loop teams to discuss how our work will affect each other and try to come up with solutions for how to support operations involving large numbers/data structures. 
+
+Due to the wide-ranging use of numbers in many of the other teams implementations, we believe working with other groups and providing them large number functionality for their data structures will be more than sufficient work for this milestone. 
 
 ## Test cases ## 
+
+1: List w/ big numbers:
+
+```
+list1: [int] = None
+list1 = [3254324322343, 893743453, 34, 5653543373]
+print(list1[3])
+```
+
+Expected = 5653543373
+
+
+2: Large number list comprehension: 
+
+```
+print([4325894324232 for i in range(4)])
+```
+
+Expected = [4325894324232, 4325894324232, 4325894324232, 4325894324232]
+
+
+3: Generator comprehension Range test: 
+
+```
+gen : generator = None
+gen = (val for val in range(3829532432432432, 3829532432432434, 1))
+print(next(gen))
+```
+
+Expected: 3829532432432432
+
+
+4: String indexing: 
+
+```
+s:str = "WASMisthebest"
+print(s[10])
+```
+
+Expected: e
+
+
+5: String comparison: (applicable because we modified the comparison operators)
+
+```
+s1:str = "ab"
+s2:str = "abc"
+print(s1 < s2)
+```
+
+Expected: True 
+
+```
+s1:str = "abcd"
+s2:str = "abc"
+print(s1 < s2)
+```
+
+Expected: False
+
+6: Big numbers within Sets: 
+
+```
+set1: set[int] = None 
+set1 = {578329573294, 458470243212321}
+set1.add(7583924132123214)
+print(7583924132123214 in set1)
+print(9 in set1)
+```
+
+Expected: 
+```
+True
+False
+```
+
+
+7: For loops range function: 
+
+```
+i:int = 0
+for i in range(0,45732100000, 100000): 
+  if i == 45732000000: 
+    print(i)
+```
+
+Expected: 45732000000
+
+8: More complex For loop w/ negative range: 
+
+```
+i:int = -432432500
+x:int = 0
+for i in range(0,-59281421500, -500):
+  x = x + 1
+  if i == -58281421500: 
+    break
+
+print(x)
+```
+
+Expected: 116562844
+
+9: Builtins Factorial: 
+
+```
+print(math.factorial(45))
+```
+
+Expected: 119622220865480194561963161495657715064383733760000000000
+
+10: Builtins Perm: 
+
+```
+print(math.perm(32523758932432,2))
+```
+
+Expected: 1057794895094917784582502192
