@@ -34,7 +34,6 @@ function webStart() {
   document.addEventListener("DOMContentLoaded", async function() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
-
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()

@@ -234,7 +234,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.parent();
       return {
         a: location,
-        tag: "bracket",
+        tag: "set",
         values: setValues
       }
     case "self":

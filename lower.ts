@@ -321,7 +321,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
-    case "bracket":
+    case "set":
       const newSetName = generateName("newSet");
       // 10 buckets for now
       const allocSet : IR.Expr<[Type, SourceLocation]> = {tag: "alloc", amount: {tag: "wasmint", value: 10}};

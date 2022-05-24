@@ -112,6 +112,11 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $set$CreateEntry (import "libmemory" "set$CreateEntry") (param i32) (result i32))
+    (func $set$add (import "libmemory" "set$add") (param i32) (param i32) (result i32))
+    (func $set$contains (import "libmemory" "set$contains") (param i32) (param i32) (result i32))
+    (func $set$length (import "libmemory" "set$length") (param i32) (result i32))
+    (func $set$remove (import "libmemory" "set$remove") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
