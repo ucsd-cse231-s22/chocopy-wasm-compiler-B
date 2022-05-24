@@ -138,6 +138,9 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env); 
       const rhsStmts = codeGenValue(expr.right, env);
+      if (expr.left.tag === "wasmint" || expr.right.tag === "wasmint") {
+        return[...lhsStmts, ...rhsStmts, codeGenWasmBinOp(expr.op)]
+      }
       return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
 
     case "uniop":
@@ -230,6 +233,39 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
       } else {
         return [`(global.get $${val.name})`];
       }
+  }
+}
+
+function codeGenWasmBinOp(op : BinOp) : string {
+  switch(op) {
+    case BinOp.Plus:
+      return "(i32.add)"
+    case BinOp.Minus:
+      return "(i32.sub)"
+    case BinOp.Mul:
+      return "(i32.mul)"
+    case BinOp.IDiv:
+      return "(i32.div_s)"
+    case BinOp.Mod:
+      return "(i32.rem_s)"
+    case BinOp.Eq:
+      return "(i32.eq)"
+    case BinOp.Neq:
+      return "(i32.ne)"
+    case BinOp.Lte:
+      return "(i32.le_s)"
+    case BinOp.Gte:
+      return "(i32.ge_s)"
+    case BinOp.Lt:
+      return "(i32.lt_s)"
+    case BinOp.Gt:
+      return "(i32.gt_s)"
+    case BinOp.Is:
+      return "(i32.eq)";
+    case BinOp.And:
+      return "(i32.and)"
+    case BinOp.Or:
+      return "(i32.or)"
   }
 }
 
