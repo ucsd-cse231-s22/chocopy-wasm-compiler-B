@@ -264,3 +264,138 @@ Expected output:
 3
 """
 ```
+
+# Error reporting
+There are no comflicts in this case. This is because the code touches parts of the program which are not touched by our code.
+```
+class C(object):
+      x : int = 0
+c : C = None
+c.x+3
+```
+"""
+Expected Error: RUNTIME ERROR: Cannot perform operation on none in line 4, column 3
+"""
+
+# Optimization
+The optimization team is mostly working in optimizing the IR and optimizing the ast. Also, for classes they are only optimizing the methods. So, with or without inheritance, their optimization should work as expected, for the super classes as well. Our code will all the super's methods in the derived classes, if they are not implemented in the derived class. 
+So, after type-checker, each class will have all the methods in the derived class, so that the optimizations team's code can work on it just like any regular method.
+```
+class B(object):
+      x:int = 0
+      def __init__(self):
+          pass
+      def sum(self:B)->int:
+         if True:
+            return 3
+        else:
+           return self.x
+class A(B):
+      z:int = 0
+      def __init__(self):
+        pass
+```
+
+"""
+Expected behaviour -> After optimization, class A and B should not have else and else body as part of dead code elimination. 
+"""
+
+# Memory Management
+We do not have any major conflict with respect to functions, but we do have to change our offsets for fields and methods
+as explained below:
+
+1) When we call alloc to allocate a class field, we assume that it is assigned where $heap points
+
+   Our heap structure looks like this:
+   <vTable referece> <Field1> <Field2> ...
+
+   So, to access vTable, we get this at offset 0, Field1 at offset 1 and so on.
+
+   But the memory managenemt group will add metadata for each class. 
+   Their heap structure looks like this:
+
+   <Metadata1> <Metadata2> <vTabke> <Field1> <Field2>
+
+   So, our offsets to access vTable and Field1 has to change in our code.
+2) We need to add a destructor method for each class in the vTable, so that memory management group can call this method while deallocating the class. We will make these changes in our next milestone.
+
+
+# Strings
+We have below conflicts with the Strings group
+1) Parser.ts
+   -> The strings groups have modified the traverseClass to handle strings in class.
+   -> Code is added to move the string initialization into the __init__ method. We need to make this merge to be able to
+      handle strings inside class. However, I don't think this is a good idea, as string should be considered as any other VarInit/Assignment. Changing __init__ method for this is not a good design decision. This is what the code does in parser
+
+      class A(object):
+           s1:str = "asd"
+           def __init__(self:A):
+               self.s1 = "abc"
+      The above code was crashing while running. I am not sure what is the issue here.
+      But the above needs to be handled properly.
+
+There are no other merge conflicts other than the ones mentioned above. 
+
+```
+class A(object):
+    s1:str = "asd"
+    def __init__(self:A):
+        self.s1 = "abc"
+    def getStr(self:A)->str:
+         return self.s1
+
+A1_class:A = None
+print(A1_class.getStr())
+```
+"""
+Expected output: abc
+Actual output -> Crash while parsing.
+"""
+
+
+
+
+# Sets/Tuples/Dictionary
+We have the following conflicts with the Sets/Tuples/Dictionary group
+1) In "type-check.ts", they have modified isSubType function. We have included code to check if a subClass is assignable to super class, and that needs to be merged into the code of Sets/Tuples/Dictionary group's code.
+2) We have modified GlobalTypeEnv and added an extra field to the classses field (To include super class).
+   "classes: Map<string, [Array<string>, Map<string, Type>, Map<string, [Array<Type>, Type]>]>"
+    Here [Array<string>] is an array of super classes.
+    Anyone trying to access the method field with 0 as the index needs to be updated.
+    Example, the below code needs to updated in Method-call
+    After updating for inheritance, we need the below code
+    ```
+    const [_, __, methods] = env.classes.get(tObj.a[0].name);
+
+    ```
+    But all other groups have the below
+
+    ```
+    const [_,methods] = env.classes.get(tObj.a[0].name);
+
+    ```
+Other than the above, we do not have any conflict as we touch separate functions and do not touch any common functions other than the mentioned above.
+
+The below code will work fine as set_1 is stored as any other variable in the class field.
+```
+class A(object):
+    set_1 : set[int] = None
+    def foo(self : A, arg : int):
+        self.set_1.add(arg)
+        return arg + defArg + self.x
+class B(A):
+    y : int = 3
+    def foo2(self : B) -> bool:
+        self.set_1.add(y)
+        return (3 in set_1)
+
+b : B = None
+print(b.foo2())
+```
+"""
+The above will return true
+"""
+
+
+
+    
