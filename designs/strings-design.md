@@ -1,3 +1,12 @@
+# Week 9 Updates on Merging
+
+Per comments on our pull request, we have made some tweaks and additions to our code base. The important parts are summerized below:
+
+1. string.wat now lives with memory.wat in stdlibs. They are also imported into compiled WAT code in a similar fashion.
+2. No type check depends on JSON.stringify now. Although they now depend on the equalType funciton, which we modified.
+3. Unified out of range checking with list group
+4. More tests
+
 # Week 8 Update
 We have flushed out our design and managed to pass all the tests. The output of the tests are shown below. The updated design section is shown after the tests.
 ## TEST CASES and output:
