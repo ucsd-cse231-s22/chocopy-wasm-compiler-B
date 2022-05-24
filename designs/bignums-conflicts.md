@@ -270,3 +270,22 @@ print(set_1)
 ```
 
 Currently, most of the code generation for sets is done via hard coding WAT code in the compiler. Hopefully, this portion does not have direct conflicts with bignums. However, because each of the method calls (such as "add" in this case) take i32s currently, they will need to be updated to take memory addresses as parameters. We also have some confusion about how these values are then stored in memory. Collaboration with the sets group will be necessary to make sure this implements without problem. 
+
+
+## Discussions
+
+# String Group
+
+Since the string group uses big numbers for indexing, we set up a meeting with them to talk about how the numbers can be used. However, they think that our design is not the best possible design and proposed another idea. We add the functions according to their ideas in webstart.ts, so they can use it if they want. Also, we have a piazza post 534 about this discussion, and we will not which design we should go for after the discussion with instructors.
+
+# Builtin Group
+
+For the builtin group, we have modified the functions like abs(), min(), max(), and pow(), so they can use the functions directly. We also added new tests for these builtin functions and passed them. The meeting with the builtin group went well and they will change their code according to our design and implementation.
+
+# Memory Group
+
+We talked to the memory group in class, and it seems that both groups wouldn't need to worried about the interaction, except that the memory.wat functions will take in one more operator in the future, and we will need to modify our code for that.
+
+# List, Set, For Group
+
+We have contacted these groups via email and provided details about our implementation and suggestions about resolving the conflicts. However, these groups said that they need more time to discuss within the groups and will get back to us when they are ready. Thus, we are not really able to make progress with these features, but I guess our siggestions will be helpful for their discussions.
