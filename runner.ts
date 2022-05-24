@@ -102,9 +102,11 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_str (import "imports" "print_str") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $min (import "imports" "min") (param i32) (param i32) (result i32))
     (func $max (import "imports" "max") (param i32) (param i32) (result i32))
@@ -112,6 +114,13 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $str$access (import "libstring" "str$access") (param $self i32) (param $index i32) (result i32))
+    (func $str$length (import "libstring" "str$length") (param $self i32) (result i32))
+    (func $str$lessthan (import "libstring" "str$lessthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$greaterthan (import "libstring" "str$greaterthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$equalsto (import "libstring" "str$equalsto") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$concat (import "libstring" "str$concat") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$copyconstructor (import "libstring" "str$copyconstructor") (param $self i32) (param $rhs i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

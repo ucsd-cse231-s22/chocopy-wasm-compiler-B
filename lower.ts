@@ -2,6 +2,9 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
+import { strictEqual } from 'assert';
+import { equalType } from "./type-check"
+import { CLASS } from "./utils"
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -25,6 +28,7 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
+    // var strInit = initStrings(p.inits);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
@@ -79,6 +83,60 @@ function literalToVal(lit: AST.Literal) : IR.Value<[Type, SourceLocation]> {
         case "none":
             return lit        
     }
+}
+
+function lowerStr(lit: { tag: "str", value: string}, source:SourceLocation): [Array<IR.VarInit<[Type, SourceLocation]>>, Array<IR.Stmt<[Type, SourceLocation]>>, IR.Expr<[Type, SourceLocation]>]{
+  const strName = generateName("newObj")
+  const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1 } };
+  const assigns : IR.Stmt<[Type, SourceLocation]>[] = [];
+  assigns.push({
+    tag: "store",
+    start: { tag: "id", name: strName },
+    offset: { tag: "wasmint", value: 0 },
+    value: { tag: "wasmint", value: lit.value.length }
+  });
+
+  // var result = ( ( (bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF) ); charCodeAt(i)
+  for(let i = 0; i < Math.floor(lit.value.length / 4); i++){
+    let register_1 = ((lit.value.charCodeAt(4*i) & 0xFF));
+    let register_2 = ((lit.value.charCodeAt(4*i+1) & 0xFF) << 8);
+    let register_3 = ((lit.value.charCodeAt(4*i+2) & 0xFF) << 16);
+    let register_4 = ((lit.value.charCodeAt(4*i+3) & 0xFF) << 24);
+
+    let result = (register_1 | register_2 | register_3 | register_4);
+
+    assigns.push({
+      tag: "store",
+      start: { tag: "id", name: strName },
+      offset: { tag: "wasmint", value: i+1 },
+      value: { tag: "wasmint", value: result }
+    });
+  }
+
+  if (lit.value.length % 4 !== 0){
+    let result = 0x0;
+    for(let i = 0; i < lit.value.length % 4; i++){
+      let offset = Math.floor(lit.value.length / 4) * 4;
+      let register_1 = ((lit.value.charCodeAt(offset + i) & 0xFF) << 8*i);
+  
+      result = (result | register_1);
+    }
+
+    let offset = Math.floor(lit.value.length / 4);
+    assigns.push({
+      tag: "store",
+      start: { tag: "id", name: strName },
+      offset: { tag: "wasmint", value: offset+1 },
+      value: { tag: "wasmint", value: result }
+    });
+  }
+
+  return [
+    [ { name: strName, type: {tag: "class", name: "str"}, value: { tag: "none" } }],
+    [ { tag: "assign", name: strName, value: alloc }, ...assigns 
+    ],
+    { a: [{tag:"class", name:"str"},source], tag: "value", value: { a: [{tag:"class", name:"str"}, source], tag: "id", name: strName } }
+  ];
 }
 
 function flattenStmts(s : Array<AST.Stmt<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, env : GlobalEnv) : Array<IR.VarInit<[Type, SourceLocation]>> {
@@ -264,6 +322,9 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
         offset: { tag: "wasmint", value: offset }}];
     }
     case "construct":
+      if(e.name == "str"){
+        return lowerStr({tag:"str", value:e.strarg}, e.a[1]);
+      }
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
@@ -289,6 +350,12 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, env : GlobalEnv
       return [[], [], {tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
+    case "index":
+      if(equalType(e.a[0], CLASS("str"))){
+        const [oinits, ostmts, oval] = flattenExprToVal(e.obj, env);
+        const [iinits, istmts, ival] = flattenExprToVal(e.index, env);
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
+      }
   }
 }
 

@@ -1,21 +1,29 @@
 import { readFileSync } from "fs";
-import { BOOL, CLASS, NONE, NUM } from "../utils";
-import { Type } from "../ast";
+import { CLASS } from "../utils";
 
-//enum Type { Num, Bool, None }
+enum Type { Num, Bool, None, String }
 
 function stringify(typ: Type, arg: any): string {
   switch (typ) {
-    case NUM:
+    case Type.Num:
       return (arg as number).toString();
-    case BOOL:
+    case Type.Bool:
       return (arg as boolean) ? "True" : "False";
-    case NONE:
+    case Type.None:
       return "None";
   }
 }
 
 function print(typ: Type, arg: any, mem?: WebAssembly.Memory): any {
+  if (typ === Type.String) {
+    var bytes = new Uint32Array(mem.buffer, arg, 1);
+    var length = bytes[0];
+    var char_bytes = new Uint8Array(mem.buffer, arg + 4, length);
+    var string = new TextDecoder('utf8').decode(char_bytes);
+    importObject.output += string;
+    importObject.output += "\n";
+    return arg;
+  }
   importObject.output += stringify(typ, arg);
   importObject.output += "\n";
   return arg;
@@ -26,21 +34,16 @@ function assert_not_none(arg: any): any {
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
 }
-
 function index_out_of_bounds(length: any, index: any): any {
-  if (index < 0) {
-    throw new Error("RUNTIME ERROR: index less than 0");
-  }
-  if (length <= index) {
-    throw new Error("RUNTIME ERROR: index not in range");
-  }
+  if (index < 0 || index >= length)
+    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
   return index;
 }
+
 const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const strings = readFileSync("build/string.wasm");
-  //const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports;
   const stringModule = await WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
@@ -58,11 +61,11 @@ export const importObject: any = {
     //  console.
     assert_not_none: (arg: any) => assert_not_none(arg),
     index_out_of_bounds: (arg1: any, arg2: any) => index_out_of_bounds(arg1, arg2),
-    print: (arg: any) => print(NUM, arg),
-    print_num: (arg: number) => print(NUM, arg),
-    print_bool: (arg: number) => print(BOOL, arg),
-    print_none: (arg: number) => print(NONE, arg),
-    print_str: (arg: number) => print(CLASS("str"), arg, memory),
+    print: (arg: any) => print(Type.Num, arg),
+    print_num: (arg: number) => print(Type.Num, arg),
+    print_bool: (arg: number) => print(Type.Bool, arg),
+    print_none: (arg: number) => print(Type.None, arg),
+    print_str: (arg: number) => print(Type.String, arg, memory),
     abs: Math.abs,
     min: Math.min,
     max: Math.max,

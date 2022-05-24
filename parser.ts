@@ -4,6 +4,7 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
+import { equalType } from "./type-check"
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -24,6 +25,11 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal {
         tag: "bool",
         value: s.substring(c.from, c.to) === "True"
       }
+    case "String":
+      return {
+        tag: "str",
+        value: s.substring(c.from + 1, c.to - 1)
+      }
     case "None":
       return {
         tag: "none"
@@ -43,7 +49,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         a: location,
         tag: "literal", 
         value: traverseLiteral(c, s)
-      }      
+      }
+    case "String":
+      return {
+        tag: "call",
+        name: "str",
+        arguments: [{ tag: "literal", value: traverseLiteral(c, s) }]
+      }
     case "VariableName":
       return {
         a: location,
@@ -88,7 +100,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         else {
           expr = { a: location, tag: "call", name: callName, arguments: args};
         }
-        return expr;  
+        return expr;
       } else {
         throw new ParseError("Unknown target while parsing assignment", location.line);
       }
@@ -135,7 +147,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           break;
         case "is":
           op = BinOp.Is;
-          break; 
+          break;
         case "and":
           op = BinOp.And;
           break;
@@ -188,6 +200,45 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.firstChild(); // Focus on object
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on .
+      var dotOrBracket = s.substring(c.from, c.to);
+      if( dotOrBracket === "[") {
+        var start_index: Expr<any>;
+        var stop_index: Expr<any>;
+        var step: Expr<any> = {
+          tag: "literal",
+          value: { tag: "num", value: 1}
+        };
+
+        var indexItems = "";
+        c.nextSibling();
+        while (s.substring(c.from, c.to) != "]") {
+          indexItems += s.substring(c.from, c.to);
+          c.nextSibling();
+        }
+        c.parent();
+        c.firstChild(); // str object name
+        c.nextSibling(); // "[""
+        c.nextSibling(); // start index
+
+        if(indexItems.length === 0) {
+          throw new Error("Error: there should have at least one value inside the brackets");
+        }
+
+        var sliced_indices = indexItems.split(":");
+        if(sliced_indices.length > 3){
+          throw new Error("Too much indices, maximum is three");
+        }
+
+        start_index = traverseExpr(c, s)
+
+        c.parent();
+        return {
+          tag: "index",
+          obj: objExpr,
+          index: start_index
+        }
+      }
+
       c.nextSibling(); // Focus on property
       var propName = s.substring(c.from, c.to);
       c.parent();
@@ -217,7 +268,7 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Sourc
     args.push(expr);
     c.nextSibling(); // Focuses on either "," or ")"
     c.nextSibling(); // Focuses on a VariableName
-  } 
+  }
   c.parent();       // Pop to ArgList
   return args;
 }
@@ -257,8 +308,15 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
           tag: "assign",
           name: target.name,
           value: value
-        }  
-      } else {
+        }
+      } else if (target.tag == "index"){
+        return {
+          tag: "index-assign",
+          obj: target.obj,
+          index: target.index,
+          value: value
+        }
+      }else {
         throw new ParseError("Unknown target while parsing assignment", location.line);
       }
     case "ExpressionStatement":
@@ -284,9 +342,9 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
     //   while(c.nextSibling()) {
     //     body.push(traverseStmt(c, s));
     //   }
-      // console.log("Before pop to body: ", c.type.name);
+    // console.log("Before pop to body: ", c.type.name);
     //   c.parent();      // Pop to Body
-      // console.log("Before pop to def: ", c.type.name);
+    // console.log("Before pop to def: ", c.type.name);
     //   c.parent();      // Pop to FunctionDefinition
     //   return {
     //     tag: "fun",
@@ -302,7 +360,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       var thn = [];
       var els = [];
       while(c.nextSibling()) {  // Focus on thn stmts
-        thn.push(traverseStmt(c,s));
+        thn.push(traverseStmt(c, s));
       }
       // console.log("Thn:", thn);
       c.parent();
@@ -331,10 +389,10 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
 
       var body = [];
       c.firstChild(); // Focus on :
-      while(c.nextSibling()) {
+      while (c.nextSibling()) {
         body.push(traverseStmt(c, s));
       }
-      c.parent(); 
+      c.parent();
       c.parent();
       return {
         a: location,
@@ -349,7 +407,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
   }
 }
 
-export function traverseType(c : TreeCursor, s : string) : Type {
+export function traverseType(c: TreeCursor, s: string): Type {
   // For now, always a VariableName
   let name = s.substring(c.from, c.to);
   switch(name) {
@@ -395,13 +453,26 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLoca
   c.nextSibling(); // go to type
   const type = traverseType(c, s);
   c.parent();
-  
+
   c.nextSibling(); // go to =
   c.nextSibling(); // go to value
   var value = traverseLiteral(c, s);
   c.parent();
 
   return { a: location, name, type, value }
+}
+
+export function initToConsturct(init: VarInit<SourceLocation>): Stmt<SourceLocation> {
+  let val: Expr<SourceLocation> = {a:init.a, tag: "call", name: "str", arguments: [{ tag: "literal", value: init.value }] };
+  if(init.name.includes(".")){
+    let strelems = init.name.split(".");
+    let ob:Expr<SourceLocation> = {  a:init.a, tag: "id", name: strelems[0] };
+    let strfield = strelems[1]
+    return {a:init.a, tag: "field-assign", obj: ob, field: strfield, value: val }
+  }
+  else{
+    return {a:init.a, tag: "assign", name: init.name, value: val };
+  }
 }
 
 export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocation> {
@@ -422,23 +493,28 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   c.firstChild();  // Focus on :
   var inits = [];
   var body = [];
-  
+
   var hasChild = c.nextSibling();
 
   while(hasChild) {
     if (isVarInit(c, s)) {
-      inits.push(traverseVarInit(c, s));
+      let temp = traverseVarInit(c, s)
+      if (equalType(temp.type, CLASS("str"))) {
+        body.push(initToConsturct(temp))
+        temp.value = { tag: "none" };
+      }
+      inits.push(temp);
     } else {
       break;
     }
     hasChild = c.nextSibling();
   }
 
-  while(hasChild) {
+  while (hasChild) {
     body.push(traverseStmt(c, s));
     hasChild = c.nextSibling();
-  } 
-  
+  }
+
   // console.log("Before pop to body: ", c.type.name);
   c.parent();      // Pop to Body
   // console.log("Before pop to def: ", c.type.name);
@@ -456,20 +532,30 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.nextSibling(); // Focus on arglist/superclass
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
-  while(c.nextSibling()) { // Focuses first field
+  var initBody: Array<Stmt<SourceLocation>> = []
+  while (c.nextSibling()) { // Focuses first field
     if (isVarInit(c, s)) {
-      fields.push(traverseVarInit(c, s));
+      let temp = traverseVarInit(c, s)
+      if (equalType(temp.type, CLASS("str"))) {
+        initBody.push(initToConsturct({...temp, name:"self"+"." +temp.name}))
+        temp.value = { tag: "none" };
+      }
+      fields.push(temp);
     } else if (isFunDef(c, s)) {
-      methods.push(traverseFunDef(c, s));
+      let tempfun = traverseFunDef(c, s)
+      if (tempfun.name == "__init__") {
+        tempfun.body = initBody.concat(tempfun.body)
+      }
+      methods.push(tempfun);
     } else {
       throw new ParseError(`Could not parse the body of class: ${className}`, location.line);
     }
-  } 
+  }
   c.parent();
   c.parent();
 
   if (!methods.find(method => method.name === "__init__")) {
-    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+    methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: initBody });
   }
   return {
     a: location,
@@ -499,24 +585,24 @@ export function traverseDefs(c : TreeCursor, s : string) : [Array<VarInit<Source
 
 }
 
-export function isVarInit(c : TreeCursor, s : string) : Boolean {
+export function isVarInit(c : TreeCursor, s : string): Boolean {
   if (c.type.name === "AssignStatement") {
     c.firstChild(); // Focus on lhs
     c.nextSibling(); // go to : type
 
     const isVar = c.type.name as any === "TypeDef";
     c.parent();
-    return isVar;  
+    return isVar;
   } else {
     return false;
   }
 }
 
-export function isFunDef(c : TreeCursor, s : string) : Boolean {
+export function isFunDef(c : TreeCursor, s : string): Boolean {
   return c.type.name === "FunctionDefinition";
 }
 
-export function isClassDef(c : TreeCursor, s : string) : Boolean {
+export function isClassDef(c : TreeCursor, s : string): Boolean {
   return c.type.name === "ClassDefinition";
 }
 
@@ -532,7 +618,12 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
 
       while(hasChild) {
         if (isVarInit(c, s)) {
-          inits.push(traverseVarInit(c, s));
+          let temp = traverseVarInit(c, s)
+          if (equalType(temp.type, CLASS("str"))) {
+            stmts.push(initToConsturct(temp))
+            temp.value = { tag: "none" };
+          }
+          inits.push(temp);
         } else if (isFunDef(c, s)) {
           funs.push(traverseFunDef(c, s));
         } else if (isClassDef(c, s)) {
@@ -546,7 +637,7 @@ export function traverse(c : TreeCursor, s : string) : Program<SourceLocation> {
       while(hasChild) {
         stmts.push(traverseStmt(c, s));
         hasChild = c.nextSibling();
-      } 
+      }
       c.parent();
       return { a: location, funs, inits, classes, stmts };
     default:
