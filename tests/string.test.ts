@@ -1,5 +1,5 @@
-import { assertPrint, assertFail, assertTCFail, assertTC } from "./string-asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./string-helpers.test"
+import { assertPrint, assertFail, assertTCFail, assertTC } from "./asserts.test";
+import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("string test", () => {
   // 1

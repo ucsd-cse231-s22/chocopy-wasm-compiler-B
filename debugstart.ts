@@ -3,7 +3,7 @@ import { parser } from "lezer-python";
 import { parse } from "./parser";
 import { tc } from "./type-check";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs } from "./tests/string-import-object.test";
+import { importObject, addLibs } from "./tests/import-object.test";
 import { augmentEnv, Config } from "./runner";
 import { lowerProgram } from "./lower";
 import { compile } from "./compiler";

@@ -482,7 +482,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if (expr.name === "print") {
         const tArg = tcExpr(env, locals, expr.arg);
         if(tArg.a && tArg.a[0].tag == "class") {
-          throw new Error("TYPE ERROR: print can't be called on objects");
+          if(tArg.a[0].name !== "str")
+            throw new Error("TYPE ERROR: print can't be called on objects");
         }
 
         return {...expr, a: tArg.a, arg: tArg};

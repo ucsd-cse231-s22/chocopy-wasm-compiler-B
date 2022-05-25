@@ -38,7 +38,8 @@ export function traverseLiteral(c : TreeCursor, s : string) : Literal<SourceLoca
     case "String":
       return {
         tag: "str",
-        value: s.substring(c.from + 1, c.to - 1)
+        value: s.substring(c.from + 1, c.to - 1),
+        a:location
       }
     case "None":
       return {
@@ -72,6 +73,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       }
     case "String":
       return {
+        a: location,
         tag: "call",
         name: "str",
         arguments: [{ tag: "literal", value: traverseLiteral(c, s) }]
