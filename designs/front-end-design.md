@@ -126,7 +126,7 @@ We will implement the render to hanle other objects like list, string and dictio
 ### 8. highlight the error area
 
 shown in the picture below, CodeMirror is able to underline the error
-![underline error](./Screen%20Shot%202022-05-20%20at%2023.59.27.png)
+![underline error](./front-end-error-highlighting.png)
 
 ### 9. front end test
 
@@ -134,4 +134,4 @@ Our team have comunicated with team A and find that there is a tool called [phan
 
 
 The overall front page will looks like below:
-![final front end](./Screen%20Shot%202022-05-21%20at%2000.09.37.png)
+![final front end](./front-end-final-design.png)
