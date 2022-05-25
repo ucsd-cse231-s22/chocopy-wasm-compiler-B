@@ -41,11 +41,11 @@ export type Expr<A> =
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
   | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
   | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
-  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
+  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, namedArgs?:Map<string,Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
-  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
+  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>>, namedArgs?:Map<string,Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression

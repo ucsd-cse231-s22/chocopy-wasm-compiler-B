@@ -22,21 +22,21 @@ function generateName(base : string) : string {
 //   return [name, {tag: "label", a: a, name: name}];
 // }
 
-type funMeta = Map<string,Array<AST.Expr<[Type,SourceLocation]>>>;
+type funMeta = Map<string, (string | AST.Expr<[Type,SourceLocation]>)[][]>;
 let funEnv:funMeta = new Map();
 
-type classMeta = Map<string, Map<string, Array<AST.Expr<[Type,SourceLocation]>>>>;
+type classMeta = Map<string, Map<string, (string | AST.Expr<[Type,SourceLocation]>)[][]>>;
 let classEnv:classMeta = new Map();
 
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    var funsToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => p.defaultValue)]))
+    var funsToAdd = new Map(p.funs.map(f => [f.name, f.parameters.map(p => [p.name, p.defaultValue])]))
     funEnv = new Map([...funEnv, ...funsToAdd]);
 
     // slice skips the self argument
-    var classesToAdd2 = new Map(p.classes.map(c => [c.name, new Map(c.methods.map(m => [m.name, m.parameters.map(p => p.defaultValue).slice(1)]))]));
+    var classesToAdd2 = new Map(p.classes.map(c => [c.name, new Map(c.methods.map(m => [m.name, m.parameters.map(p => [p.name,p.defaultValue]).slice(1)]))]));
     classEnv = new Map([...classEnv, ...classesToAdd2]);
 
     var inits = flattenStmts(p.stmts, blocks, env);
@@ -266,9 +266,13 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
 
       // don't need to check if this call is not reaching default vals
       // because it is checked in the type checker
-      funcVals.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
+      funcVals.forEach((v : [string, AST.Expr<[Type,SourceLocation]>],i : Number) => {
         if(i >= arglen) {
-          newArgs.push(v);
+          if(e.namedArgs !== undefined && e.namedArgs.has(v[0])) {
+            newArgs.push(e.namedArgs.get(v[0]));
+          } else {
+            newArgs.push(v[1]);
+          }
         }
       });
 
@@ -295,12 +299,17 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
   
         // don't need to check if this call is not reaching default vals
         // because it is checked in the type checker
-        methodData.forEach((v : AST.Expr<[Type,SourceLocation]>,i : Number) => {
+        methodData.forEach((v : [string, AST.Expr<[Type,SourceLocation]>],i : Number) => {
           if(i >= arglen) {
             if(v === undefined) {
               throw new Error("method call not properly type checked");
             }
-            newArgs.push(v);
+
+            if(e.namedArgs !== undefined && e.namedArgs.has(v[0])) {
+              newArgs.push(e.namedArgs.get(v[0]));
+            } else {
+              newArgs.push(v[1]);
+            }
           }
         });
 

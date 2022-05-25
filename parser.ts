@@ -404,6 +404,7 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Sourc
   c.firstChild();  // Focuses on open paren
   const args = [];
   c.nextSibling();
+  var named_started = false;
   while(c.type.name !== ")") {
     let expr = traverseExpr(c, s);
     args.push(expr);
