@@ -68,7 +68,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   bodyCommands += ") ;; end $loop"
 
   // const commandGroups = ast.stmts.map((stmt) => codeGenStmt(stmt, withDefines));
-  const allCommands = [...localDefines, ...inits, bodyCommands];
+  const allCommands = [...localDefines, ...inits, `(call $stack_clear)`, bodyCommands];
   withDefines.locals.clear();
   return {
     globals: globalNames,
@@ -138,7 +138,13 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "binop":
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
-      return [...lhsStmts, ...rhsStmts, codeGenBinOp(expr.op)]
+      var divbyzero = ``;
+      if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
+        // line number and column number
+
+        divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
+      }
+      return [...lhsStmts, ...rhsStmts, divbyzero, codeGenBinOp(expr.op)]
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
@@ -169,6 +175,11 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
 
     case "call":
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
+      valStmts.push(`(i32.const ${expr.a[1].line})`);
+      valStmts.push(`(call $stack_push)`);
+      if(expr.name === 'assert_not_none'){
+        valStmts.push(`(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) `);
+      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
@@ -180,7 +191,8 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "load":
       return [
         ...codeGenValue(expr.start, env),
-        `call $assert_not_none`,
+        `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) (call $assert_not_none)`,
+        // `call $assert_not_none`,
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { parse } from "../parser";
-import { assertPrint, assertTC, assertFail } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
+import { assertPrint, assertTC } from "./asserts.test";
+import { NUM, BOOL, NONE, typeCheck } from "./helpers.test";
 import { TypeCheckError } from "../error_reporting";
 
 describe("Parses default arguments", () => {
