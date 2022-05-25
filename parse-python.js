@@ -1,4 +1,4 @@
-const python = require('lezer-python');
+const python = require('@lezer/python');
 
 const input = "-1";
 

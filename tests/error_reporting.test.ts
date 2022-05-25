@@ -47,7 +47,7 @@ export function assertParseFail(name: string, source: string, line: number, col:
 describe("Error Reporting tests", () => {
     //1
     assertParseFail("missing-parenthesis-in-expression", 
-    `x: int = 4\nif (x == 6\n\tprint (6)`, 2, 10, "if (x == 6");
+    `x: int = 4\nif (x == 6\n\tprint (6)`, 2, 12, "if (x == 6");
 
     //2
     assertParseFail("invalid-syntax", 

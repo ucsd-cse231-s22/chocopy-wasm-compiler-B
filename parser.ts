@@ -1,5 +1,5 @@
-import {parser} from "lezer-python";
-import { TreeCursor} from "lezer-tree";
+import {parser} from "@lezer/python";
+import { TreeCursor} from "@lezer/common";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation } from "./ast";
 import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
 import { stringifyTree } from "./treeprinter";
