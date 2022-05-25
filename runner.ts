@@ -8,8 +8,11 @@ import { compile, GlobalEnv } from './compiler';
 import {parse} from './parser';
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value, SourceLocation } from './ast';
+import { optimizeAst } from './optimize_ast';
+import { optimizeIr } from './optimize_ir';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { BlobOptions } from 'buffer';
 import { removeGenerics } from './remove-generics';
 
 export type Config = {
@@ -70,13 +73,23 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
 
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
-export async function run(source : string, config: Config) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource]> {
+
+export async function run(source : string, config: Config, astOpt: boolean = false, irOpt: boolean = false) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource, string]> {
   const parsed = parse(source);
   sourceCode = source;
   const specialized = removeGenerics(parsed);
-  const [tprogram, tenv] = tc(config.typeEnv, specialized);
+  var [tprogram, tenv] = tc(config.typeEnv, specialized);
+  if(astOpt){
+    tprogram = optimizeAst(tprogram);
+  }
   const globalEnv = augmentEnv(config.env, tprogram);
-  const irprogram = lowerProgram(tprogram, globalEnv);
+  var irprogram = lowerProgram(tprogram, globalEnv);
+
+  if(irOpt){
+    irprogram = optimizeIr(irprogram);
+  }
+  // printProgIR(irprogram);
+
   const progTyp = tprogram.a[0];
   var returnType = "";
   var returnExpr = "";
@@ -121,6 +134,10 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $set$add (import "libset" "set$add") (param $baseAddr i32) (param $key i32) (result i32))
+    (func $set$contains (import "libset" "set$contains") (param $baseAddr i32) (param $key i32) (result i32))
+    (func $set$length (import "libset" "set$length") (param $baseAddr i32) (result i32))
+    (func $set$remove (import "libset" "set$remove") (param $baseAddr i32) (param $key i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
@@ -133,5 +150,5 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
   console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
-  return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance];
+  return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance, wasmSource];
 }

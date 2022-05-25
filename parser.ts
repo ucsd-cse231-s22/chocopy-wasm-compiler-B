@@ -120,6 +120,21 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
             left: args[0],
             right: args[1]
           }
+        } else if (callName === "set") {
+          expr = {
+            a: location,
+            tag: "call",
+            name: "set",
+            arguments: args
+          }
+        } else if (callName === "len") {
+          expr = {
+            a: location,
+            tag: "method-call",
+            obj: args[0], 
+            method: "length", 
+            arguments: [],
+          }
         }
         else {
           expr = { a: location, tag: "call", name: callName, arguments: args};
@@ -211,6 +226,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         case "or":
           op = BinOp.Or;
           break;
+        case "in":
+          c.nextSibling();
+          const rhs = traverseExpr(c, s);
+          c.parent();
+          return {
+            a: location,
+            tag: "method-call",
+            obj: rhs,
+            method: "contains",
+            arguments: [lhsExpr]
+          };
         default:
           throw new ParseError("Could not parse operator at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location)
       }
@@ -309,6 +335,20 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         tag: "lookup",
         obj: objExpr,
         field: propName
+      }
+    case "SetExpression":
+      c.firstChild();
+      let setValues = new Array<Expr<any>>();
+      while (c.nextSibling()) {
+        let v : Expr<any> = traverseExpr(c, s);
+        setValues.push(v);
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        a: location,
+        tag: "set",
+        values: setValues
       }
     case "self":
       return {
@@ -548,8 +588,54 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
         cond,
         body
       }
+    case "ForStatement":
+      c.firstChild() // for
+      c.nextSibling() // vars
+      const for_var = traverseExpr(c, s)
+      c.nextSibling()
+      // for when we implement destructuring 
+
+      // while(s.substring(c.from, c.to) == ',') {
+      //   c.nextSibling()
+      //   for_var.push(traverseExpr(c, s))
+      //   c.nextSibling()
+      // }
+      c.nextSibling()
+      const iterable = traverseExpr(c, s)
+      c.nextSibling()
+      var body = []
+      c.firstChild()
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s))
+      }
+      c.parent()
+      var elseBody = []
+      if(c.nextSibling()) {
+        while(s.substring(c.from, c.to) !== 'else')
+          c.nextSibling()
+        c.nextSibling()
+        c.firstChild()
+        while(c.nextSibling()) {
+          elseBody.push(traverseStmt(c, s))
+        }
+        c.parent()
+      }
+      c.parent()
+      return {
+        a: location,
+        tag: "for",
+        vars: for_var,
+        iterable: iterable,
+        body: body,
+        elseBody: elseBody
+      };
+
     case "PassStatement":
       return { a: location, tag: "pass" }
+    case "ContinueStatement":
+      return { a: location, tag: "continue" }
+    case "BreakStatement":
+      return { a: location, tag: "break" }
     default:
       throw new ParseError("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to), location);
   }
@@ -566,6 +652,16 @@ function typeFromString(s: string): Type {
 
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  if (c.firstChild()) {
+    if (s.substring(c.from, c.to) === "set") {
+      c.nextSibling();
+      c.nextSibling();
+      let vt : Type = traverseType(c, s);
+      c.parent();
+      return {tag: "set", valueType: vt};
+    }
+    c.parent();
+  }
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
