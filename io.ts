@@ -1,3 +1,10 @@
+declare global {
+    interface Window { 
+        duplicated: any,
+        fs: any
+    }
+}
+
 export const fileObjectDefinition : string = 
 `
 class File(object):

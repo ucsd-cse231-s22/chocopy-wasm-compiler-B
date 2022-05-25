@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { jsopen, jsclose, jsread, jswrite } from '../io';
 
 enum Type { Num, Bool, None }
 
@@ -50,6 +51,10 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    jsopen: (arg: number) => jsopen(arg),
+    jsclose: (arg: number) => jsclose(arg),
+    jsread: (arg: number) => jsread(arg),
+    jswrite: (fd : number, content : number) => jswrite(fd, content)
   },
 
   output: "",
