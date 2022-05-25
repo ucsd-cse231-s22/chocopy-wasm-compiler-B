@@ -256,6 +256,104 @@ f()`, ["1", "2"])
 
 
 });
+
+describe("Parses named arguments", () => {
+  assertParseFail("Does not allow named arguments before positional arguments",
+  `
+def test(a : int, b : int, c : int):
+  pass
+  
+test(7, c = 3, 5)
+`);
+
+  assertParse("Parses a call with named arguments",
+  `
+  def test(a : int, b : int, c : int):
+    pass
+    
+  test(7, c = 3, b = 5)`);
+
+  assertParse("Parses a named argument with an expr",
+  `
+def test(a : int, b : int):
+  pass
+  
+test(a = 1 + 2, b = 3)`)
+
+});
+
+
+describe("Type checks named arguments", () => {
+
+  assertTCFail("Ensure all arguments are defined",
+    `
+def test(a : int, b : int, c : int):
+  pass
+  
+test(b = 5, c = 3)`);
+  
+assertTCFail("Ensure all arguments are defined (with default arguments)",
+    `
+def test(a : int, b : int, c : int = 5):
+  pass
+  
+test(b = 5, c = 3)`);
+
+  assertTC("Allow only *non-default* arguments to be defined",
+    `
+def test(a : int, b : int, c : int = 5) -> int:
+  return a
+  
+test(b = 5, a = 3)`, NUM);
+
+  assertTCFail("Does not allow a named argument to be defined twice",
+  `
+def test(a : int, b : int):
+  pass
+  
+test(a = 3, a = 4)`);
+
+  assertTCFail("Does not allow a parameter to be defined positionally and via named arg",
+    `
+def test(a : int, b : int):
+  pass
+  
+test(3, a = 4)`);
+
+  assertTCFail("Only allows named arguments from those in the function",
+    `
+def test(a : int, b : int):
+  pass
+  
+test(3, c = 4)`);
+
+  assertTCFail("Ensure named arguments are typechecked",
+  `
+def test(a : int):
+  pass
+  
+test(a = False)`);
+
+  assertTCFail("Ensure named arguments are typechecked when overriding default arguments", 
+  `
+def test(a : int = 3):
+  pass
+  
+test(a = False)`);
+
+});
+
+describe("Named arguments work at runtime", () => {
+  assertPrint("Can successfully call function without defining default args", 
+  `
+def test(a : int, b : int = 4):
+  print(a)
+  print(b)
+  
+test(a = 3)`, ["3", "4"]);
+});
+
+
 // Helpers
 
 /**
