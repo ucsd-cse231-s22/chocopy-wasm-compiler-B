@@ -37,7 +37,7 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
 
-    var importObject = {
+    var importObject:any = {
       imports: {
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
@@ -56,6 +56,15 @@ function webStart() {
       memory_values: memory, //it is kind of pointer pointing to heap
       js: {memory: memory}
     };
+
+    const setModule = await fetch('sets.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
+    );
+
+    importObject.libset = setModule.instance.exports;
+    
     var repl = new BasicREPL(importObject);
 
     function setupRepl() {

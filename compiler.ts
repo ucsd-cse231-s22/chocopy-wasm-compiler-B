@@ -301,4 +301,4 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
-  }
+}
