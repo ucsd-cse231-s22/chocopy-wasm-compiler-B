@@ -4,6 +4,7 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
+import { type } from "os";
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -78,7 +79,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.firstChild();
       let callExpr = traverseExpr(c, s);
       c.nextSibling(); // go to arglist
-      const args = traverseArguments(c, s);
+      const {args, namedArgs} = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
       if(genericArgs) {
@@ -90,6 +91,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           tag: "call",
           name: callStr.split('[')[0],
           arguments: args,
+          namedArgs,
           genericArgs: genTypes
         };
       } 
@@ -100,7 +102,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           tag: "method-call",
           obj: callExpr.obj,
           method: callExpr.field,
-          arguments: args
+          arguments: args,
+          namedArgs
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
@@ -122,7 +125,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           }
         }
         else {
-          expr = { a: location, tag: "call", name: callName, arguments: args};
+          expr = { a: location, tag: "call", name: callName, arguments: args, namedArgs};
         }
         return expr;  
       } else {
@@ -400,19 +403,38 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
   }
 }
 
-export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<SourceLocation>> {
+type Arguments<A> = {args: Array<Expr<A>>, namedArgs?: Map<string,Expr<A>>};
+export function traverseArguments(c : TreeCursor, s : string) : Arguments<SourceLocation> {
   c.firstChild();  // Focuses on open paren
   const args = [];
+  const namedArgs: Map<string,Expr<SourceLocation>> = new Map();
   c.nextSibling();
   var named_started = false;
   while(c.type.name !== ")") {
-    let expr = traverseExpr(c, s);
-    args.push(expr);
-    c.nextSibling(); // Focuses on either "," or ")"
+    let arg = traverseExpr(c,s);
+    c.nextSibling(); // Focuses on either "," or ")" or "="
+    if( s.substring(c.from,c.to) === "=" ) {
+      if(arg.tag !== 'id')
+        throw new  ParseError(`Expression cannot contain assignment, perhaps you meant "=="?`, getSourceLocation(c,s));
+        
+      c.nextSibling();
+      let expr =  traverseExpr(c,s);
+      namedArgs.set(arg.name,expr);
+      named_started = true;
+      c.nextSibling(); // Focus on "," or ")"
+    }
+    else {
+      if(named_started) {
+        throw new ParseError("Can't have positional argument after keyword argument", getSourceLocation(c,s));
+      }
+      args.push(arg);
+    }
+    
+    
     c.nextSibling(); // Focuses on a VariableName
   } 
   c.parent();       // Pop to ArgList
-  return args;
+  return {args, namedArgs};
 }
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> {

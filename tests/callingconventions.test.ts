@@ -344,13 +344,36 @@ test(a = False)`);
 });
 
 describe("Named arguments work at runtime", () => {
-  assertPrint("Can successfully call function without defining default args", 
+  assertPrint("Can successfully use named parameters in any order",
+  `
+def test(a : int, b : int, c : int):
+  print(a)
+  print(b)
+  print(c)
+  
+test(b = 2, c = 3, a = 1)`, ["1", "2", "3"]);
+
+  assertPrint("Can successfully use named parameters without defining default args", 
   `
 def test(a : int, b : int = 4):
   print(a)
   print(b)
   
 test(a = 3)`, ["3", "4"]);
+
+  assertPrint("Can override default args with named args",
+  `
+def test(a : int = 3):
+  print(a)
+  
+test(a = 4)`, ["4"]);
+
+  assertPrint("Can successfully use expressions as arguments to named values",
+  `
+def test(a : int):
+  print(a)
+  
+test(a = 3 * 3)`, ["9"]);
 });
 
 

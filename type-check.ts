@@ -512,7 +512,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if (index < nonDefault) {
           throw new TypeCheckError(`${expr.name}() missing ${nonDefault - index} required positional arguments`, expr.a)
         }
-        return { ...expr, a: [retType, expr.a], arguments: tArgs };
+        // TODO : typecheck namedArgs
+        return { ...expr, a: [retType, expr.a], arguments: tArgs, namedArgs:undefined };
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -555,7 +556,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
             if (index < nonDefault) {
               throw new TypeCheckError(`${expr.method}() missing ${nonDefault - index} required positional arguments`, expr.a)
             }
-            return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs };
+            // TODO : typecheck namedArgs
+            return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined };
           } else {
             throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
           }
