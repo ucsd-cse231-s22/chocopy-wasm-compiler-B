@@ -8,52 +8,28 @@ import { augmentEnv, Config } from "./runner";
 import { lowerProgram } from "./lower";
 import { compile } from "./compiler";
 
-
-export function stringifyTree(t: TreeCursor, source: string, d: number) {
-  var str = "";
-  var spaces = " ".repeat(d * 2);
-  str += spaces + t.type.name;
-  if (["Number", "CallExpression", "BinaryExpression", "UnaryExpression"].includes(t.type.name)) {
-    str += "-->" + source.substring(t.from, t.to);
-  }
-  str += "\n";
-  if (t.firstChild()) {
-    do {
-      str += stringifyTree(t, source, d + 1);
-
-
-    } while (t.nextSibling());
-    t.parent();
-  }
-  return str;
-}
-
 // entry point for debugging
 async function debug() {
-  var source =
-  `
-  s:str = "abc"
-  s[1]
-  `
+  var source = `
+  set_1 : set[int] = None
+  a : int = 0
+  b : bool = True
+  set_1 = set({1,2})`
 
-  // const t = parser.parse(source);
-  // console.log(stringifyTree(t.cursor(), source, null))
-  // const ast = parse(source);
-  // console.log(JSON.stringify((ast), null, 2));
 
+  // set_1.add(3)
+  // set_1.add(3)
+  // set_1.remove(1)
+  // a = len(set_1)
+  // b = 1 in set_1
+  // print(a)
+  // print(b)
+  const ast = parse(source);
+  
   const repl = new BasicREPL(await addLibs());
-  const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
-  const parsed = parse(source);
-  console.log(JSON.stringify(parsed, null, 2))
-  const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  // console.log(JSON.stringify(tprogram, null, 2))
-  // const globalEnv = augmentEnv(config.env, tprogram);
-  // const irprogram = lowerProgram(tprogram, globalEnv);
-  // console.log(JSON.stringify(irprogram, null,2))
-  // const compiled = compile(irprogram, globalEnv);
-  // console.log(compiled)
+  const result = repl.tc(source);
+  console.log(result);
   // const result = repl.run(source).then(result => {
-  //   console.log("hello")
   //   console.log(result);
   // })
 }
