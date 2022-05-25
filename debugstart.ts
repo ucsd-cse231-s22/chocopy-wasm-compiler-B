@@ -10,11 +10,8 @@ import { compile } from "./compiler";
 
 // entry point for debugging
 async function debug() {
-  var source = `
-  set_1 : set[int] = None
-  a : int = 0
-  b : bool = True
-  set_1 = set({1,2})`
+  var source = `s:str = "asdf"
+  print(len(s))`
 
 
   // set_1.add(3)

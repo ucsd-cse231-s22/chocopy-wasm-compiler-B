@@ -176,6 +176,7 @@ export function builtinStringClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var strFields: Map<string, Type> = new Map();
   var strMethods: Map<string, [Array<Type>, Type]> = new Map();
   strMethods.set("__init__", [[{ tag: "class", name: "str" }, { tag: "class", name: "str" }], NONE])
+  strMethods.set("length", [[{ tag: "class", name: "str" }], NUM])
   //TODO add all string methods here
   strFields.set("length", { tag: "number" });
   env.classes.set("str", [strFields, strMethods]);
