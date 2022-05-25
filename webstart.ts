@@ -107,8 +107,11 @@ function webStart() {
       //resets environment
       repl = new BasicREPL(importObject);
       //clear editor
-      var element = document.getElementById("user-code") as HTMLTextAreaElement;
-      element.value = "";
+      // var element = document.getElementById("user-code") as HTMLTextAreaElement;
+      var element = document.querySelector(".CodeMirror") as any;
+      var editor = element.CodeMirror;
+      editor.setValue("");
+      editor.clearHistory();
     })
 
     document.getElementById("run").addEventListener("click", function (e) {
