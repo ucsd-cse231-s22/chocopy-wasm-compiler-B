@@ -417,9 +417,9 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, blocks, env);
       const [iinits, istmts, ival] = flattenExprToVal(e.index, blocks, env);
 
-      // if(equalType(e.a[0], CLASS("str"))){
-      //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
-      // }
+      if(equalType(e.a[0], CLASS("str"))){
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {a: e.a,tag: "call", name: "str$access", arguments: [oval, ival]} ]
+      }
       if (e.obj.a[0].tag === "list") { 
         const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
         return [[...oinits, ...iinits], [...ostmts, ...istmts], {

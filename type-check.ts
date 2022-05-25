@@ -176,6 +176,7 @@ export function builtinStringClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var strFields: Map<string, Type> = new Map();
   var strMethods: Map<string, [Array<Type>, Type]> = new Map();
   strMethods.set("__init__", [[{ tag: "class", name: "str" }, { tag: "class", name: "str" }], NONE])
+  //TODO add all string methods here
   strFields.set("length", { tag: "number" });
   env.classes.set("str", [strFields, strMethods]);
   return env;
@@ -550,9 +551,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // }
         throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``);
       }
-      // if (equalType(tObj.a[0], CLASS("str"))) {
-      //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
-      // }
+      if (equalType(tObj.a[0], CLASS("str"))) {
+        return { a: [CLASS("str"), expr.a], tag: "index", obj: tObj, index: tIndex };
+      }
       if (tObj.a[0].tag === "list") {
         return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex }; 
       }
@@ -623,7 +624,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           if (fields.has(expr.field)) {
             return { ...expr, a: [fields.get(expr.field), expr.a], obj: tObj };
           } else {
-            throw new TypeCheckError(`could not found field ${expr.field} in class ${tObj.a[0].name}`, expr.a);
+            throw new TypeCheckError(`could not find field ${expr.field} in class ${tObj.a[0].name}`, expr.a);
           }
         } else {
           throw new TypeCheckError("field lookup on an unknown class", expr.a);
@@ -647,7 +648,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a );
               }
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
+            throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
           }
         } else {
           throw new TypeCheckError("method call on an unknown class", expr.a);
@@ -749,6 +750,9 @@ export function tcLiteral(literal : Literal<SourceLocation>) : Literal<[Type, So
       break;
     case "none": 
       typ =  NONE;
+      break;
+    case "str": 
+      typ =  CLASS("str");
       break;
     default: throw new Error(`unknown type: ${literal.tag}`)
   }
