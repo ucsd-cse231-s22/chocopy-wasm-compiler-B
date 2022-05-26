@@ -1,5 +1,3 @@
-import { type } from "os";
-import { stringify } from "querystring";
 import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation } from "./ast";
 import { CLASS, TYPE_VAR } from "./utils";
 
