@@ -22,6 +22,7 @@ export class BasicREPL {
   functions: string
   importObject: any
   memory: any
+  watCode: string
   constructor(importObject : any) {
     this.importObject = importObject;
     if(!importObject.js) {
@@ -39,14 +40,16 @@ export class BasicREPL {
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
+    this.watCode = "";
   }
-  async run(source : string) : Promise<Value> {
+  async run(source : string, astOpt: boolean = false, irOpt: boolean = false) : Promise<Value> {
     var sourceCode = source;
     const config : Config = {importObject: this.importObject, env: this.currentEnv, typeEnv: this.currentTypeEnv, functions: this.functions};
-    const [result, newEnv, newTypeEnv, newFunctions, instance] = await run(sourceCode, config);
+    const [result, newEnv, newTypeEnv, newFunctions, instance, watCode] = await run(source, config, astOpt, irOpt);
     this.currentEnv = newEnv;
     this.currentTypeEnv = newTypeEnv;
     this.functions += newFunctions;
+    this.watCode = watCode;
     const currentGlobals = this.importObject.env || {};
     // console.log(instance);
     Object.keys(instance.instance.exports).forEach(k => {

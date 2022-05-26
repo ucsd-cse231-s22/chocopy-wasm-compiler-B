@@ -42,7 +42,7 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
-  console.log(ast.inits, globalNames);
+  // console.log(ast.inits, globalNames);
   const funs : Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
@@ -301,4 +301,4 @@ function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Ar
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
   return result.flat();
-  }
+}

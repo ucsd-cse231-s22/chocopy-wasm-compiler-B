@@ -6,6 +6,7 @@ import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
 import exp from 'constants';
 import { listenerCount } from 'process';
+import { IgnorePlugin } from 'webpack';
 
 const compvars : Map<string, [string, number]> = new Map();
 function generateCompvar(base : string) : string {
@@ -40,7 +41,9 @@ export type LocalTypeEnv = {
   vars: Map<string, Type>,
   expectedRet: Type,
   actualRet: Type,
-  topLevel: Boolean
+  topLevel: Boolean,
+  loopCount: number,
+  currLoop: Array<number>
 }
 
 const defaultGlobalFunctions = new Map();
@@ -69,7 +72,9 @@ export function emptyLocalTypeEnv() : LocalTypeEnv {
     vars: new Map(),
     expectedRet: NONE,
     actualRet: NONE,
-    topLevel: true
+    topLevel: true,
+    loopCount: 0,
+    currLoop: []
   };
 }
 
@@ -81,6 +86,7 @@ export function equalType(t1: Type, t2: Type): boolean {
   return (
     t1 === t2 ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "set" && t2.tag == "set") || 
     (t1.tag === "list" && t2.tag === "list" && (equalType(t1.type, t2.type) || t1.type === NONE)) ||
     (t1.tag === "generator" && t2.tag === "generator" && equalType(t1.type, t2.type))
   );
@@ -95,6 +101,7 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
     equalType(t1, t2) ||
     (t1.tag === "none" && t2.tag === "class") ||
     (t1.tag === "none" && t2.tag === "list") ||
+    (t1.tag === "none" && t2.tag === "set") ||
     (t1.tag === "none" && t2.tag === "generator") ||
     // can assign generator created with comprehension to generator class object
     (t1.tag === "generator" && t2.tag === "class" && t2.name === "generator") ||
@@ -149,6 +156,17 @@ export function isCompType(t: Type): Boolean {
 
 export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
+}
+
+export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
+  if(t1.tag !== "class")
+    return false;
+  var classMethods = env.classes.get(t1.name)[1];
+  if(!(classMethods.has("next") && classMethods.has("hasnext")))
+    return false;
+  if(equalType(classMethods.get("next")[1], NONE) || !equalType(classMethods.get("hasnext")[1], BOOL))
+    return false;
+  return true;
 }
 
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
@@ -249,6 +267,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       } else {
         throw new TypeCheckError("Unbound id: " + stmt.name, stmt.a);
       }
+      console.log("nameTyp: ", nameTyp);
+      console.log("left: ", tValExpr.a[0] );
       if(!isAssignable(env, tValExpr.a[0], nameTyp)) 
         throw new TypeCheckError("`" + tValExpr.a[0].tag + "` cannot be assigned to `" + nameTyp.tag + "` type", stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
@@ -277,10 +297,38 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       return {a: tRet.a, tag: stmt.tag, value:tRet};
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond);
+      locals.loopCount = locals.loopCount+1;
+      locals.currLoop.push(locals.loopCount);
       const tBody = tcBlock(env, locals, stmt.body);
+      locals.currLoop.pop();
       if (!equalType(tCond.a[0], BOOL)) 
         throw new TypeCheckError("Condition Expression Must be a bool", stmt.a);
       return {a: [NONE, stmt.a], tag:stmt.tag, cond: tCond, body: tBody};
+    case "for":
+      var tVars = tcExpr(env, locals, stmt.vars);
+      var tIterable = tcExpr(env, locals, stmt.iterable);
+      locals.loopCount = locals.loopCount+1;
+      locals.currLoop.push(locals.loopCount);
+      var tForBody = tcBlock(env, locals, stmt.body);
+      locals.currLoop.pop();
+      if(tIterable.a[0].tag !== "class" || !isIterableObject(env, tIterable.a[0]))
+        throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
+      let tIterableRet = env.classes.get(tIterable.a[0].name)[1].get("next")[1];
+      if(!equalType(tVars.a[0], tIterableRet))
+        throw new TypeCheckError("Expected type `"+ tIterableRet.tag +"`, got type `" + tVars.a[0].tag + "`", stmt.a);
+      if(stmt.elseBody !== undefined) {
+        const tElseBody = tcBlock(env, locals, stmt.elseBody);
+        return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody, elseBody: tElseBody};
+      }
+      return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody};
+    case "break":
+      if(locals.currLoop.length === 0)
+        throw new TypeCheckError("break cannot exist outside a loop", stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, loopCounter: locals.currLoop[locals.currLoop.length-1]};
+    case "continue":
+      if(locals.currLoop.length === 0)
+        throw new TypeCheckError("continue cannot exist outside a loop", stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, loopCounter: locals.currLoop[locals.currLoop.length-1]};
     case "pass":
       return {a: [NONE, stmt.a], tag: stmt.tag};
     case "field-assign":
@@ -318,6 +366,20 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<SourceLocation>) : Expr<[Type, SourceLocation]> {
   switch(expr.tag) {
+    case "set":
+      let tc_val = expr.values.map((e) => tcExpr(env, locals, e));
+      let tc_type = tc_val.map((e) => e.a[0]);
+      let set_type = new Set<Type>();
+      tc_type.forEach(t=>{
+        set_type.add(t)
+      });
+      if (set_type.size > 1){
+        throw new TypeCheckError("Bracket attribute error")
+      }
+      var t: Type ={tag: "set", valueType: tc_type[0]};
+      var a: SourceLocation = expr.a;
+      // return {...expr, a: [t, a]};
+      return {...expr, a: [t, a], values: tc_val};
     case "literal": 
       const tcVal : Literal<[Type, SourceLocation]> = tcLiteral(expr.value)
       return {...expr, a: [tcVal.a[0], expr.a], value: tcVal};
@@ -484,6 +546,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
            } else {
             throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
            }
+      } else if (expr.name === "set") {
+        if (expr.arguments.length > 1){
+          throw new Error("Set constructor can only contain element with length 1");
+        }
+        if (expr.arguments[0].tag !== "set"){
+          throw new Error("Set constructor can only accept bracket variable");
+        }
+        var initial_value = tcExpr(env, locals, expr.arguments[0]);
+        console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
+        return {...expr, a: initial_value.a, arguments: [initial_value]};
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -524,6 +596,31 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         } else {
           throw new TypeCheckError("method call on an unknown class", expr.a);
         }
+      } else if (tObj.a[0].tag === 'set'){
+        const set_method = ["add", "remove", "get", "contains", "length"]
+        if (set_method.includes(expr.method)){
+          tArgs.forEach(t => {
+            if (t.tag === "literal"&&tObj.a[0].tag === 'set'){
+              if (t.value.a[0] !== tObj.a[0].valueType){
+                throw new TypeCheckError("Mismatched Type when calling method")
+              }
+            }else{
+              throw new TypeCheckError("Unknown Type when calling method")
+            }
+          })
+        }else{
+          throw new TypeCheckError("Unknown Set Method Error");
+        }
+        if (expr.method === "contains"){
+          return {...expr, a: [BOOL, expr.a], obj: tObj, arguments: tArgs};
+        }else if(expr.method === "add"){
+          return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs};
+        }else if(expr.method === "remove"){
+          return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs};
+        } else if(expr.method === "length"){
+          return {...expr, a: [NUM, expr.a], obj: tObj, arguments: tArgs};
+        }
+        return {...expr, a:tObj.a, obj: tObj, arguments: tArgs}
       } else {
         throw new TypeCheckError("method calls require an object", expr.a);
       }

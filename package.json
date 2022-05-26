@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@diagrams-ts/graphviz-cli-renderer": "^0.5.0",
     "@lezer/common": "^0.16.0",
     "@lezer/python": "^0.16.0",
     "chai-as-promised": "^7.1.1",
@@ -22,8 +23,8 @@
     "file-saver": "^2.0.5",
     "html-webpack-plugin": "^5.5.0",
     "mochawesome": "^7.1.2",
-    "ts-loader": "^8.4.0",
-    "ts-node": "^9.1.1",
+    "ts-loader": "^9.3.0",
+    "ts-node": "^10.8.0",
     "typescript": "^4.1.2",
     "wabt": "^1.0.29"
   },
