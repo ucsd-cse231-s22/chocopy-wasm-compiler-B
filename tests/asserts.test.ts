@@ -73,6 +73,14 @@ export function assertTCFail(name: string, source: string) {
   });
 }
 
+export function assertParserFail(name: string, source: string) {
+  it(name, async () => {
+    expect(function(){
+      typeCheck(source);
+  }).to.throw('PARSE ERROR:');
+  });
+}
+
 export function assertOptimize(name: string, source: string, astOpt: boolean = true, irOpt: boolean = true) {
   it(name, async () => {
     const repl0 = new BasicREPL(await addLibs());
