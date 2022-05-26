@@ -183,7 +183,9 @@ html{
     width: 100%;
     // margin-left: 1em;
     // position:absolute;
-    padding: 1em;
+    padding-top: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
     height: 100%;
     border: none;
     overflow: scroll;
@@ -191,6 +193,7 @@ html{
     line-height: 1.2em;
     font-size: 1.2em;
     min-height: 100%;
+    position: relative;
 }
 
 .output{
