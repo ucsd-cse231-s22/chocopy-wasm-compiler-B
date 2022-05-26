@@ -1,12 +1,5 @@
 
-stdlib: build/memory.wasm
-
-build/%.wasm: stdlib/%.wat
-	mkdir -p build/
-	npx wat2wasm $< -o $@
-
-
-stdlib: build/range.wasm
+stdlib: build/memory.wasm build/sets.wasm
 
 build/%.wasm: stdlib/%.wat
 	mkdir -p build/
