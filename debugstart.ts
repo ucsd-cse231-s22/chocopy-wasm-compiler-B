@@ -5,10 +5,10 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 // entry point for debugging
 async function debug() {
   var source = `
-  a: [int] = None
-  b: [int] = None
-  c: [int] = None
-  a,b,c = [1,2,[3,4]]`
+  set_1 : set[int] = None
+  a : int = 0
+  b : bool = True
+  set_1 = set({1,2})`
 
 
   // set_1.add(3)
