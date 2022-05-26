@@ -16,8 +16,7 @@ import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
 import "./style.scss";
-
-
+import {BuiltinLib} from "./builtinlib"
 
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
@@ -39,6 +38,7 @@ function webStart() {
 
     var importObject:any = {
       imports: {
+        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),

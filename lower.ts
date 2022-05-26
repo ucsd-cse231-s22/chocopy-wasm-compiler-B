@@ -75,11 +75,11 @@ function lowerClass(cls: AST.Class<[Type, SourceLocation]>, env : GlobalEnv) : I
 function literalToVal(lit: AST.Literal<[Type, SourceLocation]>) : IR.Value<[Type, SourceLocation]> {
     switch(lit.tag) {
         case "num":
-            return { ...lit, value: BigInt(lit.value) }
+            return { ...lit, value: BigInt(lit.value), a:[NUM, lit.a[1]] }
         case "bool":
-            return lit
+            return {...lit, a:[BOOL, lit.a[1]]}
         case "none":
-            return lit        
+            return {...lit, a:[NONE, lit.a[1]]}        
     }
 }
 
@@ -349,17 +349,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         expr: val
       }];
     case "binop":
-      var [linits, lstmts, lval] = flattenExprToVal(e.left, blocks, env);
-      var [rinits, rstmts, rval] = flattenExprToVal(e.right, blocks, env);
-      return [[...linits, ...rinits], [...lstmts, ...rstmts], {
-          ...e,
-          left: lval,
-          right: rval
-        }];
-    case "builtin1":
-      var [inits, stmts, val] = flattenExprToVal(e.arg, blocks, env);
-      return [inits, stmts, {tag: "builtin1", a: e.a, name: e.name, arg: val}];
-    case "builtin2":
       var [linits, lstmts, lval] = flattenExprToVal(e.left, blocks, env);
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, blocks, env);
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {

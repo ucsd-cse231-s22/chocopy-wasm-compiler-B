@@ -4,6 +4,7 @@ import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Clas
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
+import { BuiltinLib } from './builtinlib';
 import exp from 'constants';
 import { listenerCount } from 'process';
 import { IgnorePlugin } from 'webpack';
@@ -47,10 +48,9 @@ export type LocalTypeEnv = {
 }
 
 const defaultGlobalFunctions = new Map();
-defaultGlobalFunctions.set("abs", [[NUM], NUM]);
-defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+BuiltinLib.forEach(x=>{
+  defaultGlobalFunctions.set(x.name, x.typeSig);
+})
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
@@ -554,40 +554,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else {
         throw new TypeCheckError("Unbound id: " + expr.name, expr.a);
       }
-    case "builtin1":
-      if (expr.name === "print") {
-        const tArg = tcExpr(env, locals, expr.arg);
-        if(tArg.a && tArg.a[0].tag == "class") {
-          throw new Error("TYPE ERROR: print can't be called on objects");
-        }
-
-        return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
-        const tArg = tcExpr(env, locals, expr.arg);
-        
-        if(isAssignable(env, tArg.a[0], expectedArgTyp)) {
-          return {...expr, a: [retTyp, expr.a], arg: tArg};
-        } else {
-          throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
-        }
-      } else {
-        throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
-      }
-    case "builtin2":
-      if(env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
-        const tLeftArg = tcExpr(env, locals, expr.left);
-        const tRightArg = tcExpr(env, locals, expr.right);
-        if(isAssignable(env, leftTyp, tLeftArg.a[0]) && isAssignable(env, rightTyp, tRightArg.a[0])) {
-          return {...expr, a: [retTyp, expr.a], left: tLeftArg, right: tRightArg};
-        } else {
-          throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
-        }
-      } else {
-        throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
-      }
-
     case "listliteral":
       if(expr.elements.length == 0) {
         const elements: Expr<[Type, SourceLocation]>[] = [];
@@ -636,6 +602,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // }
       throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``); // Can only index into strings, list, dicts, and tuples
     case "call":
+      if (expr.name === "print") {
+        if (expr.arguments.length===0)
+          throw new TypeCheckError("print needs at least 1 argument");
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        return {...expr, a: [NONE, expr.a], arguments: tArgs};
+      } 
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };

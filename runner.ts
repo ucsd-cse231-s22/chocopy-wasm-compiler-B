@@ -12,6 +12,7 @@ import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { BuiltinLib } from './builtinlib';
 import { BlobOptions } from 'buffer';
 import { removeGenerics } from './remove-generics';
 
@@ -127,10 +128,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $min (import "imports" "min") (param i32) (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32) (param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
+
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
