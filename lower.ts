@@ -101,7 +101,12 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       //   ...valstmts,
       //   { a: s.a, tag: "assign", name: s.name, value: vale}
       // ]];
-
+    case "assign-destr":
+      var allinits:Array<IR.VarInit<[Type, SourceLocation]>> = []
+      var lhs = s.destr
+      var rhs = s.rhs
+      lowerAllDestructureAssignments(blocks, lhs, rhs, env, allinits, s.a[1]);
+      return allinits
     case "return":
     var [valinits, valstmts, val] = flattenExprToVal(s.value, blocks, env);
     blocks[blocks.length - 1].stmts.push(
@@ -254,6 +259,84 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var counter = s.loopCounter;
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: "$whilestart" + counter});
       return []
+  }
+}
+
+function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
+  switch(rhs.tag){
+    case "non-paren-vals":
+      let lhs_index = 0
+      let rhs_index = 0
+      while (lhs_index < lhs.length && rhs_index < rhs.values.length) {
+        let l = lhs[lhs_index].lhs
+        let r = rhs.values[rhs_index]
+        if(r.a[0].tag==="class"){ //for all iterable classes
+          var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
+          allinits.push(...valinits);
+          pushStmtsToLastBlock(blocks, ...valstmts);
+          const iterClassName = r.a[0].name;
+          if(va.tag==="id"){
+            var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+            var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasNext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+          
+            //will probably fail for cases like 'a,b,c = range(1,3),5
+            while(lhs_index < lhs.length){
+              l = lhs[lhs_index].lhs
+              var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
+              pushStmtsToLastBlock(blocks, ...stmts);
+              allinits.push(...inits);
+              lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
+              lhs_index++;
+            }
+            rhs_index++;
+          }
+
+        }
+        if(lhs_index < lhs.length && rhs_index < rhs.values.length){
+          l = lhs[lhs_index].lhs
+          r = rhs.values[rhs_index]
+          lowerDestructAssignment(blocks, l, r, env, allinits);
+          rhs_index++;
+          lhs_index++;
+        }else break;
+      }
+      break;
+      default:
+        throw new Error("Not supported rhs for destructuring!")
+
+  }
+}
+
+
+function lowerDestructAssignment(blocks: {
+  a?: [AST.Type, AST.SourceLocation]; label: string;
+  //   return [name, {tag: "label", a: a, name: name}];
+  // }
+  stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[];
+}[], l: AST.AssignTarget<[AST.Type, AST.SourceLocation]>, r: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits:IR.VarInit<[AST.Type, AST.SourceLocation]>[]) {
+
+  if(l.tag === "lookup"){
+    var [oinits, ostmts, oval] = flattenExprToVal(l.obj, blocks, env);
+    var [ninits, nstmts, nval] = flattenExprToVal(r, blocks, env);
+    if(l.obj.a[0].tag !== "class") { throw new Error("Compiler's cursed, go home."); }
+    const classdata = env.classes.get(l.obj.a[0].name);
+    const offset : IR.Value<[Type, SourceLocation]> = { tag: "wasmint", value: classdata.get(l.field)[0] };
+    pushStmtsToLastBlock(blocks,
+      ...ostmts, ...nstmts, {
+        tag: "store",
+        a: l.a,
+        start: oval,
+        offset: offset,
+        value: nval
+      });
+    allinits.push(...oinits, ...ninits);
+  }
+  else if(l.tag === "id" && l.name!=="_"){
+    var [valinits, valstmts, vale] = flattenExprToExpr(r,blocks, env);
+    //@ts-ignore
+    //name always in id cases
+    blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
+    allinits.push(...valinits);
   }
 }
 

@@ -26,6 +26,7 @@ export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, 
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }
+  | {  a?: A, tag: "assign-destr", destr: DestructureLHS<A>[], rhs:Expr<A> }
   | {  a?: A, tag: "return", value: Expr<A> }
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
@@ -53,6 +54,7 @@ export type Expr<A> =
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression
+  | {  a?: A, tag: "non-paren-vals", values: Array<Expr<A>> }
 
 export type Literal<A> = 
     { a?: A, tag: "num", value: number }
@@ -68,3 +70,10 @@ export enum UniOp { Neg, Not };
 export type Value =
     Literal<null>
   | { tag: "object", name: string, address: number}
+
+export type DestructureLHS<A> = { a?: A, lhs: AssignTarget<A>, isStarred : boolean, isIgnore : boolean}
+
+export type AssignTarget<A> = 
+| {  a?: A,  tag : "id", name : string}
+| {  a?: A,  tag : "lookup", obj: Expr<A>, field: string }
+| {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }

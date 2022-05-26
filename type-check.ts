@@ -1,6 +1,6 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation, DestructureLHS } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
@@ -272,6 +272,12 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       if(!isAssignable(env, tValExpr.a[0], nameTyp)) 
         throw new TypeCheckError("`" + tValExpr.a[0].tag + "` cannot be assigned to `" + nameTyp.tag + "` type", stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
+    case "assign-destr":
+      var tDestr: DestructureLHS<[Type, SourceLocation]>[] = tcDestructureTargets(stmt.destr, env, locals);
+
+      var tRhs: Expr<[Type, SourceLocation]> = tcDestructureValues(tDestr, stmt.rhs, env, locals, stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, destr: tDestr, rhs:tRhs}
+     
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
@@ -352,7 +358,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``);
+        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, stmt.a);
       }
       if (tObj.a[0].tag === "list") {
         if (!isAssignable(env, tVal.a[0], tObj.a[0].type)) {
@@ -361,6 +367,115 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         return { ...stmt, a: [NONE, stmt.a], obj: tObj, index: tIndex, value: tVal };
       }
       throw new TypeCheckError(`Type \`${tObj.a[0].tag}\` does not support item assignment`, stmt.a); // Can only index-assign lists and dicts
+  }
+}
+
+export function tcDestructure(env : GlobalTypeEnv, locals : LocalTypeEnv, destr : DestructureLHS<SourceLocation>) : DestructureLHS<[Type, SourceLocation]> {
+  
+  // If it is an Ignore variable, do an early return as we don't need
+  // to type-check
+  if (destr.lhs.tag === "id" && destr.lhs.name === "_") {
+    return {...destr, a:[NONE, destr.a], lhs : {...destr.lhs, a: [NONE, destr.lhs.a]}}
+  }
+
+  var tcAt = tcExpr(env, locals, destr.lhs)
+  // Will never come here, handled in parser
+  //@ts-ignore
+  return {...destr, a:[tcAt.a[0], destr.a], lhs:tcAt}
+}
+
+function tcDestructureTargets(destr: DestructureLHS<SourceLocation>[], env: GlobalTypeEnv, locals: LocalTypeEnv) : DestructureLHS<[Type, SourceLocation]>[]{
+  return destr.map(r => tcDestructure(env, locals, r));
+}
+
+function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], rhs:Expr<SourceLocation>, env: GlobalTypeEnv, locals: LocalTypeEnv, stmtLoc: SourceLocation) : Expr<[Type, SourceLocation]>{
+  var tRhs: Expr<[Type, SourceLocation]> =  tcExpr(env, locals, rhs);
+
+  var hasStarred = false;
+      tDestr.forEach(r => {
+        hasStarred = hasStarred || r.isStarred
+  })
+
+  switch(tRhs.tag) {
+    case "non-paren-vals":
+      //TODO logic has to change - when all iterables are introduced
+      var isIterablePresent = false;
+      tRhs.values.forEach(r => {
+        //@ts-ignore
+        if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
+          isIterablePresent = true;
+        }
+      })
+
+      //Code only when RHS is of type literals
+      if(tDestr.length === tRhs.values.length || 
+        (hasStarred && tDestr.length < tRhs.values.length)||
+        (hasStarred && tDestr.length-1 === tRhs.values.length) || 
+        isIterablePresent){
+          tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
+          return tRhs
+        }
+      else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+    default:
+      throw new Error("not supported expr type for destructuring")
+  }
+}
+/** Function to check types of destructure assignments */
+function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
+  
+  let lhs_index = 0
+  let rhs_index = 0
+
+  while (lhs_index < tDestr.length && rhs_index < tRhs.length) {
+    if (tDestr[lhs_index].isStarred) {
+      break;
+    } else if (tDestr[lhs_index].isIgnore) {
+      lhs_index++
+      rhs_index++
+    } else {
+      //@ts-ignore
+      if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
+        //FUTURE: support range class added by iterators team, currently support range class added from code
+        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
+        //checking type of lhs with type of return of range
+        //Length mismatch from iterables will be RUNTIME ERRORS
+        if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+        } else {
+          lhs_index++
+          rhs_index++
+        }
+      } 
+      else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+        } 
+      else {
+        lhs_index++
+        rhs_index++
+      }
+    }
+  
+  }
+
+  // Only doing this reverse operation in case of starred
+  if (hasStarred) {
+    if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
+      //@ts-ignore
+    } else if (tDestr[lhs_index].isIgnore) {
+      lhs_index--
+      rhs_index--
+    } else {
+      let rev_lhs_index = tDestr.length - 1;
+      let rev_rhs_index = tRhs.length - 1;
+      while (rev_lhs_index > lhs_index) {
+        if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+        } else {
+          rev_rhs_index--
+          rev_lhs_index--
+        }
+      }
+    }
   }
 }
 
@@ -524,6 +639,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
+
+        //To support range class for now
+        if (expr.name === "range") {
+          return tConstruct;
+        }
+
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
@@ -669,6 +790,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // delete comp var name from globals
       env.globals.delete(newItemName);
       return { ...expr, a: [expr.type, expr.a], lhs: tLhs, item: newItemName, iterable: tIterable, ifcond: tCompIfCond };
+
+    case "non-paren-vals":
+      const nonParenVals = expr.values.map((val) => tcExpr(env, locals, val));
+      return { ...expr, a: [NONE, expr.a], values: nonParenVals };
+  
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`, expr.a);
   }
 }
