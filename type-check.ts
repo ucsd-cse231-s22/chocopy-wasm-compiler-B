@@ -399,27 +399,41 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
   switch(tRhs.tag) {
     case "non-paren-vals":
       //TODO logic has to change - when all iterables are introduced
-      var isIterablePresent = false;
-      tRhs.values.forEach(r => {
-        //@ts-ignore
-        if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
-          isIterablePresent = true;
-        }
-      })
+      var isIterablePresent = checkIterablePresence(tRhs.values)
 
       //Code only when RHS is of type literals
       if(tDestr.length === tRhs.values.length || 
         (hasStarred && tDestr.length < tRhs.values.length)||
         (hasStarred && tDestr.length-1 === tRhs.values.length) || 
-        isIterablePresent){
+        isIterablePresent) {
           tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
           return tRhs
         }
       else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+
+    case "call":
+      if(tRhs.a[0].tag === "class"){ 
+        tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
+        return tRhs
+      }
+      
     default:
       throw new Error("not supported expr type for destructuring")
   }
 }
+
+function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean {
+  var isIterablePresent = false
+  values.forEach(r => {
+    //@ts-ignore
+    if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
+      isIterablePresent = true;
+    }
+  })
+  return isIterablePresent
+}
+
+
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
   
@@ -434,9 +448,14 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       rhs_index++
     } else {
       //@ts-ignore
-      if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
+      if(tRhs[rhs_index].a[0].tag==="class"){
         //FUTURE: support range class added by iterators team, currently support range class added from code
-        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
+        //@ts-ignore
+        var clsName = tRhs[rhs_index].a[0].name
+        if (env.classes.get(clsName)[1].get('next')==null){
+          throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
+        }
+        var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
         //checking type of lhs with type of return of range
         //Length mismatch from iterables will be RUNTIME ERRORS
         if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
