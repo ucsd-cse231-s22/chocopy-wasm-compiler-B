@@ -474,7 +474,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       } 
       //Destructure return
       else {
-        if(rhsargs.length==1){
+        if(rhsargs.length==1 && (rhsargs[0].tag == "listliteral" || rhsargs[0].tag == "set")){
           return {
             a : location,
             tag : "assign-destr", 
