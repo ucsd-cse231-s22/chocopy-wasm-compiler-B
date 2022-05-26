@@ -371,7 +371,7 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Sour
       var tIndex = tcExpr(env, locals, stmt.index);
       var tVal = tcExpr(env, locals, stmt.value);
       if (equalType(tObj.a[0], CLASS("str"))) {
-        throw new TypeCheckError("string is immutable")
+        throw new TypeCheckError("string is immutable", stmt.a)
 
       }
       if (tIndex.a[0].tag != "number") {
@@ -853,12 +853,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       let tobj: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.obj);
       let tindex: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.index)
       if (tindex.a[0].tag != "number") {
-        throw new TypeError("non integer as index value", expr.a);
+        throw new TypeCheckError("non integer as index value", expr.a);
       }
       if (equalType(tobj.a[0], CLASS("str"))) {
         return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tobj, index: tindex };
       }
-      throw new TypeError("cannot index this type", expr.a);
+      throw new TypeCheckError("cannot index this type", expr.a);
     case "non-paren-vals":
       const nonParenVals = expr.values.map((val) => tcExpr(env, locals, val));
       return { ...expr, a: [NONE, expr.a], values: nonParenVals };
