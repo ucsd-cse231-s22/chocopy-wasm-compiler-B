@@ -11,7 +11,7 @@ import { compile } from "./compiler";
 // entry point for debugging
 async function debug() {
   var source = `s:str = "asdf"
-  print(len(s))`
+  s[1] = "p"`
 
 
   // set_1.add(3)
