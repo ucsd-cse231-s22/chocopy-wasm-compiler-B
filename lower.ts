@@ -325,6 +325,8 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
         l = lhs[lhs_index].lhs
         if(rhs_exprs.length!==0){
           lowerStarredAssignments(l, rhs_exprs, blocks, env, allinits);
+          console.log(lhs_index, rhs_index)
+          break;
         }
       } else {
         lowerDestructAssignment(blocks, l, r, env, allinits);
