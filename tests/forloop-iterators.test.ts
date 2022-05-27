@@ -299,7 +299,7 @@ for i in BoolIterable():
 
 ` ,["True", "False","True", "False","True", "False"]);
 
-assertPrint('List Iterator' , rangeStr + `
+assertPrint('List Iterator Int' , rangeStr + `
 class ListIteratorInt(object) : 
    list :  [int] = None
    index : int = 0
@@ -317,7 +317,7 @@ class ListIteratorInt(object) :
 def len(l: [int]) -> int:
     return 5
 
-def listToIterator(initVal: [int]) -> ListIteratorInt :
+def listToIteratorInt(initVal: [int]) -> ListIteratorInt :
     return ListIteratorInt().new(initVal)
     
 l : [int] = None
@@ -327,6 +327,35 @@ for i in l:
     print(i)
 
 ` ,["1","2","3","4","5"]);
+
+assertPrint('List Iterator Bool' , rangeStr + `
+class ListIteratorBool(object) : 
+   list :  [bool] = None
+   index : int = 0
+   def new(self :  ListIteratorBool, initVal :  [bool]) -> ListIteratorBool : 
+   	self.list = initVal
+   	return self
+   def next(self :  ListIteratorBool) -> bool : 
+   	ret :  bool = False
+   	ret = self.list[self.index]
+   	self.index = self.index + 1
+   	return ret
+   def hasnext(self :  ListIteratorBool) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [bool]) -> int:
+    return 5
+
+def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
+    return ListIteratorBool().new(initVal)
+    
+l : [bool] = None
+i: bool = False
+l = [True, False, True, False, True, False]
+for i in l:
+    print(i)
+
+` ,["True", "False", "True", "False", "True"]);
 
 
     assertTCFail('range: type checking for loop variable ', rangeStr + `
