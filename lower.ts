@@ -226,12 +226,12 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var forEndLbl = generateName("$whileend");
       var iterableObject = generateName("$iterableobject")
       
-      var [in_inits, in_stmts, in_expr] = flattenExprToExpr(s.iterable, blocks, env);
-      pushStmtsToLastBlock(blocks, ...in_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: in_expr} );
+      var [iter_inits, iter_stmts, iter_expr] = flattenExprToExpr(s.iterable, blocks, env);
+      pushStmtsToLastBlock(blocks, ...iter_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: iter_expr} );
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
 
-      let condExpr:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, s.a[1]],tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
+      let condExpr:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, s.a[1]], tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
       var [cinits, cstmts, cexpr] = flattenExprToVal(condExpr, blocks, env);
       pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forElseLbl });
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
@@ -249,7 +249,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forEndLbl });
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
 
-      return [...in_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { tag: "none" } }]
+      return [...iter_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { tag: "none" } }]
     
     case "break":
       var counter = s.loopCounter;

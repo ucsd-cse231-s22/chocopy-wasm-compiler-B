@@ -299,6 +299,33 @@ for i in BoolIterable():
 
 ` ,["True", "False","True", "False","True", "False"]);
 
+assertPrint('List Iterator' , rangeStr + `
+class ListIteratorInt(object) : 
+   list :  [int] = None
+   index : int = 0
+   def new(self :  ListIteratorInt, initVal :  [int]) -> ListIteratorInt : 
+   	self.list = initVal
+   	return self
+   def next(self :  ListIteratorInt) -> int : 
+   	ret :  int = 0
+   	ret = self.list[self.index]
+   	self.index = self.index + 1
+   	return ret
+   def hasnext(self :  ListIteratorInt) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [int]) -> int:
+    return 10
+    
+l : [int] = None
+i: int = 0
+l = [1,2,3,4,5,6,7,8,9,10]
+for i in l:
+    print(i)
+
+` ,["True", "False","True", "False","True", "False"]);
+
+
     assertTCFail('range: type checking for loop variable ', rangeStr + `
 
 i : bool = False

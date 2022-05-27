@@ -169,6 +169,16 @@ export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
   return true;
 }
 
+export function convertToIterableObject(env : GlobalTypeEnv, iterable: Expr<[Type, SourceLocation]>) : Expr<[Type, SourceLocation]> {
+  if(iterable.a[0].tag === "list") {
+    var iterableClass = "ListIterableInt";
+    var obj : Expr<[Type, SourceLocation]> = { a: [CLASS(iterableClass), iterable.a[1]], tag: "call", name: iterableClass, arguments: []}; 
+    return {a: [CLASS("ListIterableInt"), iterable.a[1]], tag: "method-call", obj, method: "new", arguments: [iterable] };
+  }
+  return iterable;
+}
+
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
@@ -317,9 +327,10 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       locals.currLoop.push(locals.loopCount);
       var tForBody = tcBlock(env, locals, stmt.body);
       locals.currLoop.pop();
-      if(tIterable.a[0].tag !== "class" || !isIterableObject(env, tIterable.a[0]))
+      var [isIterator, tIterableRet] = isIterable(env, tIterable.a[0])
+      if(!isIterator)
         throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
-      let tIterableRet = env.classes.get(tIterable.a[0].name)[1].get("next")[1];
+      //@ts-ignore
       if(!equalType(tVars.a[0], tIterableRet))
         throw new TypeCheckError("Expected type `"+ tIterableRet.tag +"`, got type `" + tVars.a[0].tag + "`", stmt.a);
       if(stmt.elseBody !== undefined) {
