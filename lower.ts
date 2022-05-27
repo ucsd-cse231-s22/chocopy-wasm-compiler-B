@@ -224,7 +224,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var forbodyLbl = generateName("$whilebody");
       var forElseLbl = generateName("$forelse")
       var forEndLbl = generateName("$whileend");
-      var iterableObject = generateName("$iterableobject")
+      var iterableObject = generateName("$iterableobject")  
       
       var [iter_inits, iter_stmts, iter_expr] = flattenExprToExpr(s.iterable, blocks, env);
       pushStmtsToLastBlock(blocks, ...iter_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: iter_expr} );
