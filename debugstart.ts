@@ -3,7 +3,7 @@ import { parser } from "lezer-python";
 import { parse } from "./parser";
 import { tc } from "./type-check";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs } from "./tests/string-import-object.test";
+import { importObject, addLibs } from "./tests/import-object.test";
 import { augmentEnv, Config } from "./runner";
 import { lowerProgram } from "./lower";
 import { compile } from "./compiler";
@@ -32,10 +32,9 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
     `
-    def f(s:str, i:int, t:str, j:int)->bool:
-      return s[i] > t[j]
-    print(f("asd", 1, "fgh", 1))
-    `
+  s:str = "abc"
+  s[1]
+  `
 
   // const t = parser.parse(source);
   // console.log(stringifyTree(t.cursor(), source, null))
@@ -45,9 +44,9 @@ async function debug() {
   const repl = new BasicREPL(await addLibs());
   const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
   const parsed = parse(source);
-  // console.log(JSON.stringify(parsed, null, 2))
+  console.log(JSON.stringify(parsed, null, 2))
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  console.log(JSON.stringify(tprogram, null, 2))
+  // console.log(JSON.stringify(tprogram, null, 2))
   // const globalEnv = augmentEnv(config.env, tprogram);
   // const irprogram = lowerProgram(tprogram, globalEnv);
   // console.log(JSON.stringify(irprogram, null,2))
