@@ -510,7 +510,7 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
     } else {
       while (rev_lhs_index > lhs_index) {
         if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
-          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].lhs.a[1])
         } else {
           rev_rhs_index--
           rev_lhs_index--
@@ -524,12 +524,12 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
   if (hasStarred && rev_rhs_index >= lhs_index) {
     // Get type of the starred expression
     if (tDestr[lhs_index].lhs.a[0].tag !== "list") {
-      throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].a[1])
+      throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].lhs.a[1])
     }
 
     //@ts-ignore
     if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
-      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].a[1])
+      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
     } 
     rev_rhs_index--
   }
