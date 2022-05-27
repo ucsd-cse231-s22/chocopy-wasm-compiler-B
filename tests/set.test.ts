@@ -38,10 +38,10 @@ describe("set-functionalities", () => {
     set_1.remove(1)
     print(len(set_1))`, [`1`]);
 
-    // assertPrint("set-remove-in", `
-    // set_1 : set[int] = None
-    // set_1 = {1,2}
-    // set_1.remove(1)
-    // print(1 in set_1)`, [`False`]);
+    assertPrint("set-remove-in", `
+    set_1 : set[int] = None
+    set_1 = {1,2}
+    set_1.remove(1)
+    print(1 in set_1)`, [`False`]);
 
 });
