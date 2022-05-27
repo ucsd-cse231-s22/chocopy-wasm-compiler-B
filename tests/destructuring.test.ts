@@ -4,57 +4,57 @@ import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 
 describe("Destructuring Tests", () => {
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren", `
 x : bool = True
 y : int = 12
 x,y = 1,2,3`)
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren", `
 x : bool = True
 y : int = 12
 x,y,z = 1,2`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - binop", `
 x : bool = True
 y : int = 12
 x,y = 1+2`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - binop", `
 x : bool = True
 y : int = 12
 x,y,z = 1,2+3`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore", `
 x : bool = True
 y : int = 12
 x,y,_ = 1,2`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore", `
 x : bool = True
 y : int = 12
 x,y,_ = 1,2,3,4`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore - binop", `
 x : bool = True
 y : int = 12
 x,y,_ = 1,2+3`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore - binop", `
 x : bool = True
 y : int = 12
 x,y,_ = 1,2,3+4,5`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore - star", `
 x : bool = True
 y : int = 12
 x,y,_,*c = 2,3`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - star", `
 x : bool = True
 y : int = 12
 x,y,*c = 2`);
 
-assertTCFail("length mismatch left and right hand side of assignment expression", `
+assertTCFail("length mismatch - non Paren - ignore - star - binop", `
 x : bool = True
 y : int = 12
 x,y,_,*c = 5+6`);
@@ -127,12 +127,12 @@ print(y)` , ["123", "30", "True"]);
 
 assertPrint("destr-starred", `
 x : int = 0
-y : int = 0
+y : [int] = None
 z : int = 0
 
 x, *y, z = 5, 10, 20
 print(x)
-print(y)
+print(y[0])
 print(z)` , ["5", "10", "20"]);
 
 assertPrint("destr-fnCallValid", `
@@ -216,5 +216,134 @@ def f(a:int):
     print(z)
 
 f(5)` , ["25", "5", "-20"]);
+
+//Lists
+
+assertTCFail("length mismatch - lists", `
+x : int = 2
+y : int = 12
+x,y = [1,2,3]`)
+
+assertTCFail("length mismatch - lists", `
+x : int = 2
+y : int = 12
+x,y,z = [1,2]`);
+
+assertTCFail("length mismatch - lists - binop", `
+x : int = 2
+y : int = 12
+x,y = [1+2]`);
+
+assertTCFail("length mismatch - lists - binop", `
+x : int = 2
+y : int = 12
+x,y,z = [1,2+3]`);
+
+assertTCFail("length mismatch - lists - ignore", `
+x : int = 2
+y : int = 12
+x,y,_ = [1,2]`);
+
+assertTCFail("length mismatch - lists - ignore", `
+x : int = 2
+y : int = 12
+x,y,_ = [1,2,3,4]`);
+
+assertTCFail("length mismatch - lists - ignore - binop", `
+x : int = 2
+y : int = 12
+x,y,_ = [1,2+3]`);
+
+assertTCFail("length mismatch - lists - ignore - binop", `
+x : int = 2
+y : int = 12
+x,y,_ = [1,2,3+4,5]`);
+
+assertPrint("basic-destr-list", `
+x : int = 0
+y : int  = 0
+x, y = [5, 6]
+print(x)
+print(y)` , ["5", "6"]);
+
+assertPrint("destr-underscore-list", `
+x : int = 0
+y : int  = 0
+x,_, y = [5, 6, 7]
+print(x)
+print(y)` , ["5", "7"]);
+
+assertPrint("destr-single-list", `
+a: [int] = None
+a = [1, 2, 3]
+print(a[0])
+print(a[1])
+print(a[2])`, ["1","2","3"]);
+
+assertTCFail("length mismatch - lists - ignore - star", `
+x : int = 2
+y : int = 12
+c = [int] = None
+x,y,_,*c = [2,3]`);
+
+assertPrint("destr-list-star-1", `
+x : int = 2
+y : int = 12
+z : [int] = None
+x,y,*z = [1, 2, 3, 4, 5]
+print(x)
+print(y)
+print(z[0])
+print(z[1])
+print(z[2])`, ["1","2","3","4","5"]);
+
+assertPrint("destr-list-star-2", `
+x : int = 2
+y : int = 12
+z : [int] = None
+x,*z,y= [1, 2, 3, 4, 5]
+print(x)
+print(z[0])
+print(z[1])
+print(z[2])
+print(y)`, ["1","2","3","4","5"]);
+
+assertPrint("destr-list-star-2", `
+x : int = 2
+y : int = 12
+z : [int] = None
+*z,x,y= [1, 2, 3, 4, 5]
+print(z[0])
+print(z[1])
+print(z[2])
+print(x)
+print(y)`, ["1","2","3","4","5"]);
+
+assertPrint("destr-list-star-ignore-1", `
+x : int = 2
+y : int = 12
+z : [int] = None
+x,y,_,*z = [1, 2, 3, 4, 5, 6]
+print(x)
+print(y)
+print(z[0])
+print(z[1])
+print(z[2])`, ["1","2","4","5","6"]);
+
+assertPrint("destr-list-star-ignore-2", `
+x : int = 2
+y : int = 12
+z : [int] = None
+x,_,*z,y = [1, 2, 3, 4, 5, 6]
+print(x)
+print(z[0])
+print(z[1])
+print(z[2])
+print(y)`, ["1","3","4","5","6"]);
+
+assertTCFail("Type Mismatch - lists - star", `
+x : int = 2
+y : set[int] = None
+x,*y = [2,3,6,7]`);
 
 });
