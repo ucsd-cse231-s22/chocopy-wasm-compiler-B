@@ -90,17 +90,21 @@ function webStart() {
           
           // elt.value = source;
           replCodeElement.value = "";
-    
-          if(source === ""){
-            return false;
+
+          var codeHeight = -20
+          if(source !== ""){
+            repl.run(source).then((r) => {
+              // console.log(r);
+              var objectTrackList = repl.trackObject(r, repl.trackHeap());
+              renderResult(r, objectTrackList);
+              console.log("run finished");
+            })
+              .catch((e) => { renderError(e); console.log("run failed", e) });
+            codeHeight = 20;
           }
-          repl.run(source).then((r) => {
-            // console.log(r);
-            var objectTrackList = repl.trackObject(r, repl.trackHeap());
-            renderResult(r, objectTrackList);
-            console.log("run finished");
-          })
-            .catch((e) => { renderError(e); console.log("run failed", e) });;
+          var interactions = document.getElementById("interactions") as HTMLDivElement;
+          interactions.scrollTop = interactions.scrollHeight + codeHeight;
+          // console.log(interactions.scrollTop);
         }
       });
     }
@@ -109,6 +113,12 @@ function webStart() {
 
     function resetRepl() {
       document.getElementById("output").innerHTML = "";
+      var beforeText = document.querySelector(".prompt-text") as HTMLElement;
+      beforeText.innerHTML = "";
+      var afterText = document.getElementById("prompt-text-after") as HTMLSpanElement;
+      afterText.innerHTML = "";
+      var sourceCode = document.getElementById("next-code") as HTMLTextAreaElement;
+      sourceCode.value = "";
     }
 
     document.getElementById("clear").addEventListener("click", (e)=>{
@@ -116,8 +126,11 @@ function webStart() {
       //resets environment
       repl = new BasicREPL(importObject);
       //clear editor
-      var element = document.getElementById("user-code") as HTMLTextAreaElement;
-      element.value = "";
+      // var element = document.getElementById("user-code") as HTMLTextAreaElement;
+      var element = document.querySelector(".CodeMirror") as any;
+      var editor = element.CodeMirror;
+      editor.setValue("");
+      editor.clearHistory();
     })
 
     document.getElementById("run").addEventListener("click", function (e) {
