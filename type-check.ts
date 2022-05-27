@@ -621,7 +621,7 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       //@ts-ignore
       if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
         //FUTURE: support range class added by iterators team, currently support range class added from code
-        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
+        var expectedRhsType:Type = env.classes.get('Range')[2].get('next')[1];
         //checking type of lhs with type of return of range
         //Length mismatch from iterables will be RUNTIME ERRORS
         if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
