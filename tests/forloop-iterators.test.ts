@@ -315,9 +315,9 @@ class ListIteratorInt(object) :
     return self.index < len(self.list)
 
 def len(l: [int]) -> int:
-    return 10
+    return 5
 
-def listtoIterator(initVal: [int]) -> ListIteratorInt :
+def listToIterator(initVal: [int]) -> ListIteratorInt :
     return ListIteratorInt().new(initVal)
     
 l : [int] = None
@@ -326,7 +326,7 @@ l = [1,2,3,4,5,6,7,8,9,10]
 for i in l:
     print(i)
 
-` ,["True", "False","True", "False","True", "False"]);
+` ,["1","2","3","4","5"]);
 
 
     assertTCFail('range: type checking for loop variable ', rangeStr + `

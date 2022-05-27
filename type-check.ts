@@ -171,7 +171,7 @@ export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
 
 export function convertToIterableObject(env : GlobalTypeEnv, iterable: Expr<[Type, SourceLocation]>) : Expr<[Type, SourceLocation]> {
   if(iterable.a[0].tag === "list") {
-    return {a: [CLASS("ListIterableInt"), iterable.a[1]], tag: "call", name: "listToIterable", arguments: [iterable] };
+    return {a: [CLASS("ListIteratorInt"), iterable.a[1]], tag: "call", name: "listToIterator", arguments: [iterable] };
   }
   return iterable;
 }
