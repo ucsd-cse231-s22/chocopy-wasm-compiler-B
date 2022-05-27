@@ -398,17 +398,11 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
 
   switch(tRhs.tag) {
     case "non-paren-vals":
-      //TODO logic has to change - when all iterables are introduced
-      var isIterablePresent = checkIterablePresence(tRhs.values)
-
       //Code only when RHS is of type literals
-      if(tDestr.length === tRhs.values.length || 
-        (hasStarred && tDestr.length < tRhs.values.length)||
-        (hasStarred && tDestr.length-1 === tRhs.values.length) || 
-        isIterablePresent) {
+      if(checkDestrLength(tDestr, tRhs.values, hasStarred)) {
           tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
           return tRhs
-        }
+      }
       else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
 
     case "call":
@@ -416,10 +410,35 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
         tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
         return tRhs
       }
+      else throw new TypeCheckError("undefined iterable type on RHS of Destructuring", stmtLoc)
+
+    case "listliteral":
+      if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
+        tcAssignTargets(env, locals, tDestr, tRhs.elements, hasStarred)
+        return tRhs
+    }
+    else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
       
     default:
       throw new Error("not supported expr type for destructuring")
   }
+}
+
+function checkDestrLength(tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs : Expr<[Type, SourceLocation]>[], hasStarred : boolean): boolean {
+  
+  //TODO logic has to change - when all iterables are introduced
+  var isIterablePresent = checkIterablePresence(tRhs)
+
+  // TODO : Consider starred expressions
+  if (tDestr.length === tRhs.length || 
+    (hasStarred && tDestr.length < tRhs.length)||
+    (hasStarred && tDestr.length-1 === tRhs.length) || 
+    isIterablePresent) {
+      return true
+  }
+
+  return false
+
 }
 
 function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean {
