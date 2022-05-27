@@ -259,6 +259,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
   switch(stmt.tag) {
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
+      console.log(tValExpr)
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
         nameTyp = locals.vars.get(stmt.name);
@@ -522,8 +523,13 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
   //Check starred expression type vs remaining values
   if (hasStarred && rev_rhs_index >= lhs_index) {
     // Get type of the starred expression
-    if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
-      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+    if (tDestr[lhs_index].lhs.a[0].tag !== "list") {
+      throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].a[1])
+    }
+
+    //@ts-ignore
+    if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
+      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].a[1])
     } 
     rev_rhs_index--
   }
