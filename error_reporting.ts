@@ -1,3 +1,5 @@
+import { SourceLocation } from "./ast";
+import { stackTrace } from "./runtime_error";
 
 export class CompileTimeError extends Error {
     __proto__: Error
@@ -12,8 +14,12 @@ export class CompileTimeError extends Error {
 
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends CompileTimeError {
-    constructor(message?: string) {
-     super("TYPE ERROR: " + message);
+    constructor(message?: string, location?: SourceLocation) {
+     if (location === undefined) {
+      super("TYPE ERROR: " + message);
+     } else {
+      super("TYPE ERROR: " + message + " in line " + location.line.toString()+" at column " + location.column.toString() + "\n" + location.srcCode.trim());
+     }
    } 
  }
 
@@ -25,9 +31,9 @@ export class TypeCheckError extends CompileTimeError {
 
  export class ParseError extends CompileTimeError {
     __proto__: CompileTimeError 
-    constructor(message?: string, line?: number) {
+    constructor(message?: string, location?: SourceLocation) {
      const trueProto = new.target.prototype;
-     super("PARSE ERROR: " + message + "at line " + line.toString());
+     super("PARSE ERROR: " + message + " in line " + location.line.toString()+" at column " + location.column.toString() + "\n" + location.srcCode.trim());
      this.__proto__ = trueProto;
    } 
  }
@@ -36,7 +42,7 @@ export class TypeCheckError extends CompileTimeError {
     __proto__: Error
     constructor(message?: string) {
      const trueProto = new.target.prototype;
-     super("RUNTIME ERROR: " + message);
+     super(message);
  
      // Alternatively use Object.setPrototypeOf if you have an ES6 environment.
      this.__proto__ = trueProto;
