@@ -47,3 +47,8 @@ export function stackTrace() : string {
 function splitString() : Array<string> {
   return sourceCode.split("\n");
 }
+
+export function end_of_iterator(hasnext:any) {
+  if(hasnext == false)
+    throw new Error(`StopIteration: End of iterator`);
+}
