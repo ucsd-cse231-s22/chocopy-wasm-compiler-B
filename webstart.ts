@@ -70,7 +70,7 @@ function webStart() {
     ).then(strings =>
       WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
     );
-    importObject.libset = setModule.instance.exports;
+    importObject.libstring = stringModule.instance.exports;
 
     
     var repl = new BasicREPL(importObject);
