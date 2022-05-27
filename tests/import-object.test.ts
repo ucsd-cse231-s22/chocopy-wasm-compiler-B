@@ -37,8 +37,8 @@ function index_out_of_bounds(length: any, index: any): any {
   return index;
 }
 
-const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
 export async function addLibs() {
+  const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
   const bytes = readFileSync("build/memory.wasm");
   const setBytes = readFileSync("build/sets.wasm");
   const stringBytes = readFileSync("build/string.wasm");
@@ -50,6 +50,7 @@ export async function addLibs() {
   importObject.libstring = stringModule.instance.exports;
   importObject.memory_values = memory;
   importObject.js = { memory };
+  importObject.imports.print_str =  (arg: number) => print(Type.String, arg, memory);
   return importObject;
 }
 
@@ -68,7 +69,6 @@ export const importObject: any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    print_str: (arg: number) => print(Type.String, arg, memory),
     ...BuiltinLib.reduce((o: Record<string, Function>, key) => Object.assign(o, { [key.name]: key.body }), {}),
   },
 
