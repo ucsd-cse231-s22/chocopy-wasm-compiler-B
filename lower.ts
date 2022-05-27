@@ -3,6 +3,7 @@ import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { createModuleResolutionCache } from 'typescript';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -265,6 +266,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
 function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
   switch(rhs.tag){
     case "non-paren-vals":
+    case "set":
       var rhs_vals = rhs.values
       destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
       break;
@@ -272,15 +274,13 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
       var rhs_vals = rhs.elements
       destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
       break;
-    case "set":
-      break;
     default:
       throw new Error("Not supported rhs for destructuring!")
 
   }
 }
 
-function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
+function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
   let lhs_index = 0
   let rhs_index = 0
   while (lhs_index < lhs.length && rhs_index < rhs_vals.length) {
@@ -311,11 +311,64 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
     if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
       l = lhs[lhs_index].lhs
       r = rhs_vals[rhs_index]
-      lowerDestructAssignment(blocks, l, r, env, allinits);
-      rhs_index++;
-      lhs_index++;
+      if(lhs[lhs_index].isStarred){
+        var rev_lhs_index = lhs.length-1
+        var rev_rhs_index = rhs_vals.length - 1
+        while(rev_lhs_index > lhs_index){
+          l = lhs[rev_lhs_index].lhs
+          r = rhs_vals[rev_rhs_index]
+          lowerDestructAssignment(blocks, l, r, env, allinits);
+          rev_rhs_index--;
+          rev_lhs_index--;
+        }
+        const rhs_exprs = rhs_vals.slice(lhs_index, rev_rhs_index+1);
+        l = lhs[lhs_index].lhs
+        if(rhs_exprs.length!==0){
+          lowerStarredAssignments(l, rhs_exprs, blocks, env, allinits);
+        }
+      } else {
+        lowerDestructAssignment(blocks, l, r, env, allinits);
+        rhs_index++;
+        lhs_index++;
+      }
     }else break;
   }
+}
+
+function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rhs_exprs: AST.Expr<[Type, SourceLocation]>[], blocks: { a?: [Type, SourceLocation]; label: string; stmts: IR.Stmt<[Type, SourceLocation]>[]; }[], 
+  env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[]) {
+  const newListName = generateName("newList");
+  const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: rhs_exprs.length + 1 } };
+  var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
+  var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
+  var storeLength : IR.Stmt<[Type, SourceLocation]> = {
+    tag: "store",
+    start: { tag: "id", name: newListName },
+    offset: { tag: "wasmint", value: 0 },
+    value: { a: [{tag: "number"}, rhs_exprs[0].a[1]], tag: "num", value: BigInt(rhs_exprs.length) }
+  }
+  const assignsList : IR.Stmt<[Type, SourceLocation]>[] = rhs_exprs.map((e, i) => {
+    const [init, stmt, val] = flattenExprToVal(e, blocks, env);
+    inits = [...inits, ...init];
+    stmts = [...stmts, ...stmt];
+    return {
+      tag: "store",
+      start: { tag: "id", name: newListName },
+      offset: { tag: "wasmint", value: i+1 },
+      value: val
+    }
+  })
+  allinits.push({ name: newListName, type: l.a[0], value: { tag: "none" } }, ...inits);
+  // var [valstmts, vale] = [
+  //   [ { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
+  //   { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName } }
+  // ];
+  //@ts-ignore
+  //blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
+  //console.log({ a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+  //@ts-ignore
+  pushStmtsToLastBlock(blocks, { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+
 }
 
 function lowerDestructAssignment(blocks: {
