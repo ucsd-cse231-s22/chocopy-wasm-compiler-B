@@ -970,7 +970,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
         [{ name: "self", type: CLASS(className, genericTypes) }], ret: NONE, inits: [], body: [] 
       });
     } else {
-      methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
+      methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: initBody });
     }
   }
   return {

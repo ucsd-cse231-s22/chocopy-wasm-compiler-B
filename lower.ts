@@ -28,7 +28,6 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
-    // var strInit = initStrings(p.inits);
     var inits = flattenStmts(p.stmts, blocks, env);
     return {
         a: p.a,
