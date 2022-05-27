@@ -190,11 +190,11 @@
   (func (export "str$copyconstructor") (param $self i32) (param $rhs i32) (result i32)
   (i32.const 0)
   (return))
-  (func (export "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32)
-      (local $newstr i32)
-      (local $newstrlength)
-      (i32.rem_u ())
-      (return))
+  ;; (func (export "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32)
+  ;;     (local $newstr i32)
+  ;;     (local $newstrlength i32)
+  ;;     ;; (i32.rem_u ())
+  ;;     (return))
   
   (func (export "str$upper") (param $self i32) (param $start i32) (result i32)
       (local $strLength i32)
@@ -209,15 +209,15 @@
         (i32.add (i32.const 1)(local.get $i))
         (call $load)
         (local.set $currVal)
-        (i32.le_u ($currVal) (i32.const 123))
+        (i32.le_u (local.get $currVal) (i32.const 123))
         (if
           (then
-            (i32.gt_u ($currVal) (i32.const 96))
+            (i32.gt_u (local.get $currVal) (i32.const 96))
             (if
               (then
                 (local.get $self)
                 (i32.add (i32.const 1) (local.get $i))
-                (i32.sub ($currVal) (i32.const 32))
+                (i32.sub (local.get $currVal) (i32.const 32))
                 (call $store)
               )
             )
@@ -243,15 +243,15 @@
         (i32.add (i32.const 1)(local.get $i))
         (call $load)
         (local.set $currVal)
-        (i32.le_u ($currVal) (i32.const 91))
+        (i32.le_u (local.get $currVal) (i32.const 91))
         (if
           (then
-            (i32.gt_u ($currVal) (i32.const 64))
+            (i32.gt_u (local.get $currVal) (i32.const 64))
             (if
               (then
                 (local.get $self)
                 (i32.add (i32.const 1) (local.get $i))
-                (i32.add ($currVal) (i32.const 32))
+                (i32.add (local.get $currVal) (i32.const 32))
                 (call $store)
               )
             )
