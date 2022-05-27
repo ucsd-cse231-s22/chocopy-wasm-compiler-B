@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { BuiltinLib} from "../builtinlib";
 import * as RUNTIME_ERROR from '../runtime_error'
 
 enum Type { Num, Bool, None }
@@ -55,10 +56,7 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    abs: Math.abs,
-    min: Math.min,
-    max: Math.max,
-    pow: Math.pow,
+    ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
 
   output: "",
