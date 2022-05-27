@@ -139,20 +139,6 @@ function optimizeExpr(expr: Expr<[Type, SourceLocation]>): Expr<[Type, SourceLoc
         case "call":
             var optArgs = expr.arguments.map(e => optimizeExpr(e));
             return {...expr, arguments: optArgs};
-        case "builtin1":
-            var optArg = optimizeExpr(expr.arg);
-            if (optArg.tag == "literal" && expr.name == "abs" && optArg.value.tag == "num") {
-                return {tag: "literal", value: {tag: "num", value: Math.abs(optArg.value.value)}, a: expr.a};
-            }
-            return {...expr, arg: optArg};
-        case "builtin2":
-            var optLeft = optimizeExpr(expr.left);
-            var optRight = optimizeExpr(expr.right);
-            if (optLeft.tag == "literal" && optRight.tag == "literal") {
-                const value = foldBuiltin2(optLeft.value, optRight.value, expr.name);
-                return {tag: "literal", value, a: expr.a};
-            }
-            return {...expr, left: optLeft, right: optRight};
         case "method-call":
             var optArgs = expr.arguments.map(e => optimizeExpr(e));
             return {...expr, arguments: optArgs};

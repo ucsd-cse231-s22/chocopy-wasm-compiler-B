@@ -5,13 +5,14 @@
 
 import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
-import {parse} from './parser';
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
+import { parse } from './parser';
+import { emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt } from './type-check';
 import { Program, Type, Value, SourceLocation } from './ast';
 import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
+import { BuiltinLib } from './builtinlib';
 import { BlobOptions } from 'buffer';
 import { removeGenerics } from './remove-generics';
 
@@ -31,15 +32,15 @@ export var sourceCode = "";
 // is given for this in the docs page, and I haven't spent time on the domain
 // module to figure out what's going on here. It doesn't seem critical for WABT
 // to have this support, so we patch it away.
-if(typeof process !== "undefined") {
+if (typeof process !== "undefined") {
   const oldProcessOn = process.on;
-  process.on = (...args : any) : any => {
-    if(args[0] === "uncaughtException") { return; }
+  process.on = (...args: any): any => {
+    if (args[0] === "uncaughtException") { return; }
     else { return oldProcessOn.apply(process, args); }
   };
 }
 
-export async function runWat(source : string, importObject : any) : Promise<any> {
+export async function runWat(source: string, importObject: any): Promise<any> {
   const wabtInterface = await wabt();
   const myModule = wabtInterface.parseWat("test.wat", source);
   var asBinary = myModule.toBinary({});
@@ -49,7 +50,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>): GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
@@ -74,18 +75,18 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 
-export async function run(source : string, config: Config, astOpt: boolean = false, irOpt: boolean = false) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource, string]> {
+export async function run(source: string, config: Config, astOpt: boolean = false, irOpt: boolean = false): Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource, string]> {
   const parsed = parse(source);
   sourceCode = source;
   const specialized = removeGenerics(parsed);
   var [tprogram, tenv] = tc(config.typeEnv, specialized);
-  if(astOpt){
+  if (astOpt) {
     tprogram = optimizeAst(tprogram);
   }
   const globalEnv = augmentEnv(config.env, tprogram);
   var irprogram = lowerProgram(tprogram, globalEnv);
 
-  if(irOpt){
+  if (irOpt) {
     irprogram = optimizeIr(irprogram);
   }
   // printProgIR(irprogram);
@@ -96,10 +97,10 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
-  if(progTyp !== NONE) {
+  if (progTyp !== NONE) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
-  } 
+  }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
@@ -112,8 +113,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
   ).join("\n");
 
   const importObject = config.importObject;
-  if(!importObject.js) {
-    const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+  if (!importObject.js) {
+    const memory = new WebAssembly.Memory({ initial: 2000, maximum: 2000 });
     importObject.js = { memory: memory };
   }
 
@@ -128,10 +129,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $print_str (import "imports" "print_str") (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $min (import "imports" "min") (param i32) (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32) (param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+${BuiltinLib.map(x => `    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
+
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
