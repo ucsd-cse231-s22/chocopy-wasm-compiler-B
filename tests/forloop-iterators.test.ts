@@ -316,6 +316,9 @@ class ListIteratorInt(object) :
 
 def len(l: [int]) -> int:
     return 10
+
+def listtoIterator(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
     
 l : [int] = None
 i: int = 0

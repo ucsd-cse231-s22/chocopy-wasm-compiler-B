@@ -171,9 +171,7 @@ export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
 
 export function convertToIterableObject(env : GlobalTypeEnv, iterable: Expr<[Type, SourceLocation]>) : Expr<[Type, SourceLocation]> {
   if(iterable.a[0].tag === "list") {
-    var iterableClass = "ListIterableInt";
-    var obj : Expr<[Type, SourceLocation]> = { a: [CLASS(iterableClass), iterable.a[1]], tag: "call", name: iterableClass, arguments: []}; 
-    return {a: [CLASS("ListIterableInt"), iterable.a[1]], tag: "method-call", obj, method: "new", arguments: [iterable] };
+    return {a: [CLASS("ListIterableInt"), iterable.a[1]], tag: "call", name: "listToIterable", arguments: [iterable] };
   }
   return iterable;
 }
@@ -323,6 +321,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
     case "for":
       var tVars = tcExpr(env, locals, stmt.vars);
       var tIterable = tcExpr(env, locals, stmt.iterable);
+      tIterable = convertToIterableObject(env, tIterable);
       locals.loopCount = locals.loopCount+1;
       locals.currLoop.push(locals.loopCount);
       var tForBody = tcBlock(env, locals, stmt.body);
