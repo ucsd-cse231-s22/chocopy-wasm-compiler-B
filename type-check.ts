@@ -503,13 +503,13 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
   // Only doing this reverse operation in case of starred
   if (hasStarred) {
     if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
-      //@ts-ignore
-    } else if (tDestr[lhs_index].isIgnore) {
-      lhs_index--
-      rhs_index--
+      return
     } else {
       while (rev_lhs_index > lhs_index) {
-        if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
+        if (tDestr[rev_lhs_index].isIgnore) {
+          rev_rhs_index--
+          rev_lhs_index--
+        } else if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].lhs.a[1])
         } else {
           rev_rhs_index--
