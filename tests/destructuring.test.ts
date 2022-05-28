@@ -346,4 +346,111 @@ x : int = 2
 y : set[int] = None
 x,*y = [2,3,6,7]`);
 
+assertPrint("destr-fnCallValid", `
+def f() -> int:
+ return 5
+
+x : int = 0
+y : int = 0
+z : int = 0
+
+x, y, z = f() + 1 , f() + 2, f() + 3
+print(x)
+print(y)
+print(z)` , ["6", "7", "8"]);
+
+assertPrint("destr-fnCallValid-ignore-star", `
+def f() -> int:
+ return 5
+
+x : int = 0
+y : int = 0
+z : [int] = None
+
+x, y, _, *z = f() + 1 , f() + 2, f() + 3, f() + 4 , f() + 5, f() + 6
+print(x)
+print(y)
+print(z[0])
+print(z[1])
+print(z[2])` , ["6", "7", "9", "10", "11"]);
+
+assertPrint("destr-fnCallValidParam-lists", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : int = 0
+
+    x, y, z = [a + 1 , a + 2, a + 3]
+    print(x)
+    print(y)
+    print(z)
+
+f(5)` , ["6", "7", "8"]);
+
+assertPrint("destr-fnCallValidParam-lists-ignore-star-1", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : [int] = None
+
+    x, y,_, *z = [a + 1 , a + 2, a + 3, a + 4, a + 5, a + 6 ]
+    print(x)
+    print(y)
+    print(z[0])
+    print(z[1])
+    print(z[2])
+
+f(5)` , ["6", "7", "9", "10", "11"]);
+
+
+assertPrint("destr-fnCallValidParam-lists-ignore-star-2", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : [int] = None
+
+    x,_, *z, y = [a + 1 , a + 2, a + 3, a + 4, a + 5, a + 6 ]
+    print(x)
+    print(z[0])
+    print(z[1])
+    print(z[2])
+    print(y)
+
+f(5)` , ["6", "8", "9", "10", "11"]);
+
+assertPrint("destr-fnCallValidParam-lists-ignore-star-3", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : [int] = None
+
+    x, *z, _, y = [a + 1 , a + 2, a + 3, a + 4, a + 5, a + 6 ]
+    print(x)
+    print(z[0])
+    print(z[1])
+    print(z[2])
+    print(y)
+
+f(5)` , ["6", "7", "8", "9", "11"]);
+
+assertPrint("basic-destr-multiple-list", `
+x : [int] = None
+y : [int]  = None
+x, y = [[5, 6],[7, 8]]
+print(x[0])
+print(x[1])
+print(y[0])
+print(y[1])` , ["5", "6", "7", "8"]);
+
+assertPrint("basic-destr-multiple-list", `
+x : [int] = None
+y : [int]  = None
+x, _, *y = [[5, 6],[7, 8]]
+print(x[0])
+print(x[1])
+print(y[0])
+print(y[1])` , ["5", "6", " ", " "]);
+
 });
+
+// [[1,2],[3,4]],sets
