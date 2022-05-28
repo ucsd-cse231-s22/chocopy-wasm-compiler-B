@@ -285,6 +285,105 @@ describe("string test", () => {
   print(c.greater("asd", "fgh"))`,
     [`asdfgh`]);
 
+
+  //21
+  assertPrint("test case 21: slicing with two parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:6])
+    `,
+    [`bcdef`]);
+  
+  //22
+  assertPrint("test case 22: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:6:2])
+    `,
+    [`bdf`]);
+  
+  //23
+  assertPrint("test case 23: slicing with one parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:])
+    `,
+    [`bcdefg`]);
+  
+  //24
+  assertPrint("test case 24: slicing with second parameter",
+    `
+    s: str = "abcdefg"
+    print(s[:5])
+    `,
+    [`abcde`]);
+  
+  //25
+  assertPrint("test case 25: slicing with no parameter",
+    `
+    s: str = "abcdefg"
+    print(s[::])
+    `,
+    [`abcdefg`]);
+
+  //26
+  assertPrint("test case 26: slicing with third parameter",
+    `
+    s: str = "abcdefg"
+    print(s[::2])
+    `,
+    [`aceg`]);
+  
+  //27
+  assertPrint("test case 27: upper method with only alpha characters",
+    `
+    s: str = "abcdefg"
+    print(s.upper())
+    `,
+    [`ABCDEFG`]);
+
+  //28
+  assertPrint("test case 28: upper method with number and special characters",
+    `
+    s: str = "The answer is 42!"
+    print(s.upper())
+    `,
+    [`THE ANSWER IS 42!`]);
+  
+  //29
+  assertPrint("test case 29: lower method with only alpha characters",
+    `
+    s: str = "ABCDEFG"
+    print(s.lower())
+    `,
+    [`abcdefg`]);
+
+  //30
+  assertPrint("test case 30: lower method with number and special characters",
+    `
+    s: str = "tHE ANSWER IS 42!"
+    print(s.lower())
+    `,
+    [`the answer is 42!`]);
+  
+  //31
+  assertPrint("test case 31: reverse indexing",
+    `
+    s: str = "abcdefg"
+    print(s[-1])
+    `,
+    [`g`]);
+  
+  //32
+  assertFail("test case 32: reverse indexing",
+    `
+    s: str = "abcdefg"
+    print(s[-8])
+    `);
+  
+  //TODO reverse + slicing
+  //TODO split
+
 });
 
 
