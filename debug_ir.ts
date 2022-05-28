@@ -115,10 +115,6 @@ function exprStr(expr: ir.Expr<[Type, SourceLocation]>): string {
     return `${valStr(expr.left)} ${BinOp[expr.op]} ${valStr(expr.right)}`
   case "uniop":
     return `${UniOp[expr.op]} ${valStr(expr.expr)}`;
-  case "builtin1":
-    return `${expr.name} ${valStr(expr.arg)}`;
-  case "builtin2":
-    return `${expr.name}(${valStr(expr.left)}, ${valStr(expr.right)})`;
   case "call":
     const argStrs = expr.arguments.map(valStr).join(", ");
     return `${expr.name}(${argStrs})`;
@@ -236,33 +232,6 @@ export function dotProg(p: ir.Program<[Type, SourceLocation]>): string {
   console.log(dotCode);
   return dotCode;
 
-  return `
-  digraph IR {
-
-    node [shape=record];
-    graph [labeljust=l];
-    ratio = "fill";
-  
-  "$IR_VARINITS" [label="Inits | {Init g: number = 0 | Init u: bool = false}"]
-  subgraph cluster_f{
-  label="number @f"
-  "$f$args" [label = "Args | {a: number | b: number}"]
-  "$f$inits" [label="Inits | {Init valname1: bool = None | Init valname2: number = None | Init i: number = 0 | Init x: number = 1 | Init ret: number = 0}"]
-  subgraph "cluster_$f$body"{
-  label="$f$body"
-  "$startFun1" [label="<lbl> $startFun1 | {<ins0> x = g | <ins1> goto: $whilestart1}"];
-  "$whilestart1" [label="<lbl> $whilestart1 | {<ins0> valname1 = i Lt b | <ins1> valname1 ? $whilebody1:$whileend1}"];
-  "$whilebody1" [label="<lbl> $whilebody1 | {<ins0> ret = ret Mul a | <ins1> i = i Plus 1 | <ins2> goto: $whilestart1}"];
-  "$whileend1" [label="<lbl> $whileend1 | {<ins0> valname2 = ret Plus x | <ins1> return valname2}"];
-  }
-  }
-  "$startFun1":ins1 -> "$whilestart1":lbl [color = black];
-  "$whilestart1":ins1 -> "$whilebody1":lbl [color = green];
-  "$whilestart1":ins1 -> "$whileend1":lbl [color = red];
-  "$whilebody1":ins2 -> "$whilestart1":lbl [color = black];
-  "$startProg1" [label="<lbl> $startProg1"];
-  }
-  `;
 }
 
 function inLineStmt(stmt: ir.Stmt<[Type, SourceLocation]>, curBlock: string, i: number): [string, Array<string>] {
@@ -301,10 +270,6 @@ function exprInline(expr: ir.Expr<[Type, SourceLocation]>): string {
       return valInline(expr.left) + " " + BinOp[expr.op] + " " + valInline(expr.right);
     case "uniop":
       return UniOp[expr.op] + " " + valInline(expr.expr);
-    case "builtin1":
-      return expr.name + " " + valInline(expr.arg);
-    case "builtin2":
-      return valInline(expr.left) + " " + expr.name + " " + valInline(expr.right);
     case "call":
       const argStrs = expr.arguments.map(valInline);
       return expr.name + "(" + argStrs.join(", ") + ")";
