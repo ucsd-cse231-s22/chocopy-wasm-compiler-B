@@ -433,7 +433,7 @@ def f(a:int):
 
 f(5)` , ["6", "7", "8", "9", "11"]);
 
-assertPrint("basic-destr-multiple-list", `
+assertPrint("basic-destr-multiple-list-1", `
 x : [int] = None
 y : [int]  = None
 x, y = [[5, 6],[7, 8]]
@@ -442,14 +442,109 @@ print(x[1])
 print(y[0])
 print(y[1])` , ["5", "6", "7", "8"]);
 
-assertPrint("basic-destr-multiple-list", `
+assertPrint("basic-destr-multiple-list-3", `
 x : [int] = None
-y : [int]  = None
-x, _, *y = [[5, 6],[7, 8]]
+y : [int] = None
+z : [[int]] = None
+
+x,_, *z, y = [[5, 6],[7, 8],[9, 10],[11, 12],[13, 14]]
 print(x[0])
 print(x[1])
+print(z[0][0])
+print(z[0][1])
+print(z[1][0])
+print(z[1][1])
 print(y[0])
-print(y[1])` , ["5", "6", " ", " "]);
+print(y[1])` , ["5", "6", "9", "10", "11", "12", "13", "14"]);
+
+assertPrint("basic-destr-index-assign", `
+x : int = 0
+y : int = 5
+a:[int] = None
+b:[int] = None
+a = [2,3]
+b = [3,4]
+x, a[0] = b[0], y
+print(x)
+print(a[0])
+print(a[1])` , ["3", "5", "3"]);
+
+// Different types not supported inside List
+// assertPrint("destr-non paren-list", `
+// x : int = 2
+// y : int = 12
+// z : [int] = None
+// x,y,z = [1,2,[3,4]]
+// print(x)
+// print(y)
+// print(z[0])
+// print(z[1])`, ["1","2","3","4"]);
+
+
+// We can't print list nor can we use is operator
+// assertPrint("basic-destr-multiple-list-2", `
+// x : [int] = None
+// y : [int]  = None
+// x, _, *y = [[5, 6],[7, 8]]
+// print(x[0])
+// print(x[1])
+// print(y is None)` , ["5", "6", "True"]);
+
+
+// Sets
+
+assertTCFail("length mismatch - set", `
+x : int = 2
+y : int = 12
+x,y = {1,2,3}`)
+
+assertTCFail("length mismatch - set", `
+x : int = 2
+y : int = 12
+x,y,z = {1,2}`);
+
+assertTCFail("length mismatch - set - binop", `
+x : int = 2
+y : int = 12
+x,y = {1+2}`);
+
+assertTCFail("length mismatch - set - binop", `
+x : int = 2
+y : int = 12
+x,y,z = {1,2+3}`);
+
+assertTCFail("length mismatch - set - ignore", `
+x : int = 2
+y : int = 12
+x,y,_ = {1,2}`);
+
+assertTCFail("length mismatch - set - ignore", `
+x : int = 2
+y : int = 12
+x,y,_ = {1,2,3,4}`);
+
+assertTCFail("length mismatch - set - ignore - binop", `
+x : int = 2
+y : int = 12
+x,y,_ = {1,2+3}`);
+
+assertTCFail("length mismatch - set - ignore - binop", `
+x : int = 2
+y : int = 12
+x,y,_ = {1,2,3+4,5}`);
+
+assertPrint("basic-destr-multiple-set-ignore", `
+a : set[int] = None
+a,_ = {1,2},{3,4}
+print(1 in a)
+print(2 in a)` , ["True", "True"]);
+
+// assertPrint("basic-destr-multiple-set-star-ignore", `
+// a : set[int] = None
+// c : set[int] = None
+// a,_,*c = {{1,2},{3,4}}
+// print(a[0])
+// print(a[1])` , ["1", "2"]);
 
 });
 
