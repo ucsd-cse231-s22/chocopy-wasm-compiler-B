@@ -215,8 +215,12 @@ export function liveness_analysis(bbs: Array<IR.BasicBlock<[Type, SourceLocation
 function live_stmt(stmt: IR.Stmt<[Type, SourceLocation]>, live_u: Set<string>, lp: live_predicate): Set<string> {
     switch(stmt.tag) {
         case "assign": {
-            const live_asgn = new Set([...live_u, ...live_expr(stmt.value)]);
-            live_asgn.delete(stmt.name);
+            const live_asgn: Set<string> = new Set();
+            live_u.forEach(u => {
+                if (u !== stmt.name)
+                    live_asgn.add(u);
+            });
+            live_expr(stmt.value).forEach(live_asgn.add, live_asgn);
             return live_asgn;
         }
         case "return":
