@@ -398,6 +398,9 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
   })
 
   switch(tRhs.tag) {
+    case "id":
+      return tRhs;
+
     case "set":
     case "non-paren-vals":
       //Code only when RHS is of type literals
