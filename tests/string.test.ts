@@ -382,10 +382,81 @@ describe("string test", () => {
     `);
   
   //TODO reverse + slicing
+  
+  //33
+  assertPrint("test case 33: slicing with two parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:-2])
+    `,
+    [`bcde`]);
+  
+  //34
+  assertPrint("test case 34: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:-2:2])
+    `,
+    [`bd`]);
+  
+  //35
+  assertPrint("test case 35: slicing with one parameters",
+    `
+    s: str = "abcdefg"
+    print(s[-5:])
+    `,
+    [`bcdefg`]);
+  
+  //36
+  assertPrint("test case 36: slicing with second parameter",
+    `
+    s: str = "abcdefg"
+    print(s[:-5])
+    `,
+    [`ab`]);
+  
+
+  //37
+  assertPrint("test case 37: slicing with start > end",
+    `
+    s: str = "abcdefg"
+    print(s[-1:-2:2])
+    `,
+    [``]);
+  
   //TODO split
-
+  //38
+  assertPrint("test case 38: split 1",
+    `
+    s: str = "abc def g"
+    s_split: [str] = None
+    s_split = s.split(' ')
+    print(s_split[0])
+    print(s_split[1])
+    print(s_split[2])
+    `,
+    [`abc`, `def`, `g`]);
+  
+  //39
+  assertPrint("test case 39: split 2",
+    `
+    s: str = "abc def   g"
+    s_split: [str] = None
+    s_split = s.split(' ')
+    print(s_split[0])
+    print(s_split[1])
+    print(s_split[2])
+    `,
+    [`abc`, `def`, `g`]);
+  
+  //40
+  assertPrint("test case 40: split 3",
+    `
+    s: str = "abc def    "
+    s_split: [str] = None
+    s_split = s.split(' ')
+    print(s_split[0])
+    print(s_split[1])
+    `,
+    [`abc`, `def`]);
 });
-
-
-
-
