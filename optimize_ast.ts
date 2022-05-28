@@ -1,15 +1,13 @@
 import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class} from './ast';
-
+import { BuiltinLib } from './builtinlib'
 
 let isChanged = false;
 
 export function optimizeAst(program: Program<[Type, SourceLocation]>) : Program<[Type, SourceLocation]> {
     
     var newProgram = {...program};
-    let counter = 0;
     do {
         isChanged = false;
-        counter++;
         // Optimize function definitions
         const optFuns = newProgram.funs.map(fun => optimizeFuncDef(fun));
         // Optimize class definitions
@@ -20,13 +18,11 @@ export function optimizeAst(program: Program<[Type, SourceLocation]>) : Program<
         optStmts = optStmts.map(stmt => optimizeStmt(stmt));
         newProgram = {...newProgram, funs: optFuns, stmts: optStmts, classes: optClasses}
     } while(isChanged);
-
-    // console.log(`Optimization completed after ${counter} iterations.`)
     
     return newProgram;
 }
 
-export function deadCodeElimination(stmts:Array<Stmt<[Type, SourceLocation]>>): Array<Stmt<[Type, SourceLocation]>> {
+function deadCodeElimination(stmts:Array<Stmt<[Type, SourceLocation]>>): Array<Stmt<[Type, SourceLocation]>> {
     // Eliminate unreachable codes after return
     var optCodeChunk = DCEForReturn(stmts);
     // Eliminate if branches with boolean literal condition and while loop with false literal as condition
@@ -138,6 +134,10 @@ function optimizeExpr(expr: Expr<[Type, SourceLocation]>): Expr<[Type, SourceLoc
            return {...expr, expr: optExpr};
         case "call":
             var optArgs = expr.arguments.map(e => optimizeExpr(e));
+            if (checkBuiltin(expr.name)) {
+                const exprResult = optimizeBuiltin(expr, optArgs);
+                return exprResult;
+            }
             return {...expr, arguments: optArgs};
         case "method-call":
             var optArgs = expr.arguments.map(e => optimizeExpr(e));
@@ -147,10 +147,150 @@ function optimizeExpr(expr: Expr<[Type, SourceLocation]>): Expr<[Type, SourceLoc
     }
 }
 
+function checkBuiltin(name:string): boolean {
+    for (let func of BuiltinLib) {
+        if (name === func.name) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function optimizeBuiltin(expr: Expr<[Type, SourceLocation]>, optArgs: Expr<[Type, SourceLocation]>[]): Expr<[Type, SourceLocation]> {
+    if (expr.tag === "call") {
+        switch (expr.name) {
+            case "factorial": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num") {
+                    const result = BuiltinLib[0].body(optArgs[0].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "randint": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[1].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "gcd": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[2].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "lcm": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[3].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "comb": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[4].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "perm": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[5].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "randrange": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && 
+                optArgs[1].tag === "literal" && optArgs[1].value.tag === "num" &&
+                optArgs[2].tag === "literal" && optArgs[2].value.tag === "num") {
+                    const result = BuiltinLib[6].body(optArgs[0].value.value, optArgs[1].value.value, optArgs[2].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "time": {
+                const result = BuiltinLib[7].body();
+                return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+            }
+            case "sleep": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num") {
+                    const result = BuiltinLib[8].body(optArgs[0].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "int": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "bool") {
+                    const result = BuiltinLib[9].body(optArgs[0].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "bool": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num") {
+                    const result = BuiltinLib[10].body(optArgs[0].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"bool", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "abs": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num") {
+                    const result = BuiltinLib[11].body(optArgs[0].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "min": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[12].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "max": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[13].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            case "pow": {
+                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
+                    const result = BuiltinLib[14].body(optArgs[0].value.value, optArgs[1].value.value);
+                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
+                } else {
+                    return { ...expr, arguments: optArgs };
+                }
+            }
+            default: {
+                return { ...expr, arguments: optArgs };
+            }
+        }
+    }
+}
+
 function optimizeStmt(stmt: Stmt<[Type, SourceLocation]>): Stmt<[Type, SourceLocation]> {
     switch (stmt.tag){
         case "assign":
             var optValue = optimizeExpr(stmt.value);
+            if (stmt.name === "a" && optValue.tag === "call" && optValue.name === "max") {
+                console.log("****", optValue.arguments[1]);
+            }
             return {...stmt, value: optValue};
         case "expr":
             var optExpr = optimizeExpr(stmt.expr);
