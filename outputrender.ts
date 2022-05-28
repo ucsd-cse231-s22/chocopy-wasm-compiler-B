@@ -111,7 +111,7 @@ function renderNewLine(result: Value, elt: HTMLElement){
       elt.innerHTML = (result.value) ? "True" : "False";
       break;
     case "object":
-      elt.innerHTML = `Object: ${result.name}`
+      elt.innerHTML = `Object: ${result.name} ${result.address}`;
       break
     default: 
       throw new Error(`Could not render value: ${result}`);
@@ -129,6 +129,13 @@ export function renderResult(result : Value, objectTrackList: Array<ObjectField>
     renderObject(result, objectTrackList, objEle); // if you not change it will be in the same box
     initialAccordionEvent();
   }
+}
+
+export function renderDebug(result: Value, objectTrackList: Array<ObjectField>) : void{
+  if(result === undefined) {return; }
+  const elt = document.createElement("pre");
+  document.getElementById("debug").appendChild(elt);
+  renderNewLine(result, elt);
 }
 
 export function renderPrint(typ: Type, arg : number) : any {

@@ -3,7 +3,7 @@ import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import * as RUNTIME_ERROR from './runtime_error'
-import { renderResult, renderError, renderPrint } from "./outputrender";
+import { renderResult, renderError, renderPrint, renderDebug } from "./outputrender";
 import { log } from 'console';
 import { sources } from 'webpack';
 
@@ -174,6 +174,10 @@ function webStart() {
       FileSaver.saveAs(blob, title);
     });
 
+    document.getElementById("debug_button").addEventListener("click", e =>{
+      printGlobalVariable(repl);
+    })
+
     const textarea = document.getElementById("user-code") as HTMLTextAreaElement;
     const editor = CodeMirror.fromTextArea(textarea, {
       mode: "python",
@@ -276,6 +280,8 @@ function printGlobalVariable(repl: BasicREPL){
   globalVariable.forEach((value: boolean, key: string)=>{
     repl.run(key).then(r =>{
       var objectTrackList = repl.trackObject(r, repl.trackHeap());
+      renderDebug(r, objectTrackList);
+      console.log("get the click");
       //Find a way to display variable
     })
   })
