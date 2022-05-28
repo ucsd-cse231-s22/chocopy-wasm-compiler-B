@@ -197,69 +197,69 @@ function foldBinop(lhs: Literal<[Type, SourceLocation]>, rhs: Literal<[Type, Sou
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "num", value: lhs.value + rhs.value};
+            return {tag: "num", value: lhs.value + rhs.value, a: lhs.a};
         case BinOp.Minus:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "num", value: lhs.value - rhs.value};
+            return {tag: "num", value: lhs.value - rhs.value, a: rhs.a};
         case BinOp.Mul:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "num", value: lhs.value * rhs.value};
+            return {tag: "num", value: lhs.value * rhs.value, a: lhs.a};
         case BinOp.IDiv:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "num", value: Math.floor(lhs.value / rhs.value)};
+            return {tag: "num", value: Math.floor(lhs.value / rhs.value), a: lhs.a};
         case BinOp.Mod:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "num", value: lhs.value % rhs.value};
+            return {tag: "num", value: lhs.value % rhs.value, a: lhs.a};
         case BinOp.Eq:
             if(lhs.tag === "none" || rhs.tag === "none" || lhs.tag === "TypeVar" || rhs.tag === "TypeVar"){
                 return {tag: "bool", value: true};
             }  
-            return {tag: "bool", value: lhs.value === rhs.value};
+            return {tag: "bool", value: lhs.value === rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.Neq:
             if(lhs.tag === "none" || rhs.tag === "none" || lhs.tag === "TypeVar" || rhs.tag === "TypeVar"){
                 return {tag: "bool", value: false};
             }  
-            return {tag: "bool", value: lhs.value !== rhs.value};
+            return {tag: "bool", value: lhs.value !== rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.Lte:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value <= rhs.value};
+            return {tag: "bool", value: lhs.value <= rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.Gte:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }    
-            return {tag: "bool", value: lhs.value >= rhs.value};
+            return {tag: "bool", value: lhs.value >= rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.Lt:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value < rhs.value};
+            return {tag: "bool", value: lhs.value < rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.Gt:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
                 return {tag: "none"};
             }  
-            return {tag: "bool", value: lhs.value > rhs.value};
+            return {tag: "bool", value: lhs.value > rhs.value, a: [{tag: "bool"}, lhs.a[1]]};
         case BinOp.And:
             if(lhs.tag !== "bool" || rhs.tag !== "bool"){
                 return {tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value && rhs.value};
+            return {tag: "bool", value: lhs.value && rhs.value, a: lhs.a};
         case BinOp.Or:
             if(lhs.tag !== "bool" || rhs.tag !== "bool"){
                 return {tag: "none"};
             }  
-            return {tag: "bool", value: lhs.value || rhs.value};
+            return {tag: "bool", value: lhs.value || rhs.value, a: lhs.a};
         default:
-            return {tag: "none"};
+            return {tag: "none", a: lhs.a};
       }
 }
 
@@ -269,14 +269,14 @@ function foldUniop(expr: Literal<[Type, SourceLocation]>, op: UniOp): Literal<[T
             if(expr.tag != "num"){
                 return {tag: "none"};
             }
-            return {tag: "num", value: -1*expr.value};
+            return {tag: "num", value: -1*expr.value, a: expr.a};
         case UniOp.Not:
             if(expr.tag != "bool"){
                 return {tag: "none"};
             }
-            return {tag: "bool", value: !(expr.value)};
+            return {tag: "bool", value: !(expr.value), a: expr.a};
         default:
-            return {tag: "none"};
+            return {tag: "none", a: expr.a};
     }
 }
 
