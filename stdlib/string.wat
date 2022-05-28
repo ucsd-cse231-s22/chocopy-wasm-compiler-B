@@ -193,6 +193,7 @@
   (func (export "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32)
       (local $newstr i32)
       (local $newstrlength i32)
+      (i32.rem_u (i32.sub (local.get $end) (local.get $start)) (local.get $steps))
       (i32.const 0)
       (return))
   
