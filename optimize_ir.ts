@@ -75,21 +75,6 @@ function optimizeIRExpr(expr: IR.Expr<[Type, SourceLocation]>): IR.Expr<[Type, S
     }
 }
 
-function foldBuiltin2(lhs: IR.Value<[Type, SourceLocation]>, rhs: IR.Value<[Type, SourceLocation]>, callName: string): IR.Value<[Type, SourceLocation]> {
-    if (lhs.tag !== "num" || rhs.tag !== "num") 
-        return {tag: "none", a: lhs.a};
-    switch (callName) {
-        case "max":
-            return {tag: "num", value: bigMax(lhs.value, rhs.value), a: lhs.a};
-        case "min":
-            return {tag: "num", value: bigMin(lhs.value, rhs.value), a: lhs.a};
-        case "pow":
-            return {tag: "num", value: bigPow(lhs.value, rhs.value), a: lhs.a};
-        default:
-            return {tag: "none", a: lhs.a};
-    }
-}
-
 function foldBinop(lhs: IR.Value<[Type, SourceLocation]>, rhs: IR.Value<[Type, SourceLocation]>, op: BinOp): IR.Value<[Type, SourceLocation]> {
     switch(op) {
         case BinOp.Plus: {
@@ -183,4 +168,120 @@ function foldUniop(val: IR.Value<[Type, SourceLocation]>, op: UniOp): IR.Value<[
         default:
             return {tag: "none", a: val.a};
     }
+}
+
+// {linelabel: set(vars)}
+export type live_predicate = Map<string, Set<string>>;
+
+function eqSet(a: Set<string>, b: Set<string>): boolean {
+    if (a.size !== b.size)
+        return false;
+    a.forEach(ae => {
+        if (!b.has(ae))
+            return false;
+    });
+    return true;
+}
+
+export function liveness_analysis(bbs: Array<IR.BasicBlock<[Type, SourceLocation]>>): live_predicate {
+    var saturated = false;
+    var lp: live_predicate = new Map();
+    // backward propagation
+    while (!saturated) {
+        var changed = false;
+        bbs.slice().reverse().forEach(bb => {
+            const label_prefix = bb.label;
+            for (let i = bb.stmts.length - 1; i >= 0; i--) {
+                const cur_line_label = label_prefix + i.toString();
+                // console.log(cur_line_label);
+                const succ_line_label = label_prefix + (i+1).toString();
+                const cur_stmt = bb.stmts[i];
+                const live_u: Set<string> = (lp.has(succ_line_label) ? lp.get(succ_line_label) : new Set());
+                const cur_this_live = live_stmt(cur_stmt, live_u, lp);
+                // console.log(cur_this_live);
+                if (!lp.has(cur_line_label) || 
+                    !eqSet(cur_this_live, lp.get(cur_line_label))) {
+                    lp.set(cur_line_label, cur_this_live);
+                    changed = true;
+                }  
+                // console.log(lp);
+            }
+        });
+        saturated = !changed;
+    }
+    return lp;
+}
+
+function live_stmt(stmt: IR.Stmt<[Type, SourceLocation]>, live_u: Set<string>, lp: live_predicate): Set<string> {
+    switch(stmt.tag) {
+        case "assign": {
+            const live_asgn = new Set([...live_u, ...live_expr(stmt.value)]);
+            live_asgn.delete(stmt.name);
+            return live_asgn;
+        }
+        case "return":
+            return live_val(stmt.value);
+        case "expr":
+            return live_expr(stmt.expr);
+        case "pass":
+            return live_u;
+        case "ifjmp": {
+            const live_dest: Set<string> = new Set();
+            const thn_line_label = stmt.thn + '0';
+            const els_line_label = stmt.thn + '0';
+            if (lp.has(thn_line_label)) {
+                // console.log(lp.get(thn_line_label));
+                lp.get(thn_line_label).forEach(live_dest.add, live_dest);
+            }
+            if (lp.has(els_line_label))
+                lp.get(els_line_label).forEach(live_dest.add, live_dest); 
+            return new Set([...live_dest, ...live_val(stmt.cond)]);
+        }
+        case "jmp": {
+            const live_dest: Set<string> = new Set();
+            const lbl_line_label = stmt.lbl + '0';
+            if (lp.has(lbl_line_label)) 
+                lp.get(lbl_line_label).forEach(live_dest.add, live_dest);
+            return new Set([...live_dest]);
+        }
+        case "store":
+            const live_vars = new Set([...live_val(stmt.start), ...live_val(stmt.offset), ...live_val(stmt.value)]);
+            return new Set([...live_vars, ...live_u]);
+        default:
+            return live_u;
+    }
+}
+
+function live_expr(expr: IR.Expr<[Type, SourceLocation]>): Set<string> {
+    switch (expr.tag) {
+        case "value":
+            return live_val(expr.value);
+        case "binop": 
+            var live_left = live_val(expr.left);
+            var live_right = live_val(expr.right);
+            return new Set([...live_left, ...live_right]);
+        case "uniop":
+            return live_val(expr.expr);
+        case "call":
+            const live_args: Set<string>= new Set();
+            expr.arguments.forEach(arg => {
+                const live_arg = live_val(arg);
+                if (live_arg.size != 0)
+                    live_arg.forEach(live_args.add);
+            });
+            return live_args;
+        case "alloc":
+            return live_val(expr.amount);
+        case "load":
+            return new Set([...live_val(expr.start), ...live_val(expr.offset)]);
+        default:
+            return new Set();
+    }
+}
+
+function live_val(val: IR.Value<[Type, SourceLocation]>): Set<string> {
+    if (val.tag == "id")
+        return new Set([val.name]);
+    else
+        return new Set();
 }
