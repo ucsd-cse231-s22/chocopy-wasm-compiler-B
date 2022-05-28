@@ -419,7 +419,7 @@ function lowerDestructAssignment(blocks: {
           offset: offsetValue,
           value: nval
         });
-      return [...oinits, ...iinits, ...ninits];
+      allinits.push(...oinits, ...iinits, ...ninits);
     }
     // if (s.obj.a[0].tag === "dict") {
     //   ...
