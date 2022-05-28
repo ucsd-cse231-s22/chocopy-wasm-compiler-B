@@ -337,7 +337,7 @@ describe("string test", () => {
   //27
   assertPrint("test case 27: upper method with only alpha characters",
     `
-    s: str = "abcdefg"
+    s:str = "abcdefg"
     print(s.upper())
     `,
     [`ABCDEFG`]);
@@ -345,7 +345,7 @@ describe("string test", () => {
   //28
   assertPrint("test case 28: upper method with number and special characters",
     `
-    s: str = "The answer is 42!"
+    s:str = "The answer is 42!"
     print(s.upper())
     `,
     [`THE ANSWER IS 42!`]);
@@ -353,7 +353,7 @@ describe("string test", () => {
   //29
   assertPrint("test case 29: lower method with only alpha characters",
     `
-    s: str = "ABCDEFG"
+    s:str = "ABCDEFG"
     print(s.lower())
     `,
     [`abcdefg`]);
@@ -361,7 +361,7 @@ describe("string test", () => {
   //30
   assertPrint("test case 30: lower method with number and special characters",
     `
-    s: str = "tHE ANSWER IS 42!"
+    s:str = "tHE ANSWER IS 42!"
     print(s.lower())
     `,
     [`the answer is 42!`]);

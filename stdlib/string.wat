@@ -200,25 +200,56 @@
       (local $strLength i32)
       (local $currVal i32)
       (local $i i32)
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      ;; (i32.const 0)
+      ;; (i32.const 4)
+      ;; (call $load)
+      ;; (return)
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       (i32.const 0)
+      (local.set $i)
       (local.get $self)
-      (call $load)
+      ;; (i32.const 0)
+      ;; (call $load)
+      (i32.load (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 0))))
       (local.set $strLength) ;; get the length of the string
       (loop $my_loop
-        (local.get $self)
-        (i32.add (i32.const 1)(local.get $i))
-        (call $load)
+        ;; (local.get $self)
+        ;; (i32.add (i32.const 1)(local.get $i))
+        ;; (call $load)
+        ;; (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 1)))
+        ;; (return)
+        (i32.load (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 1))))
         (local.set $currVal)
+        (local.get $currVal)
+        (return)
+        ;;testing
+        ;; (local.get $currVal)
+        ;; (return)
+        ;;testing
         (i32.le_u (local.get $currVal) (i32.const 123))
+        ;;testing
+        ;; (i32.const 66)
+        ;; (return)
+        ;;testing
         (if
           (then
+            ;;testing
+            ;; (local.get $currVal)
+            ;; (return)
+            ;;testing
             (i32.gt_u (local.get $currVal) (i32.const 96))
             (if
               (then
-                (local.get $self)
-                (i32.add (i32.const 1) (local.get $i))
-                (i32.sub (local.get $currVal) (i32.const 32))
-                (call $store)
+                ;; (local.get $self)
+                ;;testing
+                ;; (i32.const 6666)
+                ;; (return)
+                ;;testing
+                ;; (i32.add (i32.const 1) (local.get $i))
+                ;; (i32.sub (local.get $currVal) (i32.const 32))
+                ;; (call $store)
+                (i32.store (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 1))) (local.get $currVal))
               )
             )
           )
