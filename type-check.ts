@@ -447,7 +447,7 @@ function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean
   var isIterablePresent = false
   values.forEach(r => {
     //@ts-ignore
-    if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
+    if(r.a[0].tag==="class") { 
       isIterablePresent = true;
     }
   })
@@ -470,14 +470,14 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
     } else {
       //@ts-ignore
       if(tRhs[rhs_index].a[0].tag==="class"){
-        //FUTURE: support range class added by iterators team, currently support range class added from code
+        //FUTURE: support range class added by iterators team, currently supports range class added from code
         //@ts-ignore
         var clsName = tRhs[rhs_index].a[0].name
         if (env.classes.get(clsName)[1].get('next')==null){
           throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
         }
         var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
-        //checking type of lhs with type of return of range
+        //checking type of lhs with type of return of iterator
         //Length mismatch from iterables will be RUNTIME ERRORS
         if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
@@ -668,11 +668,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
-
-        //To support range class for now
-        if (expr.name === "range") {
-          return tConstruct;
-        }
 
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
