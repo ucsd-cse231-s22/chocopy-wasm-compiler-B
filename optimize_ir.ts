@@ -1,7 +1,13 @@
 import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class} from './ast';
 import * as IR from './ir';
 
+export type Line = {block: string, line: number};
+export type varant_in_line = {line: Line, varant: Map<string, Set<Line>>};
+export type CFA = Array<varant_in_line>;
+
 export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Program<[Type, SourceLocation]> {
+    const cfa: CFA = flow_wklist(program.inits, program.body);
+    printCFA(cfa);
     const optFuns = program.funs.map(optimizeFuncDef);
     const optClss = program.classes.map(optimizeClass);
     const optBody = program.body.map(optBasicBlock);
@@ -288,4 +294,164 @@ function live_val(val: IR.Value<[Type, SourceLocation]>): Set<string> {
         return new Set([val.name]);
     else
         return new Set();
+}
+
+
+function flow_wklist(inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): CFA{
+    var result: CFA = new Array();
+    var initialMap: Map<string, Set<Line>> = new Map();
+    var line2num: Map<string, number> = new Map();
+    for(let i = 0; i < inits.length; ++i){
+        var theSet: Set<Line> = new Set();
+        if(inits[i].value.tag !== 'none'){
+            theSet.add({
+                block: '$varInit',
+                line: 0 
+            });
+        }
+        initialMap.set(inits[i].name, theSet);
+    }
+
+    var lineCnt = 0;
+    for(let i = 0; i < blocks.length; ++i)
+    {
+        for(let j = 0; j < blocks[i].stmts.length; ++j)
+        {
+            var theLine = {block: blocks[i].label, line: j};
+            var var_in_line: varant_in_line = {
+                line: theLine,
+                varant: new Map()
+            }
+            result.push(var_in_line);
+            line2num.set(theLine.block + theLine.line.toString(), lineCnt);
+            lineCnt++;
+        }
+    }
+
+    result[0] = {
+        line: {block: blocks[0].label, line: 0},
+        varant: initialMap
+    }
+
+    var wklist: Array<number> = [0];
+    while(wklist.length != 0){
+        var curLine = wklist.pop();
+        var curStmt = getStmt(result[curLine].line, blocks);
+        var changed = false;
+        if(curStmt.tag === 'assign'){
+            if(curLine >= result.length-1){
+                continue;
+            }
+            var nxt = curLine+1;
+            var newSet: Set<Line> = new Set();
+            changed = false;
+            if(result[nxt].varant.has(curStmt.name)){
+                newSet = result[nxt].varant.get(curStmt.name);
+            }
+            if(!newSet.has(result[curLine].line)){
+                changed = true;
+            }
+            result[nxt].varant.set(curStmt.name, new Set([...newSet, result[curLine].line]));
+            for(let key of result[curLine].varant.keys()){
+                if(key !== curStmt.name){
+                    var nxtSet: Set<Line> = new Set();
+                    if(result[nxt].varant.has(key)){
+                        nxtSet = result[nxt].varant.get(key);
+                    }
+                    var curSet: Set<Line> = result[curLine].varant.get(key);
+                    if(!isSubSet(curSet, nxtSet)){
+                        changed = true;
+                    }
+                    result[nxt].varant.set(key, new Set([...nxtSet, ...curSet]));
+                }
+            }
+            if(changed){
+                wklist.push(nxt);
+            }
+        }else{
+            var nxts: Array<number> = [];
+            if(curStmt.tag !== 'ifjmp' && curStmt.tag !== 'jmp' && curLine < result.length-1){
+                nxts.push(curLine+1);
+            }else{
+                nxts = getNexts(curStmt, line2num);
+            }
+            for(let n of nxts){
+                changed = false;
+                for(let key of result[curLine].varant.keys()){
+                    var nxtSet: Set<Line> = new Set();
+                    if(result[n].varant.has(key)){
+                        nxtSet = result[n].varant.get(key);
+                    }
+                    var curSet: Set<Line> = result[curLine].varant.get(key);
+                    if(!isSubSet(curSet, nxtSet)){
+                        changed = true;
+                    }
+                    result[n].varant.set(key, new Set([...nxtSet, ...curSet]));
+                }
+                if(changed){
+                    wklist.push(n);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+function getStmt(line: Line, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Stmt<[Type, SourceLocation]> {
+    for(let i = 0; i < blocks.length; ++i)
+    {
+        if(blocks[i].label === line.block){
+            for(let j = 0; j < blocks[i].stmts.length; ++j)
+            {
+                if(j === line.line){
+                    return blocks[i].stmts[j];
+                }
+            }
+        }
+    }
+    return {tag:'pass'};
+}
+
+function getNexts(stmt: IR.Stmt<[Type, SourceLocation]>, line2num: Map<string, number>): Array<number> {
+    var res: Array<number> = [];
+    var lineName;
+    if(stmt.tag === 'ifjmp'){
+        lineName = stmt.thn + '0';
+        if(line2num.has(lineName)){
+            res.push(line2num.get(lineName));
+        }
+        lineName = stmt.els + '0';
+        if(line2num.has(lineName)){
+            res.push(line2num.get(lineName));
+        }
+    }else if(stmt.tag === 'jmp'){
+        lineName = stmt.lbl + '0';
+        if(line2num.has(lineName)){
+            res.push(line2num.get(lineName));
+        }
+    }
+    return res;
+}
+
+function isSubSet(s1: Set<Line>, s2: Set<Line>): boolean{
+    return (
+        s1.size <= s2.size && [...s1].every((item) => s2.has(item))
+    );
+}
+
+function printCFA(cfa: CFA){
+    for(let l of cfa){
+        console.log(l.line.block + '_' + l.line.line);
+        var str: string = '';
+        l.varant.forEach((val, key)=>{
+            str += key;
+            str += ': (';
+            val.forEach(line => {
+                str += (line.block+'_'+line.line);
+                str += ', '
+            })
+            str += ')  ';
+        })
+        console.log(str);
+    }
 }
