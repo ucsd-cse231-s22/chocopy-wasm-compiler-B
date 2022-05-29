@@ -115,10 +115,10 @@ function exprStr(expr: ir.Expr<[Type, SourceLocation]>): string {
     return `${valStr(expr.left)} ${BinOp[expr.op]} ${valStr(expr.right)}`
   case "uniop":
     return `${UniOp[expr.op]} ${valStr(expr.expr)}`;
-  case "builtin1":
+  /*case "builtin1":
     return `${expr.name} ${valStr(expr.arg)}`;
   case "builtin2":
-    return `${expr.name}(${valStr(expr.left)}, ${valStr(expr.right)})`;
+    return `${expr.name}(${valStr(expr.left)}, ${valStr(expr.right)})`;*/
   case "call":
     const argStrs = expr.arguments.map(valStr).join(", ");
     return `${expr.name}(${argStrs})`;
@@ -301,10 +301,10 @@ function exprInline(expr: ir.Expr<[Type, SourceLocation]>): string {
       return valInline(expr.left) + " " + BinOp[expr.op] + " " + valInline(expr.right);
     case "uniop":
       return UniOp[expr.op] + " " + valInline(expr.expr);
-    case "builtin1":
+    /*case "builtin1":
       return expr.name + " " + valInline(expr.arg);
     case "builtin2":
-      return valInline(expr.left) + " " + expr.name + " " + valInline(expr.right);
+      return valInline(expr.left) + " " + expr.name + " " + valInline(expr.right);*/
     case "call":
       const argStrs = expr.arguments.map(valInline);
       return expr.name + "(" + argStrs.join(", ") + ")";
