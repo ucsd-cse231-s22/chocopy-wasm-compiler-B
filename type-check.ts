@@ -323,19 +323,17 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         throw new TypeCheckError("Condition Expression Must be a bool", stmt.a);
       return {a: [NONE, stmt.a], tag:stmt.tag, cond: tCond, body: tBody};
     case "for":
-      var tVars = tcExpr(env, locals, stmt.vars);
+      var tVars = tcDestructureTargets(stmt.vars, env, locals);
       var tIterable = tcExpr(env, locals, stmt.iterable);
       tIterable = convertToIterableObject(env, tIterable);
+      var [isIterator, tIterableRet] = isIterable(env, tIterable.a[0])
+      if(!isIterator)
+        throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
+      var tIterable = tcDestructureIterables(tVars, tIterable, env, locals, stmt.a);
       locals.loopCount = locals.loopCount+1;
       locals.currLoop.push(locals.loopCount);
       var tForBody = tcBlock(env, locals, stmt.body);
       locals.currLoop.pop();
-      var [isIterator, tIterableRet] = isIterable(env, tIterable.a[0])
-      if(!isIterator)
-        throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
-      //@ts-ignore
-      if(!equalType(tVars.a[0], tIterableRet))
-        throw new TypeCheckError("Expected type `"+ tIterableRet.tag +"`, got type `" + tVars.a[0].tag + "`", stmt.a);
       if(stmt.elseBody !== undefined) {
         const tElseBody = tcBlock(env, locals, stmt.elseBody);
         return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody, elseBody: tElseBody};
@@ -401,6 +399,16 @@ export function tcDestructure(env : GlobalTypeEnv, locals : LocalTypeEnv, destr 
 function tcDestructureTargets(destr: DestructureLHS<SourceLocation>[], env: GlobalTypeEnv, locals: LocalTypeEnv) : DestructureLHS<[Type, SourceLocation]>[]{
   return destr.map(r => tcDestructure(env, locals, r));
 }
+
+function tcDestructureIterables(tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>, env: GlobalTypeEnv, locals: LocalTypeEnv, stmtLoc: SourceLocation) : Expr<[Type, SourceLocation]>{
+  var hasStarred = false;
+      tDestr.forEach(r => {
+        hasStarred = hasStarred || r.isStarred
+  })
+  tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
+  return tRhs
+}
+
 
 function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], rhs:Expr<SourceLocation>, env: GlobalTypeEnv, locals: LocalTypeEnv, stmtLoc: SourceLocation) : Expr<[Type, SourceLocation]>{
   var tRhs: Expr<[Type, SourceLocation]> =  tcExpr(env, locals, rhs);
