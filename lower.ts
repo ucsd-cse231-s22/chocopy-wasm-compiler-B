@@ -274,6 +274,20 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
       var rhs_vals = rhs.elements
       destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
       break;
+    case "id": case "call":
+      if(rhs.a[0].tag==="list"){ //TODO set on rhs, for starred exprs? how to check length..can add a length check in tc
+        //1. open rhs as index asign==> a,b = c ==> a,b = c[0], c[1]
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"id", name:rhs.name}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      }
+      break;
     default:
       throw new Error("Not supported rhs for destructuring!")
 
@@ -365,7 +379,6 @@ function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rh
   //   [ { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
   //   { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName } }
   // ];
-  //@ts-ignore
   //blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
   //console.log({ a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
   //@ts-ignore
