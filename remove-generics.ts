@@ -320,6 +320,17 @@ function addSpecializationsInClass(classDef: Class<SourceLocation>, genericsEnv:
     });
 }
 
+function defaultValue(type: Type, prevVal: Literal<SourceLocation>): Literal<SourceLocation> {
+    let newValue = prevVal;
+    if(type.tag == "number") {
+        newValue = {...newValue, tag: "num", value: 0};
+    } else if (type.tag == "bool") {
+        newValue = {...newValue, tag: "bool", value: false};
+    }
+
+    return newValue;
+}
+
 function specializeClass(classDef: Class<SourceLocation>, genericsEnv: GenericEnv, classEnv: ClassEnv): Array<Class<SourceLocation>> {
     if(classDef.generics == undefined || classDef.generics.length == 0) {
         return [classDef];
@@ -352,12 +363,7 @@ function specializeClass(classDef: Class<SourceLocation>, genericsEnv: GenericEn
 
         const newFields = classDef.fields.map(field => {
             const newType = removeGenericsFromType(field.type, variant);
-            let newValue = field.value;
-            if(newType.tag == "number") {
-                newValue = {...newValue, tag: "num", value: 0};
-            } else if (newType.tag == "bool") {
-                newValue = {...newValue, tag: "bool", value: false};
-            }
+            const newValue = defaultValue(newType, field.value);
 
             return {...field, type: newType, value: newValue};
         });
@@ -365,7 +371,8 @@ function specializeClass(classDef: Class<SourceLocation>, genericsEnv: GenericEn
         const newMethods = classDef.methods.map(method => {
             const newInits = method.inits.map(init => {
                 const newType = removeGenericsFromType(init.type, variant);
-                return {...init, type: newType};
+                const newValue = defaultValue(newType, init.value);
+                return {...init, type: newType, value: newValue};
             });
 
             const newParams = method.parameters.map(param => {

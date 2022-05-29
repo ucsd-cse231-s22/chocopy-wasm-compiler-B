@@ -172,8 +172,8 @@ describe("Generic tests", () => {
   T: TypeVar = TypeVar('T')
 
   class Adder(Generic[T]):
-      x: T = 0
-      y: T = 0
+      x: T = {}
+      y: T = {}
       def new(self: Adder[T], x: T, y: T) -> Adder[T]:
           self.x = x
           self.y = y
@@ -191,8 +191,8 @@ describe("Generic tests", () => {
   T: TypeVar = TypeVar('T')
 
   class Adder(Generic[T]):
-      x: T = 0
-      y: T = 0
+      x: T = {}
+      y: T = {}
       def new(self: Adder[T], x: T, y: T) -> Adder[T]:
           self.x = x
           self.y = y
