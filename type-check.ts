@@ -270,6 +270,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
   switch(stmt.tag) {
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
+      console.log(tValExpr)
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
         nameTyp = locals.vars.get(stmt.name);
@@ -410,29 +411,66 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
   })
 
   switch(tRhs.tag) {
-    case "non-paren-vals":
-      //TODO logic has to change - when all iterables are introduced
-      var isIterablePresent = false;
-      tRhs.values.forEach(r => {
-        //@ts-ignore
-        if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
-          isIterablePresent = true;
-        }
-      })
+    case "id":
+      return tRhs;
 
+    case "set":
+    case "non-paren-vals":
       //Code only when RHS is of type literals
-      if(tDestr.length === tRhs.values.length || 
-        (hasStarred && tDestr.length < tRhs.values.length)||
-        (hasStarred && tDestr.length-1 === tRhs.values.length) || 
-        isIterablePresent){
+      if(checkDestrLength(tDestr, tRhs.values, hasStarred)) {
           tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
           return tRhs
-        }
+      }
       else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+
+    case "call":
+      if(tRhs.a[0].tag === "class"){ 
+        tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
+        return tRhs
+      }
+      else throw new TypeCheckError("undefined iterable type on RHS of Destructuring", stmtLoc)
+
+    case "listliteral":
+      if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
+        tcAssignTargets(env, locals, tDestr, tRhs.elements, hasStarred)
+        return tRhs
+      }
+      else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+      
     default:
       throw new Error("not supported expr type for destructuring")
   }
 }
+
+function checkDestrLength(tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs : Expr<[Type, SourceLocation]>[], hasStarred : boolean): boolean {
+  
+  //TODO logic has to change - when all iterables are introduced
+  var isIterablePresent = checkIterablePresence(tRhs)
+
+  // TODO : Consider starred expressions
+  if (tDestr.length === tRhs.length || 
+    (hasStarred && tDestr.length < tRhs.length)||
+    (hasStarred && tDestr.length-1 === tRhs.length) || 
+    isIterablePresent) {
+      return true
+  }
+
+  return false
+
+}
+
+function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean {
+  var isIterablePresent = false
+  values.forEach(r => {
+    //@ts-ignore
+    if(r.a[0].tag==="class") { 
+      isIterablePresent = true;
+    }
+  })
+  return isIterablePresent
+}
+
+
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
   
@@ -447,10 +485,15 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       rhs_index++
     } else {
       //@ts-ignore
-      if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
-        //FUTURE: support range class added by iterators team, currently support range class added from code
-        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
-        //checking type of lhs with type of return of range
+      if(tRhs[rhs_index].a[0].tag==="class"){
+        //FUTURE: support range class added by iterators team, currently supports range class added from code
+        //@ts-ignore
+        var clsName = tRhs[rhs_index].a[0].name
+        if (env.classes.get(clsName)[1].get('next')==null){
+          throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
+        }
+        var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
+        //checking type of lhs with type of return of iterator
         //Length mismatch from iterables will be RUNTIME ERRORS
         if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
@@ -470,19 +513,20 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
   
   }
 
+
+  let rev_lhs_index = tDestr.length - 1;
+  let rev_rhs_index = tRhs.length - 1;  
   // Only doing this reverse operation in case of starred
   if (hasStarred) {
     if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
-      //@ts-ignore
-    } else if (tDestr[lhs_index].isIgnore) {
-      lhs_index--
-      rhs_index--
+      return
     } else {
-      let rev_lhs_index = tDestr.length - 1;
-      let rev_rhs_index = tRhs.length - 1;
       while (rev_lhs_index > lhs_index) {
-        if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
-          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+        if (tDestr[rev_lhs_index].isIgnore) {
+          rev_rhs_index--
+          rev_lhs_index--
+        } else if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].lhs.a[1])
         } else {
           rev_rhs_index--
           rev_lhs_index--
@@ -490,6 +534,22 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       }
     }
   }
+
+
+  //Check starred expression type vs remaining values
+  if (hasStarred && rev_rhs_index >= lhs_index) {
+    // Get type of the starred expression
+    if (tDestr[lhs_index].lhs.a[0].tag !== "list") {
+      throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].lhs.a[1])
+    }
+
+    //@ts-ignore
+    if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
+      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+    } 
+    rev_rhs_index--
+  }
+  
 }
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<SourceLocation>) : Expr<[Type, SourceLocation]> {
@@ -624,11 +684,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
-
-        //To support range class for now
-        if (expr.name === "range") {
-          return tConstruct;
-        }
 
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
