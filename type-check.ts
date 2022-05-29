@@ -662,6 +662,23 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         var initial_value = tcExpr(env, locals, expr.arguments[0]);
         console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
         return {...expr, a: initial_value.a, arguments: [initial_value]};
+      } else if (expr.name == "iter") {
+          if(expr.arguments.length != 1)
+            throw new TypeCheckError("iter() only accepts an iterator", expr.a) 
+          const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+          if(!isIterable(env, tArgs[0].a[0])[0])
+            throw new TypeCheckError("iter() only accepts an iterator", expr.a) 
+          return convertToIterableObject(env, tArgs[0])
+      } else if (expr.name == "next") {
+          if(expr.arguments.length != 1)
+            throw new TypeCheckError("iter() only accepts an iterator", expr.a) 
+          const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+            if(!isIterableObject(env, tArgs[0].a[0]))
+              throw new TypeCheckError("next() only accepts an iterator", expr.a) 
+            //@ts-ignore
+            const [_, methods] = env.classes.get(tArgs[0].a[0].name);
+            const [methodArgs, methodRet] = methods.get(expr.name);
+          return { a: [ methodRet, expr.a], tag: "method-call", obj: tArgs[0], method: "next", arguments: []}
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }

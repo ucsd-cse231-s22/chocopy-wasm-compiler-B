@@ -357,6 +357,40 @@ for i in l:
 
 ` ,["True", "False", "True", "False", "True"]);
 
+assertPrint('iter() and next()' , rangeStr + `
+class ListIteratorInt(object) : 
+  list :  [int] = None
+  index : int = 0
+
+  def new(self :  ListIteratorInt, initVal :  [int]) -> ListIteratorInt: 
+    self.list = initVal
+    return self
+
+  def next(self :  ListIteratorInt) -> int : 
+    ret :  int = 0
+    ret = self.list[self.index]
+    self.index = self.index + 1
+    return ret
+
+  def hasnext(self :  ListIteratorInt) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [int]) -> int:
+    return 5
+
+def listToIteratorInt(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
+
+i: [int] = None
+_iter: ListIteratorInt = None
+i = [1,2,3,4]
+_iter = iter(i)
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+`, ["1", "2", "3", "4"]);
+
 
     assertTCFail('range: type checking for loop variable ', rangeStr + `
 
@@ -461,6 +495,100 @@ for i in range(0,5,10):
 continue
 `);
 });
+
+assertTCFail('next() only takes an iterable object 1', rangeStr + `
+class ListIteratorInt(object) : 
+  list :  [int] = None
+  index : int = 0
+
+  def new(self :  ListIteratorInt, initVal :  [int]) -> ListIteratorInt: 
+    self.list = initVal
+    return self
+
+  def next(self :  ListIteratorInt) -> int : 
+    ret :  int = 0
+    ret = self.list[self.index]
+    self.index = self.index + 1
+    return ret
+
+  def hasnext(self :  ListIteratorInt) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [int]) -> int:
+  return 5
+
+def listToIteratorInt(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
+
+i: [int] = None
+_iter: ListIteratorInt = None
+i = [1,2,3,4]
+
+print(next(i))
+`);
+
+assertTCFail('next() only takes an iterable 2', rangeStr + `
+class ListIteratorInt(object) : 
+  list :  [int] = None
+  index : int = 0
+
+  def new(self :  ListIteratorInt, initVal :  [int]) -> ListIteratorInt: 
+    self.list = initVal
+    return self
+
+  def next(self :  ListIteratorInt) -> int : 
+    ret :  int = 0
+    ret = self.list[self.index]
+    self.index = self.index + 1
+    return ret
+
+  def hasnext(self :  ListIteratorInt) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [int]) -> int:
+  return 5
+
+def listToIteratorInt(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
+
+i: [int] = None
+_iter: ListIteratorInt = None
+i = [1,2,3,4]
+
+print(next(i))
+`);
+
+assertTCFail('iter() only takes an iterable type', rangeStr + `
+class ListIteratorInt(object) : 
+  list :  [int] = None
+  index : int = 0
+
+  def new(self :  ListIteratorInt, initVal :  [int]) -> ListIteratorInt: 
+    self.list = initVal
+    return self
+
+  def next(self :  ListIteratorInt) -> int : 
+    ret :  int = 0
+    ret = self.list[self.index]
+    self.index = self.index + 1
+    return ret
+
+  def hasnext(self :  ListIteratorInt) -> bool : 
+    return self.index < len(self.list)
+
+def len(l: [int]) -> int:
+  return 5
+
+def listToIteratorInt(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
+
+j:int = 0
+i: [int] = None
+_iter: ListIteratorInt = None
+i = [1,2,3,4]
+
+print(iter(j))
+`);
 
 /**
  * Ensure during typechecking, a TypeError is thrown.
