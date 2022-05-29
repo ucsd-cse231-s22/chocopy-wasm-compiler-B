@@ -591,7 +591,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       //   c.nextSibling()
       // }
       c.nextSibling()
-      const iterable = traverseDestructureValues(c,s)
+      const iterable = traverseExpr(c,s)
       c.nextSibling()
       var body = []
       c.firstChild()
