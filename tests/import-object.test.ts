@@ -1,10 +1,8 @@
 import { readFileSync } from "fs";
-<<<<<<< HEAD
 import { BinOp } from '../ast';
-=======
 import { BuiltinLib} from "../builtinlib";
+//import { importObject } from "../debugger/tests/import-object.test";
 import * as RUNTIME_ERROR from '../runtime_error'
->>>>>>> bf56d94da00575b691130d9c84cf3adcb7839e34
 
 enum Type { Num, Bool, None }
 
@@ -116,7 +114,6 @@ function print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
-<<<<<<< HEAD
 function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
@@ -169,17 +166,17 @@ function big_to_i32(arg : number, load : any) : any {
     return Number(bigInt);
   }
 }
-
+/*
 function assert_not_none(arg: any) : any {
   if (arg === 0)
     throw new Error("RUNTIME ERROR: cannot perform operation on none");
   return arg;
-=======
+} 
+*/ 
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
     throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
   return index;
->>>>>>> bf56d94da00575b691130d9c84cf3adcb7839e34
 }
 
 
@@ -238,20 +235,19 @@ export const importObject : any = {
     // the compiler easier, we define print so it logs to a string object.
     //  We can then examine output to see what would have been printed in the
     //  console.
-<<<<<<< HEAD
-    assert_not_none: (arg: any) => assert_not_none(arg),
-=======
+    //assert_not_none: (arg: any) => assert_not_none(arg),
     index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
     division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
     assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
     stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
     stack_clear: () => RUNTIME_ERROR.stack_clear(),
+    /*
     print: (arg: any) => print(Type.Num, arg),
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
+    */ 
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
->>>>>>> bf56d94da00575b691130d9c84cf3adcb7839e34
   },
 
   output: "",

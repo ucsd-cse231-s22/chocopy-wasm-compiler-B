@@ -7,7 +7,7 @@ export function PyValue(typ: Type, result: bigint): Value {
     case "bool":
       return PyBool(Boolean(result));
     case "class":
-      return PyObj(typ.name, result);
+      return PyObj(typ.name, Number(result));
     case "none":
       return PyNone();
   }
@@ -20,9 +20,14 @@ export function PyInt(n: bigint): Value {
 export function PyBool(b: boolean): Value {
   return { tag: "bool", value: b };
 }
-
+/*
 export function PyObj(name: string, address: bigint): Value {
   if (address === BigInt(0)) return PyNone();
+  else return { tag: "object", name, address };
+}
+*/ 
+export function PyObj(name: string, address: number): Value {
+  if (address === 0) return PyNone();
   else return { tag: "object", name, address };
 }
 
