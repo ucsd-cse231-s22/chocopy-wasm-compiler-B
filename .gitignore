@@ -7,4 +7,8 @@ cli
 mochawesome-report
 *lock*
 *.js
+**/*.png
+**/*.svg
+!/designs/example.svg
+**/.DS_Store
 .vscode
