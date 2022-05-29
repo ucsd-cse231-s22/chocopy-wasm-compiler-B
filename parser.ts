@@ -579,10 +579,10 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       }
     case "ForStatement":
       c.firstChild() // for
-      c.nextSibling() // vars
+      c.nextSibling()
       //const for_var = traverseExpr(c, s)
       const for_var = traverseDestructureTargets(c, s);
-      c.nextSibling()
+      //c.nextSibling()
       // for when we implement destructuring 
 
       // while(s.substring(c.from, c.to) == ',') {
@@ -647,6 +647,8 @@ function traverseDestructureTargets(c: TreeCursor, s: string):DestructureLHS<Sou
 
   do{
     if(c.name === "AssignOp") 
+      break;
+    else if (c.type.name === "in") 
       break;
     else if (c.type.name === ",") 
       continue;
