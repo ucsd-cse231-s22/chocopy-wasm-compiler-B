@@ -572,7 +572,8 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
     case "ForStatement":
       c.firstChild() // for
       c.nextSibling() // vars
-      const for_var = traverseExpr(c, s)
+      //const for_var = traverseExpr(c, s)
+      const for_var = traverseDestructureTargets(c, s);
       c.nextSibling()
       // for when we implement destructuring 
 
@@ -582,7 +583,7 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       //   c.nextSibling()
       // }
       c.nextSibling()
-      const iterable = traverseExpr(c, s)
+      const iterable = traverseDestructureValues(c,s)
       c.nextSibling()
       var body = []
       c.firstChild()
