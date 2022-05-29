@@ -64,6 +64,7 @@ export const BuiltinLib:BuiltinFunc[] = [
     body: (x:number)=>x!=0,
     typeSig: [[NUM], BOOL]
   },
+  /*
   {
     name: "abs",
     body: Math.abs,
@@ -84,6 +85,7 @@ export const BuiltinLib:BuiltinFunc[] = [
     body: Math.pow,
     typeSig: [[NUM, NUM], NUM]
   }
+  */ 
 ]
 
 

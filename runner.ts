@@ -120,7 +120,7 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-
+  var printlast = `(func $print_last_num (import "imports" "print_last_num") (param i32) (result i32))`
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
@@ -128,8 +128,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (param i32) (param i32) (result i32))
     (func $stack_push (import "imports" "stack_push") (param i32))
     (func $stack_clear (import "imports" "stack_clear"))
-    (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_last_num (import "imports" "print_last_num") (param i32) (result i32))
+    (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $plus (import "imports" "plus") (param i32) (param i32) (result i32))

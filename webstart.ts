@@ -110,7 +110,7 @@ function print(typ : Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  //elt.innerText = stringify(typ, arg);
 
   if (typ.tag === "number") {
     elt.innerText = reconstructBigint(arg, load).toString();
@@ -201,11 +201,18 @@ function webStart() {
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
+        stack_clear: () => RUNTIME_ERROR.stack_clear(),
         assert_not_none: (arg: any) => assert_not_none(arg),
+        /*
         print_num: (arg: number) => print(NUM, arg, load),
         print_last_num: (arg: number) => print(NUM, arg, load),
         print_bool: (arg: number) => print(BOOL, arg, load),
         print_none: (arg: number) => print(NONE, arg, load),
+        */ 
+        print_num: (arg: number) => renderPrint(NUM, arg),
+        print_bool: (arg: number) => renderPrint(BOOL, arg),
+        print_none: (arg: number) => renderPrint(NONE, arg),
+        print_last_num: (arg: number) => print(NUM, arg, load),
         plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
         minus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Minus, arg1, arg2, alloc, load, store),
         mul: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store),
@@ -440,8 +447,8 @@ function printGlobalVariable(repl: BasicREPL){
 }
 
 webStart();
-
+/*
   function stringify(typ: Type, arg: number): string {
     throw new Error('Function not implemented.');
   }
-
+*/ 

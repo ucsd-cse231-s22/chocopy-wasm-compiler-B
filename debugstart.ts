@@ -7,7 +7,8 @@ import {parser} from 'lezer-python'
 // entry point for debugging
 async function debug() {
   var source = `
-  print(4532645325234243)
+  x:int = 5
+  x
   `
 
   const t = parser.parse(source);
@@ -33,9 +34,9 @@ async function debug() {
   const repl = new BasicREPL(await addLibs());
   const result = repl.tc(source);
   console.log(result);
-  // const result = repl.run(source).then(result => {
-  //   console.log(result);
-  // })
+  const result2 = repl.run(source).then(result2 => {
+    console.log(result);
+  })
 }
 
 debug();
