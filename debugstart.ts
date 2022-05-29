@@ -32,12 +32,13 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
     `
-  s: str = "abcdefg"
-  print(s.upper())
+  a: int = 1
+  s:str = "abcdefg"
+  s[0:6+3:2*a]
   `
 
   const t = parser.parse(source);
-  //console.log(stringifyTree(t.cursor(), source, null))
+  // console.log(stringifyTree(t.cursor(), source, null))
   const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 
