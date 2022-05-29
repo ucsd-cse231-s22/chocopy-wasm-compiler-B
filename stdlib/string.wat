@@ -191,43 +191,105 @@
   (i32.const 0)
   (return))
   (func (export "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32)
-      (local $newstr i32)
-      (local $newstrlength i32)
+  ;;     (i32.ge_u (local.get $start) (local.get $end))
+  ;;     (if
+  ;;       (then
+  ;;         (local $newstr i32)
+  ;;         (i32.const 1)
+  ;;         (call $alloc)
+  ;;         (local.set $newstr)
+  ;;         (i32.store (local.get $newstr) (i32.const 0) (i32.const 0))
+  ;;         (local.get $newstr)
+  ;;         (return)
+  ;;       )
+  ;;     )
+  ;;     (i32.le_u (i32.sub (local.get $end) (local.get $start)) (local.get $steps))
+  ;;     (if
+  ;;       (then
+  ;;         (local $newstr i32)
+  ;;         (local $buffer i32)
+  ;;         (i32.const 2)
+  ;;         (call $alloc)
+  ;;         (local.set $newstr)
+  ;;         (local.get $newstr)
+  ;;         (i32.const 0) ;;as
+  ;;         (i32.const 1)
+  ;;         (call $store)
+  ;;         ;; get char from self and set it as the string for new string
+  ;;         (i32.add (local.get $start) (local.get $self))
+  ;;         (i32.const 1)
+  ;;         (call $load)
+  ;;         (local.set $buffer)
+  ;;         (local.get $newstr)
+  ;;         (i32.const 1)
+  ;;         (local.get $buffer)
+  ;;         (call $store)
+  ;;         (local.get $newstr)
+  ;;         (return))
+  ;;       )
+  ;;     )
+  ;;     (local $newstr i32)
+  ;;     (local $newstrlength i32)
+  ;;     (i32.rem_u (i32.sub (local.get $end) (local.get $start)) (local.get $steps))
+  ;;     (if
+  ;;     (then
+  ;;       (i32.div_u (i32.sub (local.get $end) (local.get $start)) (local.get $steps))
+  ;;       (local.set $newstrlength)
+  ;;       (i32.add (local.get $newstrlength) (i32.const 1))
+  ;;       (local.set $strLength)
+  ;;     )
+  ;;     (else
+  ;;       i32.const 0
+  ;;       call $log ;; should log '0'
+  ;;     )
+  ;;   )
       (i32.const 0)
       (return))
   
   (func (export "str$upper") (param $self i32) (result i32)
+      (local $newstr i32)
       (local $strLength i32)
       (local $currVal i32)
       (local $i i32)
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      ;; (i32.const 0)
+      ;; (i32.const 4)
+      ;; (call $load)
+      ;; (return)
+      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
       (i32.const 0)
-      (local.get $self)
-      (call $load)
+      (local.set $i)
+      ;; (local.get $self)
+      ;; (i32.const 0)
+      ;; (call $load)
+      (i32.load (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 0))))
       (local.set $strLength) ;; get the length of the string
+      (i32.add (local.get $strLength) (i32.const 1))
+      (call $alloc)
+      (local.set $newstr)
+      (local.get $newstr)
+      (i32.const 0)
+      (local.get $strLength)
+      (call $store)
       (loop $my_loop
-        (local.get $self)
-        (i32.add (i32.const 1)(local.get $i))
-        (call $load)
+        (i32.load8_u (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 4))))
         (local.set $currVal)
-        (i32.le_u (local.get $currVal) (i32.const 123))
+        (i32.and (i32.le_u (local.get $currVal) (i32.const 123)) (i32.gt_u (local.get $currVal) (i32.const 96)))
         (if
           (then
-            (i32.gt_u (local.get $currVal) (i32.const 96))
-            (if
-              (then
-                (local.get $self)
-                (i32.add (i32.const 1) (local.get $i))
-                (i32.sub (local.get $currVal) (i32.const 32))
-                (call $store)
-              )
-            )
+            (i32.sub (local.get $currVal) (i32.const 32))
+            (local.set $currVal)
+            (i32.store8 (i32.add (local.get $newstr) (i32.add (local.get $i) (i32.const 4))) (local.get $currVal))
+          )
+          (else
+            (i32.store8 (i32.add (local.get $newstr) (i32.add (local.get $i) (i32.const 4))) (local.get $currVal))
           )
         )
         (local.set $i (i32.add (i32.const 1) (local.get $i)))
         (i32.lt_u (local.get $i) (local.get $strLength))
         br_if $my_loop
       )
-      (local.get $self)
+      (local.get $newstr)
       (return))
   
   (func (export "str$lower") (param $self i32) (result i32)
