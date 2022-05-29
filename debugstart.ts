@@ -47,10 +47,10 @@ async function debug() {
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2))
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
-  console.log(JSON.stringify(tprogram, null, 2))
-  // const globalEnv = augmentEnv(config.env, tprogram);
-  // const irprogram = lowerProgram(tprogram, globalEnv);
-  // console.log(JSON.stringify(irprogram, null,2))
+  // console.log(JSON.stringify(tprogram, null, 2))
+  const globalEnv = augmentEnv(config.env, tprogram);
+  const irprogram = lowerProgram(tprogram, globalEnv);
+  console.log(JSON.stringify(irprogram, null,2))
   // const compiled = compile(irprogram, globalEnv);
   // console.log(compiled)
   // const result = repl.run(source).then(result => {

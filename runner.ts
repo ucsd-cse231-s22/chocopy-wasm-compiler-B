@@ -141,6 +141,7 @@ ${BuiltinLib.map(x => `    (func $${x.name} (import "imports" "${x.name}") ${"(p
     (func $str$equalsto (import "libstring" "str$equalsto") (param $self i32) (param $rhs i32) (result i32))
     (func $str$concat (import "libstring" "str$concat") (param $self i32) (param $rhs i32) (result i32))
     (func $str$copyconstructor (import "libstring" "str$copyconstructor") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$slicing (import "libstring" "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32))
     (func $str$upper (import "libstring" "str$upper") (param $self i32) (result i32))
     (func $str$lower (import "libstring" "str$lower") (param $self i32) (result i32))
     (func $set$add (import "libset" "set$add") (param $baseAddr i32) (param $key i32) (result i32))
