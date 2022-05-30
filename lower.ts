@@ -325,10 +325,8 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
       } 
       break;
     default:
-      break;
-      //throw new Error("Not supported rhs for destructuring!")
+      throw new Error("Not supported rhs for destructuring!")
     }
-    destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
 }
 
 function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {

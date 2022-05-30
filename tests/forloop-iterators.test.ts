@@ -49,7 +49,7 @@ i: int = 0
 for i in range(0,10,2):
     print(i)`, ["0","2","4","6", "8"]);
 
-    assertPrint('range: called inside a fucntion with function parameters', rangeStr + `
+    assertPrint('range: called inside a function with function parameters', rangeStr + `
 def f(x: int, y: int):
     i: int = 0
     for i in range(x*1,y*1,1*2*abs(1)):
