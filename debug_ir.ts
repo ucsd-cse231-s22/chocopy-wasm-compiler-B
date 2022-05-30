@@ -8,7 +8,7 @@ import { BasicREPL } from "./repl";
 import * as ir from './ir';
 import { CliRenderer } from "@diagrams-ts/graphviz-cli-renderer";
 import { optimizeAst } from './optimize_ast';
-import { optimizeIr } from './optimize_ir';
+import { optimizeIr, liveness_analysis, live_predicate } from './optimize_ir';
 
 
 export function printProgIR(p: ir.Program<[Type, SourceLocation]>) {
@@ -297,8 +297,14 @@ function valInline(val: ir.Value<[Type, SourceLocation]>): string {
 async function debug(optAst: boolean = false, optIR: boolean = false) {
   var source = 
 `
-g: int = 0
-g = 1 + 2
+a: int = 10
+b: int = 6
+r: int = 0
+while (a % b) > 0:
+  r = a % b
+  a = b
+  b = r
+b
 `
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2));
@@ -316,9 +322,11 @@ g = 1 + 2
   console.log(JSON.stringify(irprogram, (k, v) => typeof v === "bigint" ? v.toString(): v, 2));
   printProgIR(irprogram);
 
-  const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
-  const dot = dotProg(irprogram);
-  await render(dot);
+  const lp: live_predicate = liveness_analysis(irprogram.body);
+  console.log(lp);
+  // const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
+  // const dot = dotProg(irprogram);
+  // await render(dot);
 }
 
-debug();
+debug(false, false);
