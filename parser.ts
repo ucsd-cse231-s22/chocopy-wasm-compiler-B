@@ -72,29 +72,22 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         name: s.substring(c.from, c.to)
       }
     case "CallExpression":
-      const callStr = s.substring(c.from, c.to);
-      const genericRegex = /\[[A-Za-z, ]*\]/g;
-      const genericArgs = callStr.match(genericRegex);
-
       let genericTypes = [];
       c.firstChild();
-      if(genericArgs) {
-        c.firstChild(); // Focus on object
+      if(c.firstChild()) { // focus on name
         var objExpr = traverseExpr(c, s);
-        c.nextSibling(); // Focus on . or [
-        var dotOrBracket = s.substring(c.from, c.to);
-
-        if(dotOrBracket == '[') {
-          c.firstChild();
-          c.nextSibling();
+        c.nextSibling(); // Focus on ( or [
+        var parenOrBracket = s.substring(c.from, c.to);
+        if(parenOrBracket == '[') {
+          c.nextSibling(); // focus on type
           while(s.substring(c.from, c.to) !== "]") {
             const type = traverseType(c, s);
             genericTypes.push(type);
-            c.nextSibling(); // focus on , or )
+            c.nextSibling(); // focus on , or ]
             c.nextSibling(); // focus on type
           }
-          c.parent();
         }
+        c.parent();
       } 
 
       let callExpr = traverseExpr(c, s);
@@ -102,11 +95,11 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       const args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
-      if(genericTypes.length > 0) {
+      if(genericTypes.length > 0 && callExpr.tag == "index" && callExpr.obj.tag == "id") {
         return {
           a: location,
           tag: "call",
-          name: callStr.split('[')[0],
+          name: callExpr.obj.name,
           arguments: args,
           genericArgs: genericTypes
         };
