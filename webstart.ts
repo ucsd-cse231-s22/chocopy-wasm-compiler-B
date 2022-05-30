@@ -6,6 +6,9 @@ import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint } from "./outputrender";
 import { log, table } from 'console';
 import { sources } from 'webpack';
+import { gcd_help, generateRandomBigInt, perm_help } from './builtinlib';
+import {BuiltinLib} from "./builtinlib"
+import { RunTimeError } from './error_reporting';
 
 import CodeMirror from "codemirror";
 import "codemirror/addon/edit/closebrackets";
@@ -16,7 +19,7 @@ import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
 import "./style.scss";
-import {BuiltinLib} from "./builtinlib"
+
 
 export function reconstructBigint(arg : number, load : any) : bigint {
   var base = BigInt(2 ** 31);
@@ -119,6 +122,7 @@ function print(typ : Type, arg : number, load : any) : any {
   return arg;
 }
 
+// Builtins start, moved from builtinlib to webstart to avoid ReferenceError
 export function abs_big(arg : number, alloc : any, load : any, store : any) : any {
   var bigInt = reconstructBigint(arg, load);
   if (bigInt >= BigInt(0)) {
@@ -164,6 +168,95 @@ function factorial(x:number, load: any, alloc: any, store: any) {
 function factorial_help(x:bigint):bigint{
   return x>0 ? x*factorial_help(x-BigInt(1)): BigInt(1)
 }
+
+function randint(x:number, y:number, load: any, alloc: any, store: any):number{
+  var lowInt = reconstructBigint(x,load);
+  var highInt = reconstructBigint(y,load); 
+  if(highInt<lowInt) 
+    throw new RunTimeError("randint range error, upperBound less than lowerBound");
+  var ans = generateRandomBigInt(lowInt, highInt); 
+  return deconstructBigint(ans, alloc,store); 
+}
+
+function gcd(arg1:number,arg2:number, load: any, alloc: any, store: any):number{
+  var a = reconstructBigint(arg1, load); 
+  var b = reconstructBigint(arg2, load); 
+  if (a<BigInt(0) || b<BigInt(0) || a==BigInt(0) && b==BigInt(0))
+    throw new RunTimeError("gcd param error, eq or less than 0");
+  var ans = gcd_help(b,a %b);
+  return deconstructBigint(ans, alloc, store);
+}
+
+function lcm(arg1:number, arg2:number, load: any, alloc: any, store: any):number{
+  var x = reconstructBigint(arg1, load); 
+  var y = reconstructBigint(arg2, load); 
+  if (x<=BigInt(0) || y<=BigInt(0) || x==BigInt(0) && y==BigInt(0))
+    throw new RunTimeError("lcm param negative error, eq or less than 0");
+  var ans = x*y/gcd_help(x,y)
+  return deconstructBigint(ans, alloc, store);
+}
+
+function comb(arg1:number, arg2:number, load: any, alloc: any, store: any):number{
+  var x = reconstructBigint(arg1, load); 
+  var y = reconstructBigint(arg2, load); 
+  if (x < y || x < 0 || y < 0)
+    throw new RunTimeError("comb param error");
+  var ans = perm_help(x,y) / perm_help(y,y); 
+  return deconstructBigint(ans, alloc, store);
+}
+
+function perm(arg1:number, arg2:number,load: any, alloc: any, store: any):number{
+  var x = reconstructBigint(arg1, load); 
+  var y = reconstructBigint(arg2, load); 
+  if (x < y || x < 0 || y < 0)
+    throw new RunTimeError("perm param error");
+  var ans = perm_help(x,y); 
+  return deconstructBigint(ans, alloc, store);
+}
+
+function randrange(arg1:number, arg2:number, step:number,load: any, alloc: any, store: any):number{
+  var x = reconstructBigint(arg1, load); 
+  var y = reconstructBigint(arg2, load); 
+  var step2 = reconstructBigint(step, load); 
+  if(y<x) 
+    throw new RunTimeError("randrange range error, upperBound less than lowerBound");
+  let result = generateRandomBigInt(x, y)
+  while ((result - x) % step2 !== BigInt(0)) {
+    result = generateRandomBigInt(x, y)
+  }
+  return deconstructBigint(result, alloc, store); 
+}
+
+function sleep(ms:number, load: any):number{
+  var x = reconstructBigint(ms, load);  
+	const start = Date.now();
+	while (Date.now()-start<x);
+	return 0;
+}
+
+function time(alloc: any, store: any): number {
+  var ans = BigInt(Date.now()%1000000000)
+  return deconstructBigint(ans, alloc, store); 
+}
+
+// convert numbers to bool 
+function bool(arg1: number,load: any): boolean {
+  var x = reconstructBigint(arg1, load); 
+  var ans = true
+  if (x === BigInt(0)) {
+    ans = false
+  }
+  return ans
+}
+
+// convert bools to numbers
+function int(arg1: any, load: any, alloc: any, store: any): any {
+  if (arg1 === 1) 
+    return deconstructBigint(BigInt(1), alloc, store); 
+  
+  return deconstructBigint(BigInt(0), alloc, store);
+}
+// Builtins End
 
 // This function is proposed by the string group.
 export function big_to_i32(arg : number, load : any) : any {
@@ -234,6 +327,16 @@ function webStart() {
         max: (arg1: number, arg2: number) => max_big(arg1, arg2, load),
         pow: (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store),
         factorial: (arg1: number) => factorial(arg1,load,alloc,store),
+        randint: (arg1: number, arg2: number) => randint(arg1, arg2, load, alloc, store),
+        gcd: (arg1: number, arg2: number) => gcd(arg1, arg2, load, alloc, store),
+        lcm: (arg1: number, arg2: number) => lcm(arg1, arg2, load, alloc, store),
+        perm: (arg1: number, arg2: number) => perm(arg1, arg2, load, alloc, store),
+        comb: (arg1: number, arg2: number) => comb(arg1, arg2, load, alloc, store),
+        randrange: (arg1: number, arg2: number, step: number) => randrange(arg1, arg2, step, load, alloc, store),
+        sleep: (arg1: number) => sleep(arg1, load),
+        time: () => time(alloc, store), 
+        bool: (arg1: number) => bool(arg1,load),
+        int: (arg1: any) => int(arg1,load, alloc, store),
         get_num: (arg: number) => big_to_i32(arg, load)
       },
       libmemory: memoryModule.instance.exports,
