@@ -221,14 +221,7 @@ function optimizeBuiltin(expr: Expr<[Type, SourceLocation]>, optArgs: Expr<[Type
                 const result = BuiltinLib[7].body();
                 return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
             }
-            case "sleep": {
-                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num") {
-                    const result = BuiltinLib[8].body(optArgs[0].value.value);
-                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
-                } else {
-                    return { ...expr, arguments: optArgs };
-                }
-            }
+            // sleep does not need optimization
             case "int": {
                 if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "bool") {
                     const result = BuiltinLib[9].body(optArgs[0].value.value);

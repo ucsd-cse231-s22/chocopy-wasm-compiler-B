@@ -107,3 +107,13 @@ export function assertPass(name: string, source: string, astOpt: boolean = true,
   });
 }
 
+export function assertOptimizeCorrect(name: string, source: string, astOpt: boolean = true, irOpt: boolean = true) {
+  it(name, async () => {
+    const repl0 = new BasicREPL(await addLibs());
+    const v0 = await repl0.run(source, false, false);
+    const repl1 = new BasicREPL(await addLibs());
+    const v1 = await repl1.run(source, astOpt, irOpt);
+    expect(v0).deep.eq(v1);
+  });
+}
+
