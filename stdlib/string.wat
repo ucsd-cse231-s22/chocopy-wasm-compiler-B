@@ -221,6 +221,14 @@
         (local.set $start)
       )
     )
+    ;; check if we should shift start_index to 0 if it's still negative
+    (i32.gt_s (i32.const 0) (local.get $start))
+    (if
+      (then
+        (i32.const 0)
+        (local.set $start)
+      )
+    )
     ;; check whether the end_index is negative
     (i32.gt_s (i32.const 0) (local.get $end))
     (if
