@@ -6,7 +6,7 @@
 
    ```python
    def test(x : int, y : int):
-      return x + y
+      print(x + y)
 
    test(3,5)
    ```
@@ -182,7 +182,7 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 3. Checks that named arguments exist in the function argument definition
 
    ```python
-   def test(a : int, b : int, c : int = 5)
+   def test(a : int, b : int, c : int = 5):
       print(a-b+c)
    test(7, 3, f = 5)
    ```
@@ -192,8 +192,8 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 4. Normal calls with unnamed arguments and default values still works
 
    ```python
-   def test(a : int, b : int, c : int = 5)
-	   return a + b + c
+   def test(a : int, b : int, c : int = 5):
+	   print(a + b + c)
    test(7, 3)
    ```
    
@@ -202,8 +202,8 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 5. Named arguments can override non default arguments without needing to override default arguments
 
    ```python
-   def test(a : int, b : int, c : int = 5)
-	   return a - b + c
+   def test(a : int, b : int, c : int = 5):
+	   print(a - b + c)
    test(b = 7, a = 3)
    ```
 
@@ -212,8 +212,8 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 6. Named arguments can override default arguments
 
    ```python
-   def test(a : int, b : int, c : int = 5)
-	   return a - b + c
+   def test(a : int, b : int, c : int = 5):
+	   print(a - b + c)
    test(b = 7, a = 3, c = 0)
    ```
    
@@ -222,8 +222,8 @@ We do not need to modify or use memory - as mentioned before, our feature only c
 7. Checks that all of the non default arguments are defined
 
    ```python
-   def test(a : int, b : int, c : int = 5)
-	   return a - b + c
+   def test(a : int, b : int, c : int = 5):
+	   print(a - b + c)
 
    test(b = 7, c = 0)
    ```
@@ -235,9 +235,9 @@ We do not need to modify or use memory - as mentioned before, our feature only c
    ```python
    def test(a : int, b : int, c : bool = True):
 	   if(c):
-		   return a
+		   print(a)
 	   else:
-		   return b
+		   print(b)
    test(c = 5, b = 1, a = 2)
    ```
 
@@ -248,9 +248,9 @@ We do not need to modify or use memory - as mentioned before, our feature only c
    ```python
    def test(a : int, b : int, c : bool = True):
       if(c):
-         return a
+         print(a)
       else:
-         return b
+         print(b)
 
    test(b = True, a = 2)
    ```
@@ -261,7 +261,7 @@ We do not need to modify or use memory - as mentioned before, our feature only c
    
       ```python
       def test(a : int, b : int):
-         return a + b
+         print(a + b)
       test(a = 1+2, b = 5-2)
       ```
 
