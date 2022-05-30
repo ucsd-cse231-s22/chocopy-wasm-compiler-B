@@ -2,7 +2,7 @@ import bigInt from 'big-integer';
 import { Type } from './ast';
 import { RunTimeError } from './error_reporting';
 import { BOOL, NONE, NUM } from './utils';
-import {reconstructBigint, deconstructBigint, max_big, abs_big, pow_big, min_big} from './webstart'
+import {reconstructBigint, deconstructBigint, abs_big} from './webstart'
 
 type BuiltinFunc = {
   name: string
@@ -68,22 +68,22 @@ export const BuiltinLib:BuiltinFunc[] = [
   },
   {
     name: "abs",
-    body: abs_big,
+    body: Math.abs,
     typeSig: [[NUM], NUM]
   },
   {
     name: "min",
-    body: min_big,
+    body: Math.min,
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "max",
-    body: max_big,
+    body: Math.max,
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "pow",
-    body: pow_big,
+    body: Math.pow,
     typeSig: [[NUM, NUM], NUM]
   }
 ]

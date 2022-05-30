@@ -153,7 +153,18 @@ export function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, s
   // It is equivalent to Math. pow , except it also accepts BigInts as operands.
   var bigInt3 = bigInt1 ** bigInt2;
   return deconstructBigint(bigInt3, alloc, store);
-} 
+}
+
+function factorial(x:number, load: any, alloc: any, store: any) {
+  var bigInt = reconstructBigint(x,load); 
+  var ans = factorial_help(bigInt)
+  return deconstructBigint(ans,alloc,store)
+}
+ 
+function factorial_help(x:bigint):bigint{
+  return x>0 ? x*factorial_help(x-BigInt(1)): BigInt(1)
+}
+
 // This function is proposed by the string group.
 export function big_to_i32(arg : number, load : any) : any {
   var bigInt = reconstructBigint(arg, load);
@@ -222,6 +233,7 @@ function webStart() {
         min: (arg1: number, arg2: number) => min_big(arg1, arg2, load),
         max: (arg1: number, arg2: number) => max_big(arg1, arg2, load),
         pow: (arg1: number, arg2 : number) => pow_big(arg1, arg2, alloc, load, store),
+        factorial: (arg1: number) => factorial(arg1,load,alloc,store),
         get_num: (arg: number) => big_to_i32(arg, load)
       },
       libmemory: memoryModule.instance.exports,

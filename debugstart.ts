@@ -7,7 +7,7 @@ import {parser} from 'lezer-python'
 // entry point for debugging
 async function debug() {
   var source = `
-  abs(-5)
+  factorial(45)
   `
 
   const t = parser.parse(source);
