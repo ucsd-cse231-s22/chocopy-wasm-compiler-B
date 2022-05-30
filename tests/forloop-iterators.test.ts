@@ -187,7 +187,7 @@ assertPrint('range: complex break, continue 5' , rangeStr + `
 i: int = 0
 j:int  = 0
 k: int = 0 
-for i in range(5, -5, -1):
+for i in range(3, -3, -1):
     for j in range(1, 5, 1):
         for k in range(1, 5, 2):
             if(i + j + k == 0):
