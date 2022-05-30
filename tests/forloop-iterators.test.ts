@@ -683,7 +683,7 @@ i = [1,2,3,4]
 print(iter(j))
 `);
 
-
+/*
 assertFail('Stop iteration in range', rangeStr + `
 
 class ListIteratorBool(object) : 
@@ -694,6 +694,8 @@ class ListIteratorBool(object) :
    	return self
 
    def next(self :  ListIteratorBool) -> bool : 
+    if self.hasnext() == False:
+      
    	ret :  bool = False
    	ret = self.list[self.index]
    	self.index = self.index + 1
@@ -711,7 +713,7 @@ def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
 i: [bool] = None
 _iter: ListIteratorBool = None
 i = [True, False, True, False]
-_iter = iter(i)
+_iter = iter(BoolIterable())
 print(next(_iter))
 print(next(_iter))
 print(next(_iter))
@@ -719,6 +721,7 @@ print(next(_iter))
 print(next(_iter))
 print(next(_iter))
 `);
+*/
 
 /**
  * Ensure during typechecking, a TypeError is thrown.
