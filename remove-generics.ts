@@ -113,6 +113,15 @@ function typeString(type: Type): string {
         return name;
     } else if(type.tag == "either") {
         return typeString(type.left) + "#" + typeString(type.right); 
+    } else if(type.tag == "list") {
+        const name = type.tag + "_" + typeString(type.type);
+        return name;
+    } else if(type.tag == "set") {
+        const name = type.tag + "_" + typeString(type.valueType);
+        return name;
+    } else if(type.tag == "generator") {
+        const name = type.tag + "_" + typeString(type.type);
+        return name;
     } else {
         return type.tag;
     }

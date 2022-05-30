@@ -748,20 +748,32 @@ export function traverseType(c : TreeCursor, s : string) : Type {
         c.parent(); //up from ArrayExpression
 
         return {tag: "list", type};
-    } else {
-      //object
-      const genericRegex = /\[[A-Za-z, ]*\]/g;
-      const genericArgs = name.match(genericRegex);
-      if(genericArgs) {
-        const className = name.split('[')[0].trim();
-        const genericNamesStr = genericArgs.toString();
-        const genericNames = genericNamesStr.substring(1, genericNamesStr.length - 1).split(',');
-        const genericTypes = genericNames.map(gn => typeFromString(gn.trim()));
-        return CLASS(className, genericTypes);
       } else {
-        return CLASS(name);
-      }
-    }      
+        //object
+        let className = "";
+        let genericArgs = [];
+        if(c.firstChild()) { // focus on name
+          className = s.substring(c.from, c.to);
+          c.nextSibling(); // Focus on ( or [
+          var parenOrBracket = s.substring(c.from, c.to);
+          if(parenOrBracket == '[') {
+            c.nextSibling(); // focus on type
+            while(s.substring(c.from, c.to) !== "]") {
+              const type = traverseType(c, s);
+              genericArgs.push(type);
+              c.nextSibling(); // focus on , or ]
+              c.nextSibling(); // focus on type
+            }
+          }
+          c.parent();
+        } 
+    
+        if(genericArgs.length > 0) {
+          return CLASS(className, genericArgs);
+        } else {
+          return CLASS(name);
+        }
+      }      
   }
 }
 
