@@ -1,9 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { jsopen, jsclose, jsread, jswrite, fileObjectDefinition } from './io';
-import { isJsxAttribute } from 'typescript';
 
 declare global {
   interface Window { 
