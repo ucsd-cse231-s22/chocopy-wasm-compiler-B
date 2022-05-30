@@ -274,7 +274,7 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
       var rhs_vals = rhs.elements
       destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
       break;
-    case "id": case "call":
+    case "id": 
       if(rhs.a[0].tag==="list"){ //TODO set on rhs, for starred exprs? how to check length..can add a length check in tc
         //1. open rhs as index asign==> a,b = c ==> a,b = c[0], c[1]
         let lhs_index = 0
@@ -286,7 +286,37 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
           lhs_index++;
         }
         destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
       }
+      break;
+    case "call":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"call", name:rhs.name, arguments:rhs.arguments}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
+      }
+      break;
+    case "lookup":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"lookup", obj:rhs.obj, field:rhs.field}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } 
       break;
     default:
       throw new Error("Not supported rhs for destructuring!")
