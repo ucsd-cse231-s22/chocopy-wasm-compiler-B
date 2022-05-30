@@ -337,7 +337,7 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
       const iterClassName = r.a[0].name;
       if(va.tag==="id"){
         var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasNext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasnext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
       
         //will probably fail for cases like 'a,b,c = range(1,3),5
         while(lhs_index < lhs.length){

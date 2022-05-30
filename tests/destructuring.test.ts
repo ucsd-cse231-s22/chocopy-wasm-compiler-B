@@ -161,64 +161,74 @@ print(x)
 print(y)
 print(z)`)
 
-const rangeDef =`
-class Range(object):
-  current : int = 0
-  start : int = 0
-  end : int = 0
-  def new(self:Range, start:int, end:int)->Range:
-    self.start = start
-    self.current = start
-    self.end = end
-    return self
-  def next(self:Range)->int:
-    c : int = 0
-    c = self.current
-    self.current = self.current + 1
-    return c
-  def hasNext(self:Range)->bool:
-    return self.current < self.end
-def range(s: int, e: int)->Range:
-  r: Range = None
-  r = Range().new(s,e)
-  return r
+var rangeStr = `
+class __range__(object):
+    start: int = 0
+    stop: int = 0
+    step: int = 1
+    hasNext: bool = False
+    currval: int = 0
+    def __init__(self: __range__):
+        pass
+    def new(self: __range__, start: int, stop: int, step: int) -> __range__:
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.currval = start
+        return self
+
+    def next(self: __range__) -> int:
+        prev: int = 0
+        prev = self.currval
+        self.currval = prev+self.step
+        return prev
+        
+    def hasnext(self: __range__) -> bool:
+        nextval: int = 0
+        nextval = self.currval
+        if((self.step>0 and nextval<self.stop) or (self.step<0 and nextval>self.stop)):
+            self.hasNext = True
+        else:
+            self.hasNext = False
+        return self.hasNext
+
+def range(start: int, stop: int, step: int) -> __range__:
+    return __range__().new(start, stop, step)
+
 `
 
-assertPrint("range-test-1", `
-${rangeDef}
+
+assertPrint("range-test-1", rangeStr + `
 a:int = 5
 b:int = 3
-a, b = range(1, 3)
+a, b = range(1, 3, 1)
 print(a)
 print(b)
 `, ["1", "2"]
 )
 
-assertPrint("range-test-2", `
-${rangeDef}
+assertPrint("range-test-2", rangeStr + `
 a:int = 5
 b:int = 3
-a, b = 2, range(1, 2)
+a, b = 2, range(1, 2, 1)
 print(a)
 print(b)
 `, ["2", "1"]
 )
 
 // Range with star on LHS
-// assertPrint("basic-destr-range-star-1", `
-// ${rangeDef}
+// assertPrint("basic-destr-range-star-1", rangeStr + `
 // x : int = 0
 // y : [int] = None
-// x, *y = 2, range(1, 3)
+// x, *y = 2, range(1, 3, 1)
 // print(x)
 // print(y[0])
 // print(y[1])` , ["2", "1", "2"]);
 
-// assertPrint("basic-destr-range-star-2", `
-// ${rangeDef}
+// assertPrint("basic-destr-range-star-2", rangeStr + `
 // x : int = 0
 // y : [int] = None
-// x, *y = range(1, 4)
+// x, *y = range(1, 4, 1)
 // print(x)
 // print(y[0])
 // print(y[1])` , ["1", "2", "3"]);
