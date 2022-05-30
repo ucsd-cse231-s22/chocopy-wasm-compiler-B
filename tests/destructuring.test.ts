@@ -777,24 +777,22 @@ f(5)` , ["7", "8", "9"]);
 
 // Class
 
-// assertPrint("basic-descr-class-field-assign",
-// `
-// class C(object):
-//   x : [int] = None
-//   def getX(self: C) -> int:
-//     return self.x
-//   def setX(self: C, x: int):
-//     self.x = x
+assertPrint("basic-descr-class-field-assign-1",
+`
+class C(object):
+  x : [int] = None
+  def getX(y : int) -> int:
+    return y
 
-// c : C = None
-// c = C()
-// x_1 : int = 0
-// x_2 : int = 0
-// x_2 : int = 0
-// c.x = [1, 2, 3]
-// x_1, x_2, x_3 = c.x 
-// print(x_1)
-// print(x_2)
-// print(x_3)`,["1", "2", "3"]);
+c : C = None
+x_1 : int = 0
+x_2 : int = 0
+x_3 : int = 0
+c = C()
+c.x = [1, 2, 3]
+x_1, x_2, x_3 = c.x 
+print(x_1)
+print(x_2)
+print(x_3)`,["1", "2", "3"]);
 
 });
