@@ -419,7 +419,11 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
   })
 
   switch(tRhs.tag) {
+    case "lookup":
     case "id":
+    case "method-call":
+    case "binop":
+      checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
       return tRhs;
 
     case "set":
@@ -435,8 +439,10 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
       if(tRhs.a[0].tag === "class"){ 
         tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
         return tRhs
-      }
-      else throw new TypeCheckError("undefined iterable type on RHS of Destructuring", stmtLoc)
+      } 
+      checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
+      return tRhs;
+      
 
     case "listliteral":
       if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
@@ -448,6 +454,22 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
     default:
       throw new Error("not supported expr type for destructuring")
   }
+}
+
+function checkArbitraryTypes(env: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], rhsType : Type, hasStarred : boolean, stmtLoc: SourceLocation) {
+  if (rhsType.tag === "list" || rhsType.tag === "set") {
+    tDestr.forEach(r => {
+
+      if (r.isIgnore) {
+        return
+      }
+
+      //@ts-ignore
+      if (!r.isStarred && !isAssignable(env, r.lhs.a[0], rhsType.type) || r.isStarred && !isAssignable(env, r.lhs.a[0].type, rhsType.type)) {
+        throw new TypeCheckError("Type Mismatch while destructuring assignment", r.lhs.a[1])
+      }
+    })
+  } else {throw new TypeCheckError(`cannot unpack ${rhsType.tag}`, stmtLoc)}
 }
 
 function checkDestrLength(tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs : Expr<[Type, SourceLocation]>[], hasStarred : boolean): boolean {
@@ -493,11 +515,11 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       rhs_index++
     } else {
       //@ts-ignore
-      if(tRhs[rhs_index].a[0].tag==="class"){
+      if(tRhs[rhs_index].a[0].tag==="class") {
         //FUTURE: support range class added by iterators team, currently supports range class added from code
         //@ts-ignore
         var clsName = tRhs[rhs_index].a[0].name
-        if (env.classes.get(clsName)[1].get('next')==null){
+        if (env.classes.get(clsName)[1].get('next')==null) {
           throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
         }
         var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
@@ -509,11 +531,9 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
           lhs_index++
           rhs_index++
         }
-      } 
-      else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
+      } else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
-        } 
-      else {
+      } else {
         lhs_index++
         rhs_index++
       }
@@ -526,7 +546,7 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
   let rev_rhs_index = tRhs.length - 1;  
   // Only doing this reverse operation in case of starred
   if (hasStarred) {
-    if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
+    if (lhs_index === tDestr.length - 1 && rhs_index === tRhs.length) {
       return
     } else {
       while (rev_lhs_index > lhs_index) {
@@ -551,8 +571,21 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].lhs.a[1])
     }
 
-    //@ts-ignore
-    if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
+    if (tRhs[rev_rhs_index].a[0].tag==="class") {
+      //@ts-ignore
+      var clsName = tRhs[rev_rhs_index].a[0].name
+      if (env.classes.get(clsName)[1].get('next')==null) {
+        throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
+      }
+      var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
+      //checking type of lhs with type of return of iterator
+      //Length mismatch from iterables will be RUNTIME ERRORS
+      //@ts-ignore
+      if(!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, expectedRhsType)) {
+        throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+      } 
+    } //@ts-ignore  
+    else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
       throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
     } 
     rev_rhs_index--
