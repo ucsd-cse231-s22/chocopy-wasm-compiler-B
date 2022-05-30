@@ -18,7 +18,7 @@ import "codemirror/addon/fold/comment-fold";
 import "./style.scss";
 import {BuiltinLib} from "./builtinlib"
 
-function reconstructBigint(arg : number, load : any) : bigint {
+export function reconstructBigint(arg : number, load : any) : bigint {
   var base = BigInt(2 ** 31);
   var digitNum = load(arg, 0);
 
@@ -36,7 +36,7 @@ function reconstructBigint(arg : number, load : any) : bigint {
 }
 
 // allocate the bigint
-function deconstructBigint(bigInt : bigint, alloc : any, store : any) : number {
+export function deconstructBigint(bigInt : bigint, alloc : any, store : any) : number {
   var isNegative = 1;
   if (bigInt < 0) {
     isNegative = -1;
@@ -106,6 +106,7 @@ function comparisonOp(op : any, arg1 : number, arg2 : number, alloc : any, load 
   throw Error("RUNTIME ERROR: Unknown bigint comparison operator");
 }
 
+// replaced with print in "outputrender"
 function print(typ : Type, arg : number, load : any) : any {
   console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
@@ -118,7 +119,7 @@ function print(typ : Type, arg : number, load : any) : any {
   return arg;
 }
 
-function abs_big(arg : number, alloc : any, load : any, store : any) : any {
+export function abs_big(arg : number, alloc : any, load : any, store : any) : any {
   var bigInt = reconstructBigint(arg, load);
   if (bigInt >= BigInt(0)) {
     return arg;
@@ -126,7 +127,7 @@ function abs_big(arg : number, alloc : any, load : any, store : any) : any {
   return deconstructBigint(-bigInt, alloc, store);
 }
 
-function min_big(arg1 : number, arg2 : number, load : any) : any {
+export function min_big(arg1 : number, arg2 : number, load : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
   if (bigInt1 > bigInt2) {
@@ -135,7 +136,7 @@ function min_big(arg1 : number, arg2 : number, load : any) : any {
   return arg1;
 }
 
-function max_big(arg1 : number, arg2 : number, load : any) : any {
+export function max_big(arg1 : number, arg2 : number, load : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
   if (bigInt1 > bigInt2) {
@@ -144,7 +145,7 @@ function max_big(arg1 : number, arg2 : number, load : any) : any {
   return arg2;
 }
 
-function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
+export function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : any) : any {
   var bigInt1 = reconstructBigint(arg1, load);
   var bigInt2 = reconstructBigint(arg2, load);
 
@@ -152,10 +153,9 @@ function pow_big(arg1 : number, arg2 : number, alloc : any, load : any, store : 
   // It is equivalent to Math. pow , except it also accepts BigInts as operands.
   var bigInt3 = bigInt1 ** bigInt2;
   return deconstructBigint(bigInt3, alloc, store);
-}
-
+} 
 // This function is proposed by the string group.
-function big_to_i32(arg : number, load : any) : any {
+export function big_to_i32(arg : number, load : any) : any {
   var bigInt = reconstructBigint(arg, load);
   const min_value = -2147483648;
   const max_value = 2147483647;
@@ -190,7 +190,7 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-
+    
     var alloc = memoryModule.instance.exports.alloc;
     var load = memoryModule.instance.exports.load;
     var store = memoryModule.instance.exports.store;
@@ -203,16 +203,10 @@ function webStart() {
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
         assert_not_none: (arg: any) => assert_not_none(arg),
-        /*
-        print_num: (arg: number) => print(NUM, arg, load),
-        print_last_num: (arg: number) => print(NUM, arg, load),
-        print_bool: (arg: number) => print(BOOL, arg, load),
-        print_none: (arg: number) => print(NONE, arg, load),
-        */ 
-        print_num: (arg: number) => renderPrint(NUM, arg),
-        print_bool: (arg: number) => renderPrint(BOOL, arg),
-        print_none: (arg: number) => renderPrint(NONE, arg),
-        print_last_num: (arg: number) => print(NUM, arg, load),
+        print_num: (arg: number) => renderPrint(NUM, arg, load),
+        print_bool: (arg: number) => renderPrint(BOOL, arg, load),
+        print_none: (arg: number) => renderPrint(NONE, arg, load),
+        print_last_num: (arg: number) => renderPrint(NUM, arg, load),
         plus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Plus, arg1, arg2, alloc, load, store),
         minus: (arg1: number, arg2: number) => arithmeticOp(BinOp.Minus, arg1, arg2, alloc, load, store),
         mul: (arg1: number, arg2: number) => arithmeticOp(BinOp.Mul, arg1, arg2, alloc, load, store),

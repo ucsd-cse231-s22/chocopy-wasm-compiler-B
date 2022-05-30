@@ -244,5 +244,103 @@ y : int = 3
 print(pow(x, y))
     `,
     [`1881676372240757194277820616164488626666147700309108518161`]
+  ), 
+  // 26 
+  assertPrint(
+    "List w/ big numbers", 
+    `
+list1: [int] = None
+list1 = [3254324322343, 893743453, 34, 5653543373]
+print(list1[3])
+`, 
+[`5653543373`]
+  ), 
+  // 27 
+  assertPrint(
+    "Large number list comprehension", 
+    `print([4325894324232 for i in range(4)])`, 
+    [`[4325894324232, 4325894324232, 4325894324232, 4325894324232]`]
+  ), 
+  // 28 
+  assertPrint(
+    `Generator comprehension Range test`, 
+    `
+gen : generator = None
+gen = (val for val in range(3829532432432432, 3829532432432434, 1))
+print(next(gen))
+`, 
+[`3829532432432432`]
+  ), 
+  // 29
+  assertPrint(
+    `String indexing`, 
+    `s:str = "WASMisthebest"
+    print(s[10])`, 
+    [`e`]
+  ), 
+  // 30
+  assertPrint(
+    `String comparison`, 
+    `
+s1:str = "ab"
+s2:str = "abc"
+print(s1 < s2)
+`, 
+[`True`]
+  ), 
+  // 31
+  assertPrint(
+    `String comparison 2`, 
+    `
+s1:str = "abcd"
+s2:str = "abc"
+print(s1 < s2)
+`, 
+[`False`]
+  ), 
+  // 32 
+  assertPrint(
+    `Big numbers within Sets`, 
+    `set1: set[int] = None 
+    set1 = {578329573294, 458470243212321}
+    set1.add(7583924132123214)
+    print(458470243212321 in set1)
+    print(9 in set1)`, 
+    [`True`,
+    `False`]
+  ), 
+  // 33 
+  assertPrint(
+    `For loops range function`, 
+    `i:int = 0
+    for i in range(0,45732100000, 100000): 
+      if i == 45732000000: 
+        print(i)`, 
+    [`45732000000`]
+  ), 
+  // 34
+  assertPrint(
+    `More complex For loop w/ negative range`, 
+    `i:int = 432432500
+    i = -1*i
+    x:int = 0
+    for i in range(0,-59281421500, -500):
+      x = x + 1
+      if i == -58281421500: 
+        break
+    print(x)`, 
+    [`116562844`]
+  ), 
+  // 35
+  assertPrint(
+    `Builtins Factorial`, 
+    `print(factorial(45))`, 
+    [`119622220865480194561963161495657715064383733760000000000`]
+  ), 
+  // 36 
+  assertPrint(
+    `Builtins Perm`, 
+    `print(perm(32523758932432,2))`, 
+    [`1057794895094917784582502192`]
   )
 });

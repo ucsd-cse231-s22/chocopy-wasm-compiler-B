@@ -7,8 +7,7 @@ import {parser} from 'lezer-python'
 // entry point for debugging
 async function debug() {
   var source = `
-  x:int = 5
-  x
+  abs(-5)
   `
 
   const t = parser.parse(source);

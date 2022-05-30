@@ -120,7 +120,11 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
     importObject.js = { memory: memory };
   }
-  var printlast = `(func $print_last_num (import "imports" "print_last_num") (param i32) (result i32))`
+  const funcs = `(func $abs (import "imports" "abs") (param i32) (result i32))
+  (func $min (import "imports" "min") (param i32) (param i32) (result i32))
+  (func $max (import "imports" "max") (param i32) (param i32) (result i32))
+  (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
+  `
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
     (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
@@ -143,13 +147,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $gte (import "imports" "gte") (param i32) (param i32) (result i32))
     (func $lt (import "imports" "lt") (param i32) (param i32) (result i32))
     (func $gt (import "imports" "gt") (param i32) (param i32) (result i32))
-    (func $abs (import "imports" "abs") (param i32) (result i32))
-    (func $min (import "imports" "min") (param i32) (param i32) (result i32))
-    (func $max (import "imports" "max") (param i32) (param i32) (result i32))
-    (func $pow (import "imports" "pow") (param i32) (param i32) (result i32))
     (func $get_num (import "imports" "get_num") (param i32) (result i32))
 ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
-
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))

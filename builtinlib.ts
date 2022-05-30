@@ -1,6 +1,8 @@
+import bigInt from 'big-integer';
 import { Type } from './ast';
 import { RunTimeError } from './error_reporting';
 import { BOOL, NONE, NUM } from './utils';
+import {reconstructBigint, deconstructBigint, max_big, abs_big, pow_big, min_big} from './webstart'
 
 type BuiltinFunc = {
   name: string
@@ -64,33 +66,40 @@ export const BuiltinLib:BuiltinFunc[] = [
     body: (x:number)=>x!=0,
     typeSig: [[NUM], BOOL]
   },
-  /*
   {
     name: "abs",
-    body: Math.abs,
+    body: abs_big,
     typeSig: [[NUM], NUM]
   },
   {
     name: "min",
-    body: Math.min,
+    body: min_big,
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "max",
-    body: Math.max,
+    body: max_big,
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "pow",
-    body: Math.pow,
+    body: pow_big,
     typeSig: [[NUM, NUM], NUM]
   }
-  */ 
 ]
-
-
+/*
+function factorial(x:number, load: any, alloc: any, store: any) {
+  var bigInt = reconstructBigint(x,load); 
+  var ans = factorial_help(bigInt)
+  return deconstructBigint(ans,alloc,store)
+}
+ 
+function factorial_help(x:bigint):bigint{
+  return x>0 ? x*factorial_help(x-BigInt(1)): BigInt(1)
+}
+*/ 
 function factorial(x:number):number{
-  return x>0 ? x*factorial(x-1): 1 
+  return x>0 ? x*factorial(x-1): 1
 }
 
 function randint(x:number, y:number):number{
@@ -118,6 +127,7 @@ function comb(x:number, y:number):number{
 }
 
 function perm(x:number, y:number):number{
+
   if (x < y || x < 0 || y < 0)
     throw new RunTimeError("perm param error");
   let result = 1
@@ -135,7 +145,6 @@ function randrange(x:number, y:number, step:number){
   }
   return result
 }
-
 
 function sleep(ms:number):number{
 	const start = Date.now();
