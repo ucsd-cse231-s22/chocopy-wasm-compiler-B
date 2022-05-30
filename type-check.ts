@@ -32,8 +32,8 @@ function retrieveCompvar(base : string) : string {
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
-  functions: Map<string, [Array<Type>, Type, number]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type, number]>]>
+  functions: Map<string, [Map<string, Type>, Type, number]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Map<string, Type>, Type, number]>]>
 }
 
 export type LocalTypeEnv = {
@@ -43,12 +43,12 @@ export type LocalTypeEnv = {
   topLevel: Boolean
 }
 
-const defaultGlobalFunctions = new Map();
-defaultGlobalFunctions.set("abs", [[NUM], NUM]);
-defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+const defaultGlobalFunctions:GlobalTypeEnv["functions"] = new Map();
+defaultGlobalFunctions.set("abs", [new Map([["num",NUM]]), NUM, 1]);
+defaultGlobalFunctions.set("max", [new Map([["num1",NUM], ["num2",NUM]]), NUM, 2]);
+defaultGlobalFunctions.set("min", [new Map([["num1",NUM], ["num2",NUM]]), NUM,  2]);
+defaultGlobalFunctions.set("pow", [new Map([["base",NUM], ["power",NUM]]), NUM, 2]);
+defaultGlobalFunctions.set("print", [new Map([["x",CLASS("object")]]), NUM, 1]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -160,7 +160,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
   // else, everything before this index is a non-default argument
   program.funs.forEach(fun => {
     const nonDefault = fun.parameters.filter(p => p.defaultValue === undefined).length;
-    newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret, nonDefault])
+    newFuns.set(fun.name, [new Map(fun.parameters.map(p => [p.name,p.type])), fun.ret, nonDefault])
   }); // add defaultLength
   program.classes.forEach(cls => {
     const fields = new Map();
@@ -168,7 +168,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
     cls.fields.forEach(field => fields.set(field.name, field.type));
     cls.methods.forEach(method => {
       const nonDefault = method.parameters.filter(p => p.defaultValue === undefined).length;
-      methods.set(method.name, [method.parameters.map(p => p.type), method.ret, nonDefault])
+      methods.set(method.name, [new Map(method.parameters.map(p => [p.name,p.type])), method.ret, nonDefault])
     });
     newClasses.set(cls.name, [fields, methods]);
   });
@@ -407,7 +407,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
 
         return {...expr, a: tArg.a, arg: tArg};
       } else if(env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
+        const [[[,expectedArgTyp]], retTyp] = env.functions.get(expr.name);
         const tArg = tcExpr(env, locals, expr.arg);
         
         if(isAssignable(env, tArg.a[0], expectedArgTyp)) {
@@ -420,7 +420,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       }
     case "builtin2":
       if(env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
+        const [[[,leftTyp], [,rightTyp]], retTyp] = env.functions.get(expr.name);
         const tLeftArg = tcExpr(env, locals, expr.left);
         const tRightArg = tcExpr(env, locals, expr.right);
         if(isAssignable(env, leftTyp, tLeftArg.a[0]) && isAssignable(env, rightTyp, tRightArg.a[0])) {
@@ -486,7 +486,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
-          if (expr.arguments.length !== initArgs.length - 1)
+          if (expr.arguments.length !== initArgs.size - 1)
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor", expr.a);
           if (initRet !== NONE) 
             throw new TypeCheckError("__init__  must have a void return type", expr.a);
@@ -498,22 +498,45 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         const [argTypes, retType, nonDefault] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         // check if length is at least non-default (here 2-4)
-        const passedArgLength = expr.arguments.length;
-        if (passedArgLength > argTypes.length) {
-          throw new TypeCheckError(`${expr.name}() takes from ${nonDefault} to ${argTypes.length} positional arguments but ${passedArgLength} were given`, expr.a);
+        const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
+        expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+        const passedArgLength = tArgs.length + tNamedArgs.size;
+        if (passedArgLength > argTypes.size) {
+          throw new TypeCheckError(`${expr.name}() takes from ${nonDefault} to ${argTypes.size} positional arguments but ${passedArgLength} were given`, expr.a);
         }
-        let index;
-        for (index = 0; index < passedArgLength; index++) {
-          if (!isAssignable(env, tArgs[index].a[0],  argTypes[index])) {
+        const argTypesArray = Array.from(argTypes.entries());
+        const passedArgKeys:Set<string> = new Set();
+        for (let index = 0; index < tArgs.length; index++) {
+          let [name, type] = argTypesArray[index]
+          if (!isAssignable(env, tArgs[index].a[0], type )) {
             throw new TypeCheckError("Function call type mismatch: " + expr.name + " for argument " + index, expr.a);
           }
+          passedArgKeys.add(name);
+        }
 
+        tNamedArgs.forEach((arg,name)=>{
+          if (passedArgKeys.has(name)) {
+            throw new TypeCheckError(`${expr.name}() got multiple values for argument '${name}'`,expr.a);
+          }
+          if (!argTypes.has(name)) {
+            throw new TypeCheckError(`${expr.name}() got an unexpected keyword argument '${name}'`,expr.a);
+          }
+          if (!isAssignable(env,arg.a[0],argTypes.get(name))) {
+            throw new TypeCheckError("Function call type mismatch: " + expr.name + " for argument " + name, expr.a);
+          }
+          passedArgKeys.add(name);
+        });
+        const missing:Array<string> = []
+        for (let index = 0; index < nonDefault; index++) {
+          const [name,] = argTypesArray[index];
+          if (!passedArgKeys.has(name)) {
+            missing.push(name)
+          }
         }
-        if (index < nonDefault) {
-          throw new TypeCheckError(`${expr.name}() missing ${nonDefault - index} required positional arguments`, expr.a)
+        if (missing.length>0) {
+          throw new TypeCheckError(`${expr.name}() missing ${missing.length} required positional argument(s) '${missing.join("','")}'`,expr.a);
         }
-        // TODO : typecheck namedArgs
-        return { ...expr, a: [retType, expr.a], arguments: tArgs, namedArgs:undefined };
+        return { ...expr, a: [retType, expr.a], arguments: tArgs, namedArgs:tNamedArgs };
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -536,28 +559,52 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+      const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
+      expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+      
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
           const [_, methods] = env.classes.get(tObj.a[0].name);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet, nonDefault] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
-            const passedArgLength = realArgs.length;
-            if (passedArgLength > methodArgs.length) {
-              throw new TypeCheckError(`Method ${expr.method}() takes from ${nonDefault} to ${methodArgs.length} positional arguments but ${passedArgLength} were given`, expr.a);
+            const passedArgLength = realArgs.length + tNamedArgs.size;
+            if (passedArgLength > methodArgs.size) {
+              throw new TypeCheckError(`Method ${expr.method}() takes from ${nonDefault} to ${methodArgs.size} positional arguments but ${passedArgLength} were given`, expr.a);
             }
-            let index;
-            for (index = 0; index < passedArgLength; index++) {
-              if (!isAssignable(env, realArgs[index].a[0], methodArgs[index])) {
+            const argTypesArray = Array.from(methodArgs.entries());
+            const passedArgKeys:Set<string> = new Set();
+            for (let index = 0; index < realArgs.length; index++) {
+              let [name, type] =  argTypesArray[index]
+              if (!isAssignable(env, realArgs[index].a[0],type)) {
                 throw new TypeCheckError("Method call type mismatch: " + expr.method + " for argument " + index, expr.a);
               }
+              passedArgKeys.add(name);
 
             }
-            if (index < nonDefault) {
-              throw new TypeCheckError(`${expr.method}() missing ${nonDefault - index} required positional arguments`, expr.a)
+            tNamedArgs.forEach((arg,name)=>{
+              if (passedArgKeys.has(name)) {
+                throw new TypeCheckError(`${expr.method}() got multiple values for argument '${name}'`,expr.a);
+              }
+              if (!methodArgs.has(name)) {
+                throw new TypeCheckError(`${expr.method}() got an unexpected keyword argument '${name}'`,expr.a);
+              }
+              if (!isAssignable(env,arg.a[0],methodArgs.get(name))) {
+                throw new TypeCheckError("Function call type mismatch: " + expr.method + " for argument " + name, expr.a);
+              }
+              passedArgKeys.add(name)
+            });
+            const missing:Array<string> = []
+            for (let index = 0; index < nonDefault; index++) {
+              const [name,] = argTypesArray[index];
+              if (!passedArgKeys.has(name)) {
+                missing.push(name)
+              }
             }
-            // TODO : typecheck namedArgs
-            return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined };
+            if (missing.length>0) {
+              throw new TypeCheckError(`${expr.method}() missing ${missing.length} required positional argument(s) '${missing.join("','")}'`,expr.a);
+            }
+            return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs, namedArgs:tNamedArgs };
           } else {
             throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
           }
