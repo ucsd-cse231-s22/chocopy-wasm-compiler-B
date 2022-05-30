@@ -391,38 +391,6 @@ print(next(_iter))
 print(next(_iter))
 `, ["1", "2", "3", "4"]);
 
-
-assertPrint('enumerate() on list of integers' , rangeStr + `
-
-def enumerate(initVal: [int]) -> EnumerateIteratorListInt :
-    return EnumerateIteratorListInt().new(initVal)
-
-def len(l: [int]) -> int:
-    return 5
-
-class EnumerateIteratorListInt(object) : 
-   list :  [int] = None
-   index : int = 0
-   def new(self :  EnumerateIteratorListInt, initVal :  [int]) -> EnumerateIteratorListInt : 
-    self.list = initVal
-   	return self
-   def next(self : EnumerateIteratorListInt) -> [int] : 
-   	ret :  [int] = None
-   	ret = [self.index, self.list[self.index]]
-   	self.index = self.index + 1
-   	return ret
-   def hasnext(self : EnumerateIteratorListInt) -> bool : 
-    return self.index < len(self.list)
-
-l : [int] = None
-i: [int] = None
-l = [1,2,3,4,5,6,7,8,9,10]
-for i in enumerate(l):
-    print(i[0])
-    print(i[1])
-
-` ,["0","1","1","2","2","3","3","4","4","5"]);
-
 assertPrint('iter() and next() for ListIteratorBool' , rangeStr + `
 class ListIteratorBool(object) : 
    list :  [bool] = None
@@ -441,7 +409,7 @@ class ListIteratorBool(object) :
 def len(l: [bool]) -> int:
     return 5
 
-def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
+def listToListIteratorBool(initVal: [bool]) -> ListIteratorBool :
     return ListIteratorBool().new(initVal)
     
 i: [bool] = None
@@ -454,6 +422,37 @@ print(next(_iter))
 print(next(_iter))
 
 ` ,["True", "False", "True", "False"]);
+
+assertPrint('enumerate() on list of integers' , rangeStr + `
+
+def enumerate(initVal: [int]) -> EnumerateIteratorListInt :
+    return EnumerateIteratorListInt().new(initVal)
+
+def len(l: [int]) -> int:
+    return 5
+
+class EnumerateIteratorListInt(object) : 
+    list :  [int] = None
+    index : int = 0
+    def new(self :  EnumerateIteratorListInt, initVal :  [int]) -> EnumerateIteratorListInt : 
+        self.list = initVal
+        return self
+    def next(self : EnumerateIteratorListInt) -> [int] : 
+        ret :  [int] = None
+        ret = [self.index, self.list[self.index]]
+        self.index = self.index + 1
+        return ret
+    def hasnext(self : EnumerateIteratorListInt) -> bool : 
+        return self.index < len(self.list)
+
+l : [int] = None
+i: [int] = None
+l = [1,2,3,4,5,6,7,8,9,10]
+for i in enumerate(l):
+    print(i[0])
+    print(i[1])
+
+` ,["0","1","1","2","2","3","3","4","4","5"]);
 
 
 
