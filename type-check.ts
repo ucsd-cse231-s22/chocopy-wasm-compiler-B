@@ -1,11 +1,13 @@
 
 import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation } from './ast';
+import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation, DestructureLHS } from './ast';
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
+import { BuiltinLib } from './builtinlib';
 import exp from 'constants';
 import { listenerCount } from 'process';
+import { IgnorePlugin } from 'webpack';
 
 const compvars : Map<string, [string, number]> = new Map();
 function generateCompvar(base : string) : string {
@@ -40,14 +42,15 @@ export type LocalTypeEnv = {
   vars: Map<string, Type>,
   expectedRet: Type,
   actualRet: Type,
-  topLevel: Boolean
+  topLevel: Boolean,
+  loopCount: number,
+  currLoop: Array<number>
 }
 
 const defaultGlobalFunctions = new Map();
-defaultGlobalFunctions.set("abs", [[NUM], NUM]);
-defaultGlobalFunctions.set("max", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("min", [[NUM, NUM], NUM]);
-defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
+BuiltinLib.forEach(x=>{
+  defaultGlobalFunctions.set(x.name, x.typeSig);
+})
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
 export const defaultTypeEnv = {
@@ -69,7 +72,9 @@ export function emptyLocalTypeEnv() : LocalTypeEnv {
     vars: new Map(),
     expectedRet: NONE,
     actualRet: NONE,
-    topLevel: true
+    topLevel: true,
+    loopCount: 0,
+    currLoop: []
   };
 }
 
@@ -81,6 +86,7 @@ export function equalType(t1: Type, t2: Type): boolean {
   return (
     t1 === t2 ||
     (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "set" && t2.tag == "set") || 
     (t1.tag === "list" && t2.tag === "list" && (equalType(t1.type, t2.type) || t1.type === NONE)) ||
     (t1.tag === "generator" && t2.tag === "generator" && equalType(t1.type, t2.type))
   );
@@ -95,6 +101,7 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
     equalType(t1, t2) ||
     (t1.tag === "none" && t2.tag === "class") ||
     (t1.tag === "none" && t2.tag === "list") ||
+    (t1.tag === "none" && t2.tag === "set") ||
     (t1.tag === "none" && t2.tag === "generator") ||
     // can assign generator created with comprehension to generator class object
     (t1.tag === "generator" && t2.tag === "class" && t2.name === "generator") ||
@@ -149,6 +156,17 @@ export function isCompType(t: Type): Boolean {
 
 export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
   return NONE
+}
+
+export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
+  if(t1.tag !== "class")
+    return false;
+  var classMethods = env.classes.get(t1.name)[1];
+  if(!(classMethods.has("next") && classMethods.has("hasnext")))
+    return false;
+  if(equalType(classMethods.get("next")[1], NONE) || !equalType(classMethods.get("hasnext")[1], BOOL))
+    return false;
+  return true;
 }
 
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
@@ -249,9 +267,17 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       } else {
         throw new TypeCheckError("Unbound id: " + stmt.name, stmt.a);
       }
+      console.log("nameTyp: ", nameTyp);
+      console.log("left: ", tValExpr.a[0] );
       if(!isAssignable(env, tValExpr.a[0], nameTyp)) 
         throw new TypeCheckError("`" + tValExpr.a[0].tag + "` cannot be assigned to `" + nameTyp.tag + "` type", stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
+    case "assign-destr":
+      var tDestr: DestructureLHS<[Type, SourceLocation]>[] = tcDestructureTargets(stmt.destr, env, locals);
+
+      var tRhs: Expr<[Type, SourceLocation]> = tcDestructureValues(tDestr, stmt.rhs, env, locals, stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, destr: tDestr, rhs:tRhs}
+     
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
@@ -277,10 +303,38 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       return {a: tRet.a, tag: stmt.tag, value:tRet};
     case "while":
       var tCond = tcExpr(env, locals, stmt.cond);
+      locals.loopCount = locals.loopCount+1;
+      locals.currLoop.push(locals.loopCount);
       const tBody = tcBlock(env, locals, stmt.body);
+      locals.currLoop.pop();
       if (!equalType(tCond.a[0], BOOL)) 
         throw new TypeCheckError("Condition Expression Must be a bool", stmt.a);
       return {a: [NONE, stmt.a], tag:stmt.tag, cond: tCond, body: tBody};
+    case "for":
+      var tVars = tcExpr(env, locals, stmt.vars);
+      var tIterable = tcExpr(env, locals, stmt.iterable);
+      locals.loopCount = locals.loopCount+1;
+      locals.currLoop.push(locals.loopCount);
+      var tForBody = tcBlock(env, locals, stmt.body);
+      locals.currLoop.pop();
+      if(tIterable.a[0].tag !== "class" || !isIterableObject(env, tIterable.a[0]))
+        throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
+      let tIterableRet = env.classes.get(tIterable.a[0].name)[1].get("next")[1];
+      if(!equalType(tVars.a[0], tIterableRet))
+        throw new TypeCheckError("Expected type `"+ tIterableRet.tag +"`, got type `" + tVars.a[0].tag + "`", stmt.a);
+      if(stmt.elseBody !== undefined) {
+        const tElseBody = tcBlock(env, locals, stmt.elseBody);
+        return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody, elseBody: tElseBody};
+      }
+      return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody};
+    case "break":
+      if(locals.currLoop.length === 0)
+        throw new TypeCheckError("break cannot exist outside a loop", stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, loopCounter: locals.currLoop[locals.currLoop.length-1]};
+    case "continue":
+      if(locals.currLoop.length === 0)
+        throw new TypeCheckError("continue cannot exist outside a loop", stmt.a);
+      return {a: [NONE, stmt.a], tag: stmt.tag, loopCounter: locals.currLoop[locals.currLoop.length-1]};
     case "pass":
       return {a: [NONE, stmt.a], tag: stmt.tag};
     case "field-assign":
@@ -304,7 +358,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``);
+        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, stmt.a);
       }
       if (tObj.a[0].tag === "list") {
         if (!isAssignable(env, tVal.a[0], tObj.a[0].type)) {
@@ -316,8 +370,131 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
   }
 }
 
+export function tcDestructure(env : GlobalTypeEnv, locals : LocalTypeEnv, destr : DestructureLHS<SourceLocation>) : DestructureLHS<[Type, SourceLocation]> {
+  
+  // If it is an Ignore variable, do an early return as we don't need
+  // to type-check
+  if (destr.lhs.tag === "id" && destr.lhs.name === "_") {
+    return {...destr, a:[NONE, destr.a], lhs : {...destr.lhs, a: [NONE, destr.lhs.a]}}
+  }
+
+  var tcAt = tcExpr(env, locals, destr.lhs)
+  // Will never come here, handled in parser
+  //@ts-ignore
+  return {...destr, a:[tcAt.a[0], destr.a], lhs:tcAt}
+}
+
+function tcDestructureTargets(destr: DestructureLHS<SourceLocation>[], env: GlobalTypeEnv, locals: LocalTypeEnv) : DestructureLHS<[Type, SourceLocation]>[]{
+  return destr.map(r => tcDestructure(env, locals, r));
+}
+
+function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], rhs:Expr<SourceLocation>, env: GlobalTypeEnv, locals: LocalTypeEnv, stmtLoc: SourceLocation) : Expr<[Type, SourceLocation]>{
+  var tRhs: Expr<[Type, SourceLocation]> =  tcExpr(env, locals, rhs);
+
+  var hasStarred = false;
+      tDestr.forEach(r => {
+        hasStarred = hasStarred || r.isStarred
+  })
+
+  switch(tRhs.tag) {
+    case "non-paren-vals":
+      //TODO logic has to change - when all iterables are introduced
+      var isIterablePresent = false;
+      tRhs.values.forEach(r => {
+        //@ts-ignore
+        if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
+          isIterablePresent = true;
+        }
+      })
+
+      //Code only when RHS is of type literals
+      if(tDestr.length === tRhs.values.length || 
+        (hasStarred && tDestr.length < tRhs.values.length)||
+        (hasStarred && tDestr.length-1 === tRhs.values.length) || 
+        isIterablePresent){
+          tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
+          return tRhs
+        }
+      else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+    default:
+      throw new Error("not supported expr type for destructuring")
+  }
+}
+/** Function to check types of destructure assignments */
+function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
+  
+  let lhs_index = 0
+  let rhs_index = 0
+
+  while (lhs_index < tDestr.length && rhs_index < tRhs.length) {
+    if (tDestr[lhs_index].isStarred) {
+      break;
+    } else if (tDestr[lhs_index].isIgnore) {
+      lhs_index++
+      rhs_index++
+    } else {
+      //@ts-ignore
+      if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
+        //FUTURE: support range class added by iterators team, currently support range class added from code
+        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
+        //checking type of lhs with type of return of range
+        //Length mismatch from iterables will be RUNTIME ERRORS
+        if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+        } else {
+          lhs_index++
+          rhs_index++
+        }
+      } 
+      else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+        } 
+      else {
+        lhs_index++
+        rhs_index++
+      }
+    }
+  
+  }
+
+  // Only doing this reverse operation in case of starred
+  if (hasStarred) {
+    if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
+      //@ts-ignore
+    } else if (tDestr[lhs_index].isIgnore) {
+      lhs_index--
+      rhs_index--
+    } else {
+      let rev_lhs_index = tDestr.length - 1;
+      let rev_rhs_index = tRhs.length - 1;
+      while (rev_lhs_index > lhs_index) {
+        if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+        } else {
+          rev_rhs_index--
+          rev_lhs_index--
+        }
+      }
+    }
+  }
+}
+
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<SourceLocation>) : Expr<[Type, SourceLocation]> {
   switch(expr.tag) {
+    case "set":
+      let tc_val = expr.values.map((e) => tcExpr(env, locals, e));
+      let tc_type = tc_val.map((e) => e.a[0]);
+      let set_type = new Set<Type>();
+      tc_type.forEach(t=>{
+        set_type.add(t)
+      });
+      if (set_type.size > 1){
+        throw new TypeCheckError("Bracket attribute error")
+      }
+      var t: Type ={tag: "set", valueType: tc_type[0]};
+      var a: SourceLocation = expr.a;
+      // return {...expr, a: [t, a]};
+      return {...expr, a: [t, a], values: tc_val};
     case "literal": 
       const tcVal : Literal<[Type, SourceLocation]> = tcLiteral(expr.value)
       return {...expr, a: [tcVal.a[0], expr.a], value: tcVal};
@@ -377,40 +554,6 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else {
         throw new TypeCheckError("Unbound id: " + expr.name, expr.a);
       }
-    case "builtin1":
-      if (expr.name === "print") {
-        const tArg = tcExpr(env, locals, expr.arg);
-        if(tArg.a && tArg.a[0].tag == "class") {
-          throw new Error("TYPE ERROR: print can't be called on objects");
-        }
-
-        return {...expr, a: tArg.a, arg: tArg};
-      } else if(env.functions.has(expr.name)) {
-        const [[expectedArgTyp], retTyp] = env.functions.get(expr.name);
-        const tArg = tcExpr(env, locals, expr.arg);
-        
-        if(isAssignable(env, tArg.a[0], expectedArgTyp)) {
-          return {...expr, a: [retTyp, expr.a], arg: tArg};
-        } else {
-          throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
-        }
-      } else {
-        throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
-      }
-    case "builtin2":
-      if(env.functions.has(expr.name)) {
-        const [[leftTyp, rightTyp], retTyp] = env.functions.get(expr.name);
-        const tLeftArg = tcExpr(env, locals, expr.left);
-        const tRightArg = tcExpr(env, locals, expr.right);
-        if(isAssignable(env, leftTyp, tLeftArg.a[0]) && isAssignable(env, rightTyp, tRightArg.a[0])) {
-          return {...expr, a: [retTyp, expr.a], left: tLeftArg, right: tRightArg};
-        } else {
-          throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
-        }
-      } else {
-        throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
-      }
-
     case "listliteral":
       if(expr.elements.length == 0) {
         const elements: Expr<[Type, SourceLocation]>[] = [];
@@ -459,9 +602,21 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // }
       throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``); // Can only index into strings, list, dicts, and tuples
     case "call":
+      if (expr.name === "print") {
+        if (expr.arguments.length===0)
+          throw new TypeCheckError("print needs at least 1 argument");
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        return {...expr, a: [NONE, expr.a], arguments: tArgs};
+      } 
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
+
+        //To support range class for now
+        if (expr.name === "range") {
+          return tConstruct;
+        }
+
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
@@ -484,6 +639,16 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
            } else {
             throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
            }
+      } else if (expr.name === "set") {
+        if (expr.arguments.length > 1){
+          throw new Error("Set constructor can only contain element with length 1");
+        }
+        if (expr.arguments[0].tag !== "set"){
+          throw new Error("Set constructor can only accept bracket variable");
+        }
+        var initial_value = tcExpr(env, locals, expr.arguments[0]);
+        console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
+        return {...expr, a: initial_value.a, arguments: [initial_value]};
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -524,6 +689,31 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         } else {
           throw new TypeCheckError("method call on an unknown class", expr.a);
         }
+      } else if (tObj.a[0].tag === 'set'){
+        const set_method = ["add", "remove", "get", "contains", "length"]
+        if (set_method.includes(expr.method)){
+          tArgs.forEach(t => {
+            if (t.tag === "literal"&&tObj.a[0].tag === 'set'){
+              if (t.value.a[0] !== tObj.a[0].valueType){
+                throw new TypeCheckError("Mismatched Type when calling method")
+              }
+            }else{
+              throw new TypeCheckError("Unknown Type when calling method")
+            }
+          })
+        }else{
+          throw new TypeCheckError("Unknown Set Method Error");
+        }
+        if (expr.method === "contains"){
+          return {...expr, a: [BOOL, expr.a], obj: tObj, arguments: tArgs};
+        }else if(expr.method === "add"){
+          return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs};
+        }else if(expr.method === "remove"){
+          return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs};
+        } else if(expr.method === "length"){
+          return {...expr, a: [NUM, expr.a], obj: tObj, arguments: tArgs};
+        }
+        return {...expr, a:tObj.a, obj: tObj, arguments: tArgs}
       } else {
         throw new TypeCheckError("method calls require an object", expr.a);
       }
@@ -572,6 +762,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // delete comp var name from globals
       env.globals.delete(newItemName);
       return { ...expr, a: [expr.type, expr.a], lhs: tLhs, item: newItemName, iterable: tIterable, ifcond: tCompIfCond };
+
+    case "non-paren-vals":
+      const nonParenVals = expr.values.map((val) => tcExpr(env, locals, val));
+      return { ...expr, a: [NONE, expr.a], values: nonParenVals };
+  
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`, expr.a);
   }
 }

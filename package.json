@@ -6,7 +6,7 @@
   "scripts": {
     "build-web": "webpack && cp \"index.html\" \"build/\"",
     "build-parse": "tsc parsestart.ts --esModuleInterop --moduleResolution node --outDir cli/",
-    "test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register 'tests/**/*.test.ts'",
+    "test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && for FILE in tests/*.test.ts; do mocha -r ts-node/register $FILE; done",
     "build": "tsc debuggerstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debuggerstart.js",
     "prestart": "npm run build"
@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@diagrams-ts/graphviz-cli-renderer": "^0.5.0",
     "codemirror": "^5.59.4",
     "file-saver": "^2.0.5",
     "eslint-plugin-cypress": "^2.11.2",
@@ -22,8 +23,8 @@
     "lezer": "^0.13.5",
     "lezer-python": "^0.13.7",
     "mochawesome": "^7.1.2",
-    "ts-loader": "^8.4.0",
-    "ts-node": "^9.1.1",
+    "ts-loader": "^9.3.0",
+    "ts-node": "^10.8.0",
     "typescript": "^4.1.2",
     "wabt": "^1.0.29"
   },

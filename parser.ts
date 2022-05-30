@@ -1,6 +1,6 @@
 import {parser} from "lezer-python";
 import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation } from "./ast";
+import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, DestructureLHS, AssignTarget } from "./ast";
 import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
@@ -105,25 +105,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
         var expr : Expr<SourceLocation>;
-        if (callName === "print" || callName === "abs") {
-          expr = {
-            a: location,
-            tag: "builtin1",
-            name: callName,
-            arg: args[0]
-          };
-        } else if (callName === "max" || callName === "min" || callName === "pow") {
-          expr = {
-            a: location,
-            tag: "builtin2",
-            name: callName,
-            left: args[0],
-            right: args[1]
-          }
-        }
-        else {
-          expr = { a: location, tag: "call", name: callName, arguments: args};
-        }
+        expr = { a: location, tag: "call", name: callName, arguments: args};
         return expr;  
       } else {
         throw new ParseError("Unknown target while parsing assignment", location);
@@ -211,6 +193,17 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         case "or":
           op = BinOp.Or;
           break;
+        case "in":
+          c.nextSibling();
+          const rhs = traverseExpr(c, s);
+          c.parent();
+          return {
+            a: location,
+            tag: "method-call",
+            obj: rhs,
+            method: "contains",
+            arguments: [lhsExpr]
+          };
         default:
           throw new ParseError("Could not parse operator at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location)
       }
@@ -309,6 +302,20 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         tag: "lookup",
         obj: objExpr,
         field: propName
+      }
+    case "SetExpression":
+      c.firstChild();
+      let setValues = new Array<Expr<any>>();
+      while (c.nextSibling()) {
+        let v : Expr<any> = traverseExpr(c, s);
+        setValues.push(v);
+        c.nextSibling();
+      }
+      c.parent();
+      return {
+        a: location,
+        tag: "set",
+        values: setValues
       }
     case "self":
       return {
@@ -429,38 +436,52 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       return { a: location, tag: "return", value };
     case "AssignStatement":
       c.firstChild(); // go to name
-      const target = traverseExpr(c, s);
-      c.nextSibling(); // go to equals
-      c.nextSibling(); // go to value
-      var value = traverseExpr(c, s);
+      // Parse LHS
+      const target = traverseDestructureTargets(c, s);
+      // Parse AssignOp
+      c.nextSibling();
+      //Parse RHS
+      const rhsargs = traverseDestructureValues(c,s);
       c.parent();
-
-      if (target.tag === "lookup") {
-        return {
-          a: location,
-          tag: "field-assign",
-          obj: target.obj,
-          field: target.field,
-          value: value
+      //Normal assign statements
+      if(target.length==1){
+        if (target[0].lhs.tag === "lookup") {
+          return {
+            a: location,
+            tag: "field-assign",
+            obj: target[0].lhs.obj,
+            field: target[0].lhs.field,
+            value: rhsargs[0]
+          }
+        } else if (target[0].lhs.tag === "id") {
+          return {
+            a: location,
+            tag: "assign",
+            name: target[0].lhs.name,
+            value: rhsargs[0]
+          }  
+        } else if (target[0].lhs.tag === "index"){
+          return {
+            a: location,
+            tag: "index-assign",
+            obj: target[0].lhs.obj,
+            index: target[0].lhs.index,
+            value: rhsargs[0]
+          }
+        } else {
+          throw new ParseError("Unknown target while parsing assignment", location);
         }
-      } else if (target.tag === "id") {
+      } 
+      //Destructure return
+      else {
         return {
-          a: location,
-          tag: "assign",
-          name: target.name,
-          value: value
-        }  
-      } else if (target.tag === "index"){
-        return {
-          a: location,
-          tag: "index-assign",
-          obj: target.obj,
-          index: target.index,
-          value: value
-        }
-      } else {
-        throw new ParseError("Unknown target while parsing assignment", location);
-      }
+          a : location,
+          tag : "assign-destr", 
+          destr : target, 
+          rhs : { tag:"non-paren-vals", values:rhsargs }
+        };
+      }  
+      
     case "ExpressionStatement":
       c.firstChild();
       const expr = traverseExpr(c, s);
@@ -548,8 +569,54 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
         cond,
         body
       }
+    case "ForStatement":
+      c.firstChild() // for
+      c.nextSibling() // vars
+      const for_var = traverseExpr(c, s)
+      c.nextSibling()
+      // for when we implement destructuring 
+
+      // while(s.substring(c.from, c.to) == ',') {
+      //   c.nextSibling()
+      //   for_var.push(traverseExpr(c, s))
+      //   c.nextSibling()
+      // }
+      c.nextSibling()
+      const iterable = traverseExpr(c, s)
+      c.nextSibling()
+      var body = []
+      c.firstChild()
+      while(c.nextSibling()) {
+        body.push(traverseStmt(c, s))
+      }
+      c.parent()
+      var elseBody = []
+      if(c.nextSibling()) {
+        while(s.substring(c.from, c.to) !== 'else')
+          c.nextSibling()
+        c.nextSibling()
+        c.firstChild()
+        while(c.nextSibling()) {
+          elseBody.push(traverseStmt(c, s))
+        }
+        c.parent()
+      }
+      c.parent()
+      return {
+        a: location,
+        tag: "for",
+        vars: for_var,
+        iterable: iterable,
+        body: body,
+        elseBody: elseBody
+      };
+
     case "PassStatement":
       return { a: location, tag: "pass" }
+    case "ContinueStatement":
+      return { a: location, tag: "continue" }
+    case "BreakStatement":
+      return { a: location, tag: "break" }
     default:
       throw new ParseError("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to), location);
   }
@@ -564,8 +631,93 @@ function typeFromString(s: string): Type {
   }
 }
 
+function traverseDestructureTargets(c: TreeCursor, s: string):DestructureLHS<SourceLocation>[] {
+  const lhsargs : DestructureLHS<SourceLocation>[] = [];
+  var location = getSourceLocation(c, s);
+  var hasStarred = 0;
+
+  do{
+    if(c.name === "AssignOp") 
+      break;
+    else if (c.type.name === ",") 
+      continue;
+    else {
+      var lhs = traverseDestructureLHS(c,s);
+      if(lhs.isStarred){
+        hasStarred = hasStarred + 1
+        if (hasStarred > 1)
+          throw new ParseError("Multiple starred expressions.", location)
+      }
+      lhsargs.push(lhs)
+    } 
+  } while(c.nextSibling())
+  // check if we want normal assignment expressions to have * or not
+
+  return lhsargs;
+}
+/** This function takes in input to destructure. 
+ * Input of kind i,j,k (lhs) of an assignment expression.
+ * @returns DestructureLHS
+ */
+function traverseDestructureLHS(c: TreeCursor, s: string):DestructureLHS<SourceLocation> {
+  let isIgnore = false;
+  let isStarred = false;
+  // 1. check if star in from of variable name
+  if (c.name === "*") {
+    isStarred = true;
+    c.nextSibling();
+  }
+  const lhs = traverseAssignTarget(c,s);
+  // 3. check if ignore is encountered 
+  if (lhs.tag === "id" && lhs.name === "_"){
+    isIgnore = true;
+  }
+  return {lhs, isIgnore, isStarred};
+}
+
+/** This function takes in input to destructure. 
+ * Input of kind 2,3,4 (rhs) of an assignment expression.
+ * @returns Array<Expr<SourceLocation>>
+ */
+function traverseDestructureValues(c: TreeCursor, s: string): Array<Expr<SourceLocation>> {
+  // Parse RHS
+  const rhsargs:Expr<SourceLocation>[] = [];
+  do{
+    if(c.name === "AssignOp") 
+      break;
+    else if (c.type.name === ",") 
+      continue;
+    else 
+      var rhs = traverseExpr(c,s);
+      rhsargs.push(rhs)
+  
+  }while(c.nextSibling())
+
+  return rhsargs;
+}
+
+function traverseAssignTarget(c: TreeCursor, s: string):AssignTarget<SourceLocation> {
+  var location = getSourceLocation(c, s);
+  const lhs = traverseExpr(c,s);
+  // 2. LHS is valid expression type : "id" | "lookup" 
+  if (lhs.tag!=="id" && lhs.tag!=="lookup" && lhs.tag !== "index") {
+    throw new ParseError("Cannot have "+ lhs.tag + " expression at LHS while parsing assignment statements.", location)
+  }
+  return lhs;
+}
+
 export function traverseType(c : TreeCursor, s : string) : Type {
   // For now, always a VariableName
+  if (c.firstChild()) {
+    if (s.substring(c.from, c.to) === "set") {
+      c.nextSibling();
+      c.nextSibling();
+      let vt : Type = traverseType(c, s);
+      c.parent();
+      return {tag: "set", valueType: vt};
+    }
+    c.parent();
+  }
   let name = s.substring(c.from, c.to);
   switch(name) {
     case "int": return NUM;
