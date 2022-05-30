@@ -248,4 +248,16 @@ describe("Generic tests", () => {
   x: Box[int] = None
   x.val = 0`);
 
+  assertPrint("lists-as-generics", `
+  T: TypeVar = TypeVar('T')
+
+  class Box(Generic[T]):
+    x: T = {}
+
+  b: Box[[int]] = None
+  b = Box[[int]]()
+  b.x = [0, 1, 2]
+  print(b.x[1])
+  `, ["1"]);
+
 });
