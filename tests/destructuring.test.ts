@@ -233,6 +233,26 @@ print(b)
 // print(y[0])
 // print(y[1])` , ["1", "2", "3"]);
 
+// assertPrint("basic-destr-range-star-3", rangeStr + `
+// x : int = 0
+// y : [int] = None
+// z : int = 0
+// x, *y, z = range(1, 5, 1)
+// print(x)
+// print(y[0])
+// print(y[1])
+// print(z)` , ["1", "2", "3", "4"]);
+
+// assertPrint("basic-destr-range-ignore-star-4", rangeStr + `
+// x : int = 0
+// y : [int] = None
+// z : int = 0
+// x,_, *y, z = range(1, 6, 1)
+// print(x)
+// print(y[0])
+// print(y[1])
+// print(z)` , ["1", "3", "4", "5"]);
+
 assertPrint("destr-fnCallValidParam", `
 def f(a:int):
     x : int = 0
@@ -804,5 +824,37 @@ x_1, x_2, x_3 = c.x
 print(x_1)
 print(x_2)
 print(x_3)`,["1", "2", "3"]);
+
+assertPrint("basic-descr-class-func-assign-1",
+`
+class C(object):
+  def getY(self : C,y : int) -> int:
+    return y
+
+c : C = None
+x_1 : int = 0
+x_2 : int = 0
+x_3 : int = 0
+c = C()
+x_1, x_2, x_3 = c.getY(1), c.getY(2), c.getY(3) 
+print(x_1)
+print(x_2)
+print(x_3)`,["1", "2", "3"]);
+
+assertPrint("basic-destr-class-func-list-1", `
+class C(object):
+  def f(self : C, lst: [int]) -> [int]:
+    return lst
+x : [int] = None
+y : int = 0
+a : [int] = None
+c : C = None
+c = C()
+a = [66, -5, 10]
+x, y = c.f(a),6
+print(x[0])
+print(x[1])
+print(x[2])
+print(y)`, ["66", "-5", "10", "6"]);
 
 });
