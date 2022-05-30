@@ -4,6 +4,7 @@ import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { createModuleResolutionCache } from 'typescript';
+import { defaultMaxListeners } from 'events';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -228,6 +229,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var iterableObject = generateName("$iterableobject")  
       
       var [iter_inits, iter_stmts, iter_expr] = flattenExprToExpr(s.iterable, blocks, env);
+      
       pushStmtsToLastBlock(blocks, ...iter_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: iter_expr} );
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
@@ -238,10 +240,14 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
 
       const iterVal: AST.Expr<[AST.Type, SourceLocation]> = {a: s.a, tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "next", arguments: []}
-      var [s_inits, s_stmts,s_expr] = flattenExprToExpr(iterVal, blocks, env);
-      //@ts-ignore
-      pushStmtsToLastBlock(blocks, ...s_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: s.vars.name, value: s_expr } );
+      var [s_inits, s_stmts, s_expr] = flattenExprToExpr(iterVal, blocks, env);
+
+      // pushStmtsToLastBlock(blocks, ...s_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: s.vars.name, value: s_expr } );
       
+      const destructStatment: AST.Stmt <[AST.Type, AST.SourceLocation]>[]  = [];
+      destructStatment.push({a: [NONE, s.a[1]], tag: "assign-destr", destr: s.vars, rhs:s.iterable })
+      var destructinits = flattenStmts( destructStatment, blocks, env );
+              
       var bodyinits = flattenStmts(s.body, blocks, env);
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
       blocks.push({  a: s.a, label: forElseLbl, stmts: [] })
@@ -250,7 +256,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forEndLbl });
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
 
-      return [...iter_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { tag: "none" } }]
+      return [...iter_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, ...destructinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { tag: "none" } }]
     
     case "break":
       var counter = s.loopCounter;
@@ -275,9 +281,10 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
       destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
       break;
     default:
-      throw new Error("Not supported rhs for destructuring!")
-
-  }
+      break;
+      //throw new Error("Not supported rhs for destructuring!")
+    }
+    destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
 }
 
 function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
@@ -293,7 +300,7 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
       const iterClassName = r.a[0].name;
       if(va.tag==="id"){
         var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasNext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasnext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
       
         //will probably fail for cases like 'a,b,c = range(1,3),5
         while(lhs_index < lhs.length){
