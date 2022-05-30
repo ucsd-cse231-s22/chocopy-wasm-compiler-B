@@ -398,6 +398,30 @@ describe("string test", () => {
     print(s[1:-2:2])
     `,
     [`bd`]);
+
+  //34.1
+  // assertPrint("test case 34.1: slicing with three parameters",
+  //   `
+  //   s: str = "abcdefg"
+  //   print(s[1:-2:-2])
+  //   `,
+  //   [`bd`]);
+  
+  //34.2
+  assertPrint("test case 34.2: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[-10:-2:2])
+    `,
+    [`ace`]);
+  
+  //34.3
+  assertPrint("test case 34.3: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:1000:2])
+    `,
+    [`bdf`]);
   
   //35
   assertPrint("test case 35: slicing with one parameters",
@@ -405,7 +429,7 @@ describe("string test", () => {
     s: str = "abcdefg"
     print(s[-5:])
     `,
-    [`bcdefg`]);
+    [`cdefg`]);
   
   //36
   assertPrint("test case 36: slicing with second parameter",

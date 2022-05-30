@@ -8,10 +8,20 @@
   (func (export "str$access") (param $self i32) (param $index i32) (result i32)
     (local $newstr i32)
     (local $buffer i32)
-    ;; check if index is out of range
+    (local $selfLength i32)
     (local.get $self)
-    (i32.const 0) ;;0
+    (i32.const 0)
     (call $load)
+    (local.set $selfLength)
+    (i32.gt_s (i32.const 0) (local.get $index))
+    (if
+      (then
+        (i32.add (local.get $index) (local.get $selfLength))
+        (local.set $index)
+      )
+    )
+    ;; check if index is out of range
+    (local.get $selfLength)
     (local.get $index)
     (call $index_out_of_bounds)
     (local.set $newstr) ;; just scraping up the return
@@ -193,10 +203,33 @@
   (func (export "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32)
     (local $newstr i32)
     (local $newstrlength i32)
+    (local $selfLength i32)
     (local $i i32)
     (local $currVal i32)
     (local $diff i32)
     (local $temp i32)
+    ;; get the length of the self string
+    (local.get $self)
+    (i32.const 0)
+    (call $load)
+    (local.set $selfLength)
+    ;; check whether the start_index is negative
+    (i32.gt_s (i32.const 0) (local.get $start))
+    (if
+      (then
+        (i32.add (local.get $start) (local.get $selfLength))
+        (local.set $start)
+      )
+    )
+    ;; check whether the end_index is negative
+    (i32.gt_s (i32.const 0) (local.get $end))
+    (if
+      (then
+        (i32.add (local.get $end) (local.get $selfLength))
+        (local.set $end)
+      )
+    )
+    ;; check if start greater than end
     (i32.ge_u (local.get $start) (local.get $end))
     (if
       (then
@@ -212,13 +245,23 @@
         (return)
       )
     )
+    ;;;;;;;;;;;;;;
+    (i32.gt_u (local.get $end) (local.get $selfLength))
+    (if
+      (then
+        (local.get $selfLength)
+        (local.set $end)
+      )
+    )
+    ;;;;;;;;;;;;;;;
     ;; calculate the length of newstr
     (i32.sub (i32.sub (local.get $end) (local.get $start)) (i32.const 1))
     (local.set $temp)
     (i32.add (i32.div_u (local.get $temp) (local.get $steps)) (i32.const 1))
     (local.set $newstrlength)
     ;; allocate the memory heap of newstr
-    (i32.add (local.get $newstrlength) (i32.const 1))
+    ;; (i32.add ((i32.div_u (i32.add (local.get $newstrlength) (i32.const 3)) (i32.const 4))) (i32.const 1))
+    (i32.add (i32.div_u (i32.add (local.get $newstrlength) (i32.const 3)) (i32.const 4)) (i32.const 1))
     (call $alloc)
     (local.set $newstr)
     (local.get $newstr)
@@ -226,13 +269,15 @@
     (local.get $newstrlength)
     (call $store)
     ;;set count i and start the while loop
-    (local.get $start)
+    (i32.const 0)
     (local.set $i)
+    ;; (i32.mul (local.get $i) (local.get $steps))
+    ;; (i32.add (i32.mul (local.get $i) (local.get $steps)) (local.get $start))
     (loop $my_loop
-      (i32.load8_u (i32.add (local.get $self) (i32.add (local.get $i) (i32.const 4))))
+      (i32.load8_u (i32.add (local.get $self) (i32.add (i32.add (i32.mul (local.get $i) (local.get $steps)) (local.get $start)) (i32.const 4))))
       (local.set $currVal)
       (i32.store8 (i32.add (local.get $newstr) (i32.add (local.get $i) (i32.const 4))) (local.get $currVal))
-      (local.set $i (i32.add (local.get $steps) (local.get $i)))
+      (local.set $i (i32.add (i32.const 1) (local.get $i)))
       (i32.lt_u (local.get $i) (local.get $newstrlength))
       br_if $my_loop
     )

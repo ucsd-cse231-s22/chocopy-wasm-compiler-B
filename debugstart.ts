@@ -32,25 +32,24 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
 async function debug() {
   var source =
     `
-  a: int = 1
-  s:str = "abcdefg"
-  s[0:6+3:2*a]
+    s: str = "abcdefg"
+    print(s[:5])
   `
 
   const t = parser.parse(source);
-  // console.log(stringifyTree(t.cursor(), source, null))
+  console.log(stringifyTree(t.cursor(), source, null))
   const ast = parse(source);
   // console.log(JSON.stringify((ast), null, 2));
 
   const repl = new BasicREPL(await addLibs());
   const config: Config = { importObject: repl.importObject, env: repl.currentEnv, typeEnv: repl.currentTypeEnv, functions: repl.functions };
   const parsed = parse(source);
-  // console.log(JSON.stringify(parsed, null, 2))
+  console.log(JSON.stringify(parsed, null, 2))
   const [tprogram, tenv] = tc(config.typeEnv, parsed);
   // console.log(JSON.stringify(tprogram, null, 2))
   const globalEnv = augmentEnv(config.env, tprogram);
   const irprogram = lowerProgram(tprogram, globalEnv);
-  console.log(JSON.stringify(irprogram, null,2))
+  // console.log(JSON.stringify(irprogram, null,2))
   // const compiled = compile(irprogram, globalEnv);
   // console.log(compiled)
   // const result = repl.run(source).then(result => {

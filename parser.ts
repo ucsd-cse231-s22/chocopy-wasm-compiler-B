@@ -287,7 +287,7 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         };;
         var stop_index: Expr<SourceLocation> = {
           tag: "literal",
-          value: { tag: "num", value: Number.MAX_SAFE_INTEGER }
+          value: { tag: "num", value: 2147483647 }
         };;
         var step: Expr<SourceLocation> = {
           tag: "literal",
@@ -298,22 +298,23 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         c.nextSibling();
         
         for (let i = 0; i < 3; i++) {
-          if(s.substring(c.from, c.to) != "]"){
+          if(s.substring(c.from, c.to) != "]" && s.substring(c.from, c.to) != ":"){
             switch (i){
               case 0:
                 start_index = traverseExpr(c, s);
                 break;
               case 1:
-                isSlice = true;
                 stop_index = traverseExpr(c, s);
                 break;
               case 2:
                 step = traverseExpr(c, s);
                 break;
-            } 
+            }
+            c.nextSibling(); 
           }
-          c.nextSibling();
+          
           if (s.substring(c.from, c.to) === ":"){
+            isSlice = true;
             c.nextSibling();
           }
           else if (s.substring(c.from, c.to) !== "]"){
@@ -335,8 +336,6 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         // if (sliced_indices.length > 3) {
         //   throw new Error("Too much indices, maximum is three");
         // }
-
-        start_index = traverseExpr(c, s)
 
         c.parent();
         if (isSlice){
