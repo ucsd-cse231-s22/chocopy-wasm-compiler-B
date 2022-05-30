@@ -2,7 +2,6 @@ import { parse } from "./parser";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
 
-
 // entry point for debugging
 async function debug() {
   var source = `
@@ -16,8 +15,8 @@ class C(object):
   
   const repl = new BasicREPL(await addLibs());
   const result = repl.run({main:source}).then(result => {
-    console.log(result);    
-  })  
+    console.log(result);
+  })
 }
 
 debug();
