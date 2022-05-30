@@ -423,6 +423,35 @@ print(next(_iter))
 
 ` ,["True", "False", "True", "False"]);
 
+
+assertPrint('iter() and next() for Custom iterators' , rangeStr + `
+class BoolIterable(object):
+    val:bool = True
+    num:int = 0
+    def __init__(self: BoolIterable):
+        pass
+    def next(self: BoolIterable) -> bool:
+        ret: bool = True
+        ret = self.val
+        self.num = self.num + 1
+        self.val = not self.val
+        return ret
+    def hasnext(self: BoolIterable) -> bool:
+        if self.num > 5:
+            return False
+        else:
+            return True
+    
+i: [bool] = None
+_iter : BoolIterable = None
+_iter = iter(BoolIterable())
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+
+` ,["True", "False", "True", "False"]);
+
 assertPrint('enumerate() on list of integers' , rangeStr + `
 
 def enumerate(initVal: [int]) -> EnumerateIteratorListInt :
