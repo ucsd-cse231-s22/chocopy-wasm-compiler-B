@@ -1,6 +1,8 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
 import { importObject, addLibs  } from "./tests/import-object.test";
+import { stringifyTree } from './treeprinter'
+import {parser} from 'lezer-python'
 
 // entry point for debugging
 async function debug() {
@@ -19,6 +21,7 @@ async function debug() {
   // print(a)
   // print(b)
   const ast = parse(source);
+  console.log(ast)
   
   const repl = new BasicREPL(await addLibs());
   const result = repl.tc(source);
