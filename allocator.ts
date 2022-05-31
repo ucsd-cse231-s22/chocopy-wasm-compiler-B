@@ -69,7 +69,7 @@ export class FreeList {
             }
         });
         if(addr == 0){
-            // throw new Error("Out of memory.");
+            throw new Error("Out of memory.");
         }
         this.free_blocks = new_free_blocks;
         console.log(`Alloc ${size} byte: ${addr}-${addr+size}`);
