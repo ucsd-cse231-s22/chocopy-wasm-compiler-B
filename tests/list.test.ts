@@ -112,4 +112,26 @@ describe("List tests", () => {
     a = [1, 2, 4, 8, 16, 32, 64]
     print(a[2] + a[5])
     `, [`36`])
+
+    assertFail("list-out-of-bounds", `
+    a: [int] = None
+    b: int = 100
+
+    a = [1, 2, 3]
+    a[3] = 999
+
+    b`)
+
+    assertPrint("list-index-not-literal", `
+    a: [int] = None
+    a = [66, -5, 10]
+    print(a[1+0])
+    `, [`-5`])
+
+    assertPrint("list-allocate-enough-memory", `
+    a: [[int]] = None
+    a = [[100, 4], [5], [99, -7, 3]]
+    print(a[0][1])
+    print(a[1][0])
+    print(a[2][2])`, [`4`, `5`, `3`])
 });
