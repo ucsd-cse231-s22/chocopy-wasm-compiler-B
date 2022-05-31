@@ -5,7 +5,7 @@ import { NUM, BOOL, NONE } from './utils';
 import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint } from "./outputrender";
 import { log, table } from 'console';
-import { sources } from 'webpack';
+import { runtime, sources } from 'webpack';
 import { gcd_help, generateRandomBigInt, perm_help } from './builtinlib';
 import {BuiltinLib} from "./builtinlib"
 import { RunTimeError } from './error_reporting';
@@ -290,6 +290,16 @@ function assert_not_none(arg: any) : any {
   return arg;
 } 
 
+export function division_by_zero(arg: number, line: number, col: number, load: any) : any {
+  var bigInt = reconstructBigint(arg, load);
+
+  if (bigInt === BigInt(0)) {
+    var message = RUNTIME_ERROR.stackTrace() + "\nRUNTIME ERROR: division by zero in line " + line.toString() + " at column " + col.toString() + "\n" + RUNTIME_ERROR.splitString()[line-1].trim();
+    throw new RunTimeError(message);
+  }
+  return arg;
+}
+
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
     throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
@@ -316,7 +326,7 @@ function webStart() {
       imports: {
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
-        division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+        division_by_zero: (arg: number, line: number, col: number) => division_by_zero(arg, line, col, load),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
         assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
