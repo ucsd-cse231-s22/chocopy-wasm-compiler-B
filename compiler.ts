@@ -140,12 +140,14 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const lhsStmts = codeGenValue(expr.left, env); 
       const rhsStmts = codeGenValue(expr.right, env);
       var divbyzero = ``;
-      if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
-        // line number and column number
 
-        divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
-      }
       if (expr.left.tag === "wasmint" || expr.right.tag === "wasmint") {
+        if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
+          // line number and column number
+  
+          divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
+        }
+
         return[...lhsStmts, ...rhsStmts, divbyzero, codeGenWasmBinOp(expr.op)]
       }
       return [...lhsStmts, ...rhsStmts, divbyzero, codeGenBinOp(expr.op)]

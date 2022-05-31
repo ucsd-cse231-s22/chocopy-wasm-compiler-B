@@ -490,7 +490,8 @@ Expected: 45732000000
 8: More complex For loop w/ negative range: 
 
 ```
-i:int = -432432500
+i:int = 432432500
+i = -1*i
 x:int = 0
 for i in range(0,-59281421500, -500):
   x = x + 1
