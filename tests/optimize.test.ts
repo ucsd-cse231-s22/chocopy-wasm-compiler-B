@@ -551,6 +551,19 @@ class C(object):
 if True:
     print(C().new(1, 2).add())
 `),
+  // 45
+  assertOptimize("Optimization (Neededness DCE)",
+`
+def f() -> int:
+  p:int = 1
+  x:int = 5
+  z:int = 1
+  while x > 0:
+    p = p * x
+    z = z + 1
+    x = x - 1
+  return p
+`),
 
 
   // 1

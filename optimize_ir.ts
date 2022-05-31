@@ -1,32 +1,236 @@
-import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class} from './ast';
+import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class, Value} from './ast';
 import * as IR from './ir';
+import { lowerProgram } from './lower';
+import { NONE } from './utils';
 
 export type Line = {block: string, line: number};
 export type varant_in_line = {line: Line, varant: Map<string, Set<Line>>};
 export type CFA = Array<varant_in_line>;
-
-export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Program<[Type, SourceLocation]> {
-    const cfa: CFA = flow_wklist(program.inits, program.body);
-    printCFA(cfa);
-    const optFuns = program.funs.map(optimizeFuncDef);
-    const optClss = program.classes.map(optimizeClass);
-    const optBody = program.body.map(optBasicBlock);
-    return { ...program, funs: optFuns, classes: optClss, body: optBody };
-}
+export type live_predicate = Map<string, Set<string>>;
+export type needed_predicate = Map<string, Set<string>>;
 
 const bfoldable = ["num", "bool", "none"];
 const ufoldable = ["num", "bool"];
-function bigMax(a: bigint, b: bigint): bigint {
-    return a > b ? a : b;
+let isChanged = false;
+
+export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Program<[Type, SourceLocation]> {
+    var newProgram = {...program};
+    do {
+        isChanged = false;
+        const cfa: CFA = flow_wklist(program.inits, program.body);
+        printCFA(cfa);
+        const optFuns = newProgram.funs.map(optimizeFuncDef);
+        const optClss = newProgram.classes.map(optimizeClass);
+        var optStmts = newProgram.body.map(optBasicBlock);
+        optStmts = needednessDCE(optStmts);
+        newProgram = {...newProgram, funs: optFuns, classes: optClss, body: optStmts};
+        console.log(isChanged);
+    } while(isChanged);
+    
+    return newProgram;
 }
-function bigMin(a: bigint, b: bigint): bigint {
-    return a < b ? a : b;
+
+/**
+ * Calculate necessary values to calculate needed values
+ * @param value 
+ * @returns 
+ */
+function getNeededValue(value: IR.Value<[Type, SourceLocation]>): Set<string> {
+    if (value.tag == "id") {
+        return new Set([value.name]);
+    } else {
+        return new Set([]);
+    }
 }
-function bigPow(a: bigint, p: bigint): bigint {
-    return a ** p;
+
+/**
+ * Find the needed values in an expression to calculate needed values
+ * A necessary variable at line l is needed at line 1 (Rule 1)
+ * Implement based on https://www.cs.cmu.edu/~rjsimmon/15411-f15/lec/07-dataflow.pdf
+ * @param expr 
+ * @returns 
+ */
+function getNeededExpr(expr: IR.Expr<[Type, SourceLocation]>): Set<string> {
+    switch(expr.tag) {
+        case "binop": {
+            // BinOp with effect
+            // LHS & RHS is necessary because // and mod could not have 0 as RHS
+            if (expr.op == BinOp.IDiv || expr.op == BinOp.Mod) {
+                return new Set([...getNeededValue(expr.left), ...getNeededValue(expr.right)]);
+            } else {
+                // effect free operation
+                return new Set([]);
+            }
+        }
+        case "call": {
+            var necArg: Set<string> = new Set();
+            for(let arg of expr.arguments) {
+                let necValue = getNeededValue(arg);
+                necArg = new Set([...necArg, ...necValue]);
+            }
+            return necArg;
+        }
+        case "alloc": {
+            return getNeededValue(expr.amount);
+        }
+        case "load": {
+            return getNeededValue(expr.offset);
+        }
+        case "value":
+        case "uniop":
+        default:
+            return new Set();
+    }
 }
-function bigAbs(a: bigint): bigint {
-    return a < 0 ? -a : a;
+
+/**
+ * Find used variables in an expression
+ * For Rule 3 in neededness analysis
+ * @param expr 
+ */
+function getUsedValue(expr: IR.Expr<[Type, SourceLocation]>): Set<string> {
+    switch(expr.tag) {
+        case "value":
+            return getNeededValue(expr.value);
+        case "binop":
+            return new Set([...getNeededValue(expr.left), ...getNeededValue(expr.right)]);
+        case "uniop":
+            return getNeededValue(expr.expr);
+        case "call": {
+            const argSet: Set<string> = new Set();
+            for (let arg of expr.arguments) {
+                const argVal = getNeededValue(arg);
+                argVal.forEach(arg => argSet.add(arg));
+            }
+            return argSet;
+        }
+        case "alloc":
+            return getNeededValue(expr.amount);
+        case "load":
+            return new Set([...getNeededValue(expr.start), ...getNeededValue(expr.offset)])
+    }
+}
+
+/**
+ * Calculate needed values in a statement
+ * A necessary variable at line l is needed at line l (Rule 1)
+ * Implement based on https://www.cs.cmu.edu/~rjsimmon/15411-f15/lec/07-dataflow.pdf
+ * @param stmt 
+ */
+function getNeededStmt(stmt: IR.Stmt<[Type, SourceLocation]>, nextLineNec: Set<string>, np: needed_predicate): Set<string> {
+    switch(stmt.tag) {
+        case "assign": {
+            const currentNeeded: Set<string> = new Set();
+            // Rule 2
+            nextLineNec.forEach(nec => {
+                if (nec !== stmt.name) {
+                    currentNeeded.add(nec);
+                }
+            })
+            // Rule 3
+            if(nextLineNec.has(stmt.name)) {
+                getUsedValue(stmt.value).forEach(val => {currentNeeded.add(val)});
+            }
+            getNeededExpr(stmt.value).forEach(val => {currentNeeded.add(val)});
+            return currentNeeded;
+        }
+        case "return": {
+            // there will not be any stmts after return
+            // after DCE in AST
+            return getNeededValue(stmt.value);
+        }
+        case "expr": {
+            return new Set([...getNeededExpr(stmt.expr), ...nextLineNec]);
+        }
+        case "ifjmp": {
+            const ifNeeded: Set<string> = new Set();
+            const thnLabel = stmt.thn + '0';
+            const elsLabel = stmt.els + '0';
+            if (np.has(thnLabel)) {
+                np.get(thnLabel).forEach(val => {ifNeeded.add(val)});
+            }
+            if (np.has(elsLabel)) {
+                np.get(elsLabel).forEach(val => {ifNeeded.add(val)});
+            }
+            return new Set([...ifNeeded, ...getNeededValue(stmt.cond)]);
+        }
+        case "store": {
+            return new Set([...getNeededValue(stmt.offset), ...getNeededValue(stmt.value), ...nextLineNec]);
+        }
+        case "jmp":
+            const jmpNeeded: Set<string> = new Set();
+            const jmpLabel = stmt.lbl + '0';
+            if (np.has(jmpLabel)) {
+                np.get(jmpLabel).forEach(val => jmpNeeded.add(val));
+            }
+            return jmpNeeded;
+        case "pass":
+        default:
+            return new Set();
+    }
+}
+
+export function needednessAnalysis(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): needed_predicate {
+    var saturated = false;
+    var np: needed_predicate = new Map();
+    // backward propagation
+    while (!saturated) {
+        var changed = false;
+        // slice() returns a new copy
+        blocks.slice().reverse().forEach(block => {
+            const label_prefix = block.label;
+            for (let i = block.stmts.length - 1; i >= 0; i--) {
+                const cur_line_label = label_prefix + i.toString();
+                const succ_line_label = label_prefix + (i+1).toString();
+                const cur_stmt = block.stmts[i];
+                const nextLineNeeded: Set<string> = (np.has(succ_line_label) ? np.get(succ_line_label) : new Set());
+                const cur_this_live = getNeededStmt(cur_stmt, nextLineNeeded, np);
+                // If the predicate at current line is changed
+                if (!np.has(cur_line_label) || 
+                    !eqSet(cur_this_live, np.get(cur_line_label))) {
+                    np.set(cur_line_label, cur_this_live);
+                    changed = true;
+                }  
+            }
+        });
+        saturated = !changed;
+    }
+    const reverseNp = new Map();
+    for (let newKey of Array.from(np.keys()).reverse()) {
+        reverseNp.set(newKey, np.get(newKey));
+    }
+    return reverseNp;
+}
+
+function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>> {
+    const np: needed_predicate = needednessAnalysis(blocks);
+    var blockStmts = [];
+    const newBlocks = [];
+    for (let block of blocks) {
+        blockStmts = [];
+        for (const [stmtIndex, stmt] of block.stmts.entries()) {
+            let stmtLabel = block.label+stmtIndex.toString();
+            if (stmt.tag === "assign" && !np.get(stmtLabel).has(stmt.name)) {
+                let isFound = false;
+                for (let valueSet of np.values()) {
+                    if (valueSet.has(stmt.name)) {
+                        isFound = true;
+                        break;
+                    }
+                }
+                if (isFound) {
+                    blockStmts.push(stmt);
+                } else {
+                    isChanged = true;
+                }
+            } else {
+                blockStmts.push(stmt);
+            }
+        }
+        let newBlock = {...block, stmts:blockStmts};
+        newBlocks.push(newBlock);
+    }
+    return newBlocks;
 }
 
 function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock<[Type, SourceLocation]> {
@@ -34,7 +238,9 @@ function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock
 }
 
 function optimizeFuncDef(fun: IR.FunDef<[Type, SourceLocation]>): IR.FunDef<[Type, SourceLocation]> {
-    return {...fun, body: fun.body.map(optBasicBlock)};
+    let newFunBody = fun.body.map(optBasicBlock);
+    newFunBody = needednessDCE(newFunBody);
+    return {...fun, body: newFunBody};
 }
 
 function optimizeClass(cls: IR.Class<[Type, SourceLocation]>): IR.Class<[Type, SourceLocation]> {
@@ -63,12 +269,16 @@ function optimizeIRExpr(expr: IR.Expr<[Type, SourceLocation]>): IR.Expr<[Type, S
         case "value":
             return expr;
         case "binop": 
-            if (bfoldable.includes(expr.left.tag) && bfoldable.includes(expr.right.tag)) 
+            if (bfoldable.includes(expr.left.tag) && bfoldable.includes(expr.right.tag)) {
+                isChanged = true;
                 return {tag: "value", value: foldBinop(expr.left, expr.right, expr.op), a: expr.a};
+            }
             return expr;
         case "uniop":
-            if (ufoldable.includes(expr.expr.tag)) 
+            if (ufoldable.includes(expr.expr.tag)) {
+                isChanged = true;
                 return {tag: "value", value: foldUniop(expr.expr, expr.op), a: expr.a};
+            }
             return expr;
         case "call":
             return expr;
@@ -177,7 +387,6 @@ function foldUniop(val: IR.Value<[Type, SourceLocation]>, op: UniOp): IR.Value<[
 }
 
 // {linelabel: set(vars)}
-export type live_predicate = Map<string, Set<string>>;
 
 function eqSet(a: Set<string>, b: Set<string>): boolean {
     if (a.size !== b.size)
@@ -238,7 +447,7 @@ function live_stmt(stmt: IR.Stmt<[Type, SourceLocation]>, live_u: Set<string>, l
         case "ifjmp": {
             const live_dest: Set<string> = new Set();
             const thn_line_label = stmt.thn + '0';
-            const els_line_label = stmt.thn + '0';
+            const els_line_label = stmt.els + '0';
             if (lp.has(thn_line_label)) {
                 // console.log(lp.get(thn_line_label));
                 lp.get(thn_line_label).forEach(live_dest.add, live_dest);

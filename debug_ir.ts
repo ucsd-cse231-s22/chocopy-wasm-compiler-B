@@ -8,7 +8,7 @@ import { BasicREPL } from "./repl";
 import * as ir from './ir';
 import { CliRenderer } from "@diagrams-ts/graphviz-cli-renderer";
 import { optimizeAst } from './optimize_ast';
-import { optimizeIr, liveness_analysis, live_predicate } from './optimize_ir';
+import { optimizeIr, liveness_analysis, live_predicate, needed_predicate, needednessAnalysis } from './optimize_ir';
 
 
 export function printProgIR(p: ir.Program<[Type, SourceLocation]>) {
@@ -297,14 +297,15 @@ function valInline(val: ir.Value<[Type, SourceLocation]>): string {
 async function debug(optAst: boolean = false, optIR: boolean = false) {
   var source = 
 `
-a: int = 10
-b: int = 6
-r: int = 0
-while (a % b) > 0:
-  r = a % b
-  a = b
-  b = r
-b
+def f() -> int:
+  p:int = 1
+  x:int = 5
+  z:int = 1
+  while x > 0:
+    p = p * x
+    z = z + 1
+    x = x - 1
+  return p
 `
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2));
@@ -323,7 +324,11 @@ b
   printProgIR(irprogram);
 
   const lp: live_predicate = liveness_analysis(irprogram.body);
+  const np: needed_predicate = needednessAnalysis(irprogram.funs[0].body);
+  console.log("Liveness Analysis");
   console.log(lp);
+  console.log("Needed Analysis");
+  console.log(np);
   // const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
   // const dot = dotProg(irprogram);
   // await render(dot);
