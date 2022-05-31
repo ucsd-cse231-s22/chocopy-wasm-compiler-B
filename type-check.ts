@@ -139,7 +139,7 @@ export function isIterable(env: GlobalTypeEnv, t1: Type): [Boolean, Type] {
     // case "dictionary":
     case "set":
       return [true, t1.valueType];
-    // case "string": // string group makes string a literal rather than a type
+    // string group makes string a literal rather than a type
     default:
       return [false, undefined]; 
   }
@@ -187,6 +187,10 @@ export function convertToIterableObject(env : GlobalTypeEnv, iterable: Expr<[Typ
     else 
       throw new TypeCheckError("Iterable not supported yet for sets of: ", iterable.a[1]);
   }
+  if(iterable.a[0].tag === "class") {
+    if(iterable.a[0].name==="str")
+      return {a: [CLASS("StringIterator"), iterable.a[1]], tag: "call", name: "strtoStringIterator", arguments: [iterable] };
+  } 
   return iterable;
 }
 
@@ -392,7 +396,6 @@ export function tcStmt(env: GlobalTypeEnv, locals: LocalTypeEnv, stmt: Stmt<Sour
       var tVal = tcExpr(env, locals, stmt.value);
       if (equalType(tObj.a[0], CLASS("str"))) {
         throw new TypeCheckError("string is immutable", stmt.a)
-
       }
       if (tIndex.a[0].tag != "number") {
         // if (tObj.a[0].tag === "dict") {
@@ -471,7 +474,6 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
       checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
       return tRhs;
       
-
     case "listliteral":
       if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
         tcAssignTargets(env, locals, tDestr, tRhs.elements, hasStarred)
@@ -818,9 +820,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
           if(expr.arguments.length != 1)
             throw new TypeCheckError("iter() only accepts an iterator", expr.a) 
           const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-          if(!isIterable(env, tArgs[0].a[0])[0])
+          const _iterable = convertToIterableObject(env, tArgs[0])
+          if(!isIterable(env, _iterable.a[0])[0])
             throw new TypeCheckError("iter() only accepts an iterator", expr.a) 
-          return convertToIterableObject(env, tArgs[0])
+          return _iterable
       } else if (expr.name == "next") {
           if(expr.arguments.length != 1)
             throw new TypeCheckError("iter() only accepts an iterator", expr.a) 

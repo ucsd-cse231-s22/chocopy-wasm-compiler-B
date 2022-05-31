@@ -455,6 +455,39 @@ print(next(_iter))
 
 ` ,["True", "False", "True", "False"]);
 
+assertPrint('iter() and next() on string' , rangeStr + `
+
+class StringIterator(object):
+  val:str = "a"
+  index:int = 0
+  
+  
+  def new(self:StringIterator, initVal:str ) -> StringIterator:
+    self.val = initVal
+    return self
+  
+  def next(self :  StringIterator) -> str :    
+   	ret :  str = "a"
+   	ret = self.val[self.index]
+   	self.index = self.index + 1
+   	return ret
+    
+  def hasnext(self :  StringIterator) -> bool : 
+    return self.index < len(self.val)
+  
+def strtoStringIterator(initVal: str) -> StringIterator :
+    return StringIterator().new(initVal)
+  
+s:str = "iterator"
+i:str = "a"
+_iter: StringIterator = None
+_iter = iter(s)
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+
+` ,["i", "t", "e"]);
+
 assertPrint('enumerate() on list of integers' , rangeStr + `
 
 l : [int] = None
@@ -466,8 +499,38 @@ for i in enumerate(l):
 
 ` ,["0","1","1","2","2","3","3","4","4","5"]);
 
+assertPrint('String Iterator' , rangeStr + `
+
+class StringIterator(object):
+  val:str = "a"
+  index:int = 0
+  
+  
+  def new(self:StringIterator, initVal:str ) -> StringIterator:
+    self.val = initVal
+    return self
+  
+  def next(self :  StringIterator) -> str :    
+   	ret :  str = "a"
+   	ret = self.val[self.index]
+   	self.index = self.index + 1
+   	return ret
+    
+  def hasnext(self :  StringIterator) -> bool : 
+    return self.index < len(self.val)
+  
+def strtoStringIterator(initVal: str) -> StringIterator :
+    return StringIterator().new(initVal)
+  
+s:str = "iterator"
+i:str = "a"
+  
+for i in s:
+    print(i)
+
+` ,["i", "t", "e", "r", "a", "t", "o", "r"]);
 assertPrint('Set Iterator Int' , rangeStr + `
- 
+
 l : set[int] = None
 i: int = 0
 l = {1,2,3}
@@ -610,6 +673,31 @@ print(iter(j))
 
 
 assertFail('Stop iteration in range', rangeStr + `
+<<<<<<< HEAD
+
+class ListIteratorBool(object) : 
+   list :  [bool] = None
+   index : int = 0
+   def new(self :  ListIteratorBool, initVal :  [bool]) -> ListIteratorBool : 
+   	self.list = initVal
+   	return self
+
+   def next(self :  ListIteratorBool) -> bool :    
+   	ret :  bool = False
+   	ret = self.list[self.index]
+   	self.index = self.index + 1
+   	return ret
+    
+   def hasnext(self :  ListIteratorBool) -> bool : 
+    return self.index < len_list(self.list)
+
+def len_list(l: [bool]) -> int:
+    return 5
+
+def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
+    return ListIteratorBool().new(initVal)
+=======
+>>>>>>> 9cd7d76a0ffeab203d0d67c410e4c0497b056980
     
 i: [bool] = None
 _iter: ListIteratorBool = None
