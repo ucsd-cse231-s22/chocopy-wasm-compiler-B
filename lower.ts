@@ -341,8 +341,8 @@ function lowerAllDestructureForAssignments(blocks: { a?: [AST.Type, AST.SourceLo
     let r = rhs_vals[rhs_index]
     if(r.a[0].tag==="class"){ //for all iterable classes
       var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
-      allinits.push(...valinits);
-      pushStmtsToLastBlock(blocks, ...valstmts);
+      // allinits.push(...valinits);
+      // pushStmtsToLastBlock(blocks, ...valstmts);
       const iterClassName = r.a[0].name;
       if(va.tag==="id"){
         var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] , a:[{ tag: "none" }, dummyLoc]};
