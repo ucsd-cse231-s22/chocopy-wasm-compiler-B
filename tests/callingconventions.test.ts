@@ -317,6 +317,8 @@ def test(a : int, b : int):
   
 test(a = 1 + 2, b = 3)`
   );
+
+  assertParse("Parses a method call with named arguments", `obj.C(x = 3)`);
 });
 
 describe("Type checks named arguments", () => {
@@ -391,6 +393,31 @@ def test(a : int = 3):
   pass
   
 test(a = False)`
+  );
+
+  assertTC(
+    "Ensure methods are typechecked",
+    `
+class C(object):
+  def test(self : C, testNum : int) -> int:
+    return testNum
+    
+x : C = None
+x = C()
+x.test(testNum = 3)`,
+    NUM
+  );
+
+  assertTCFail(
+    "Methods require all parameters to be defined",
+    `
+class C(object):
+  def test(self : C, a : int, b : int) -> int:
+    return b
+    
+x : C = None
+x = C()
+x.test(b = 3)`
   );
 });
 
