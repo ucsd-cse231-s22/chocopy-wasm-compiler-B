@@ -9,7 +9,8 @@
     "test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && for FILE in tests/*.test.ts; do mocha -r ts-node/register $FILE; done",
     "build": "tsc debuggerstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debuggerstart.js",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "destr-test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && for FILE in tests/destructuring.test.ts; do mocha -r ts-node/register $FILE; done"
   },
   "author": "",
   "license": "ISC",
