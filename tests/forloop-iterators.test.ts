@@ -115,10 +115,10 @@ class SetIteratorInt(object):
         if(self.hasnext() == True):
             self.currElement = self.set.next(self.currElement)
         return ret
-    def hasnext(self :  SetIteratorInt) -> bool : 
-        if(self.index == 0):
-            return True
-        return self.set.hasnext(self.currElement)
+    def hasnext(self : SetIteratorInt) -> bool : 
+        if(self.currElement == -1):
+            return False
+        return True
 
 def setToSetIteratorInt(initVal: set[int]) -> SetIteratorInt :
     return SetIteratorInt().new(initVal)
@@ -461,7 +461,6 @@ class StringIterator(object):
   val:str = "a"
   index:int = 0
   
-  
   def new(self:StringIterator, initVal:str ) -> StringIterator:
     self.val = initVal
     return self
@@ -673,31 +672,6 @@ print(iter(j))
 
 
 assertFail('Stop iteration in range', rangeStr + `
-<<<<<<< HEAD
-
-class ListIteratorBool(object) : 
-   list :  [bool] = None
-   index : int = 0
-   def new(self :  ListIteratorBool, initVal :  [bool]) -> ListIteratorBool : 
-   	self.list = initVal
-   	return self
-
-   def next(self :  ListIteratorBool) -> bool :    
-   	ret :  bool = False
-   	ret = self.list[self.index]
-   	self.index = self.index + 1
-   	return ret
-    
-   def hasnext(self :  ListIteratorBool) -> bool : 
-    return self.index < len_list(self.list)
-
-def len_list(l: [bool]) -> int:
-    return 5
-
-def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
-    return ListIteratorBool().new(initVal)
-=======
->>>>>>> 9cd7d76a0ffeab203d0d67c410e4c0497b056980
     
 i: [bool] = None
 _iter: ListIteratorBool = None
