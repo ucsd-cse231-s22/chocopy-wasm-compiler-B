@@ -17,6 +17,10 @@ import "codemirror/addon/fold/foldcode";
 import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
+import "codemirror/addon/dialog/dialog";
+import "codemirror/addon/edit/matchbrackets";
+import "codemirror/addon/search/searchcursor"
+import "codemirror/keymap/vim";
 import "./style.scss";
 import {BuiltinLib} from "./builtinlib"
 
@@ -27,6 +31,7 @@ function index_out_of_bounds(length: any, index: any): any {
 }
 
 function webStart() {
+  var editMode = "default";
   var filecontent: string | ArrayBuffer;
   document.addEventListener("DOMContentLoaded", async function() {
 
@@ -188,12 +193,29 @@ function webStart() {
       autoCloseBrackets: true,
       lineWrapping: true,
       foldGutter: true,
+      keyMap: "default",
+      matchBrackets: true,
+      showCursorWhenSelecting: true,
       gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
       extraKeys: {
         "Ctrl": "autocomplete",
       },
       // scrollbarStyle: "simple",
     } as any);
+    var commandDisplay = document.getElementById('command-display');
+    var keys = '';
+    CodeMirror.on(editor, 'vim-keypress', function(key : string) {
+      keys = keys + key;
+      commandDisplay.innerText = keys;
+    });
+    CodeMirror.on(editor, 'vim-command-done', function(e : string) {
+      keys = '';
+      commandDisplay.innerHTML = keys;
+    });
+    var vimMode = document.getElementById('vim-mode');
+    CodeMirror.on(editor, 'vim-mode-change', function(e : string) {
+      vimMode.innerText = JSON.stringify(e);
+    });
     console.log('thy this is not run textarea', textarea)
     console.log(editor)
     
@@ -212,6 +234,7 @@ function webStart() {
     dragbarFunction();
     promptTextArea();
     themeDropDown(editor);
+    modeDropDown(editor, editMode);
 
   });
 
@@ -298,6 +321,32 @@ function themeDropDown (editor : any) {
     const random = Math.floor(Math.random() * themeList.length);
     var randomTheme = themeList[random];
     editor.setOption("theme", randomTheme);
+  });
+}
+
+function modeDropDown (editor : any, editMode : string) {
+  // Append vim mode
+  var dropdown = document.getElementById("config-mode");
+  dropdown.appendChild
+  var option = document.createElement("option");
+  option.value = "vim";
+  option.text = "vim";
+  dropdown.appendChild(option);
+  // Create listener for mode dropdown
+  var modeDropDown = document.getElementById("config-mode") as HTMLSelectElement;
+  modeDropDown.addEventListener("change", (event) => {
+    editMode = modeDropDown.value;
+    editor.setOption("keyMap", modeDropDown.value);
+  });
+  // Change edit mode
+  document.getElementById("change-mode").addEventListener("click", (e)=>{
+    if (editMode === "vim") {
+      editMode = "default";
+      editor.setOption("keyMap", "default");
+    } else if (editMode === "default"){
+      editMode = "vim";
+      editor.setOption("keyMap", "vim");
+    }
   });
 }
 
