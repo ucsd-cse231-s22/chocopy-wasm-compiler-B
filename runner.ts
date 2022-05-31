@@ -129,10 +129,13 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
 ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
-
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $jsopen (import "imports" "jsopen") (param i32) (result i32))
+    (func $jsclose (import "imports" "jsclose") (param i32) (result i32))
+    (func $jsread (import "imports" "jsread") (param i32) (result i32))
+    (func $jswrite (import "imports" "jswrite") (param i32) (param i32) (result i32))
     (func $set$add (import "libset" "set$add") (param $baseAddr i32) (param $key i32) (result i32))
     (func $set$contains (import "libset" "set$contains") (param $baseAddr i32) (param $key i32) (result i32))
     (func $set$length (import "libset" "set$length") (param $baseAddr i32) (result i32))
