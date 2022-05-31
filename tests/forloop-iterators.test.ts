@@ -483,6 +483,36 @@ for i in enumerate(l):
 
 ` ,["0","1","1","2","2","3","3","4","4","5"]);
 
+assertPrint('Set Iterator Int' , rangeStr + `
+class SetIteratorInt(object): 
+    set : set[int] = None
+    currElement : int = 0
+    index : int = 0
+    def new(self :  SetIteratorInt, initVal :  set[int]) -> SetIteratorInt : 
+        self.set = initVal
+        self.currElement = self.set.firstItem()
+        return self
+    def next(self :  SetIteratorInt) -> int : 
+        ret : int = 0
+        ret = self.currElement
+        if(self.hasnext() == True):
+           self.currElement = self.set.next(self.currElement)
+        return ret
+    def hasnext(self :  SetIteratorInt) -> bool : 
+        if(self.index == 0):
+            return True
+        return self.set.hasnext(self.currElement)
+ 
+def setToSetIteratorInt(initVal: set[int]) -> SetIteratorInt :
+    return SetIteratorInt().new(initVal)
+ 
+l : set[int] = None
+i: int = 0
+l = {1,2,3}
+for i in l:
+    print(i)
+
+` ,["1","2","3"]);
 
 
 assertTCFail('range: type checking for loop variable ', rangeStr + `
