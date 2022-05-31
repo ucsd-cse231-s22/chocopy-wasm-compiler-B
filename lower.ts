@@ -569,15 +569,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {tag: "value", value: literalToVal(e.value) } ];
-    case "index":
-      if(equalType(e.a[0], CLASS("str"))){
-        const [oinits, ostmts, oval] = flattenExprToVal(e.obj, blocks, env);
-        const [iinits, istmts, ival] = flattenExprToVal(e.index, blocks, env);
-        return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
-      }
-      else{
-        break;
-      }
     case "set":
       const newSetName = generateName("newSet");
       // 10 buckets for now
