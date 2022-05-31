@@ -1,22 +1,24 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BOOL, CLASS, NONE, NUM } from "./utils";
+import { equalType } from "./type-check";
+import { equal } from "assert";
 import { RunTimeError } from "./error_reporting";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
+  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
 }
 
-export const emptyEnv : GlobalEnv = { 
-  globals: new Map(), 
+export const emptyEnv: GlobalEnv = {
+  globals: new Map(),
   classes: new Map(),
   locals: new Set(),
   labels: [],
-  offset: 0 
+  offset: 0
 };
 
 type CompileResult = {
@@ -26,29 +28,29 @@ type CompileResult = {
   newEnv: GlobalEnv
 };
 
-export function makeLocals(locals: Set<string>) : Array<string> {
-  const localDefines : Array<string> = [];
+export function makeLocals(locals: Set<string>): Array<string> {
+  const localDefines: Array<string> = [];
   locals.forEach(v => {
     localDefines.push(`(local $${v} i32)`);
   });
   return localDefines;
 }
 
-export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
+export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv): CompileResult {
   const withDefines = env;
 
-  const definedVars : Set<string> = new Set(); //getLocals(ast);
+  const definedVars: Set<string> = new Set(); //getLocals(ast);
   definedVars.add("$last");
   definedVars.add("$selector");
   definedVars.forEach(env.locals.add, env.locals);
   const localDefines = makeLocals(definedVars);
   const globalNames = ast.inits.map(init => init.name);
   // console.log(ast.inits, globalNames);
-  const funs : Array<string> = [];
+  const funs: Array<string> = [];
   ast.funs.forEach(f => {
     funs.push(codeGenDef(f, withDefines).join("\n"));
   });
-  const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
+  const classes: Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
@@ -91,9 +93,9 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
       if (env.locals.has(stmt.name)) {
-        return valStmts.concat([`(local.set $${stmt.name})`]); 
+        return valStmts.concat([`(local.set $${stmt.name})`]);
       } else {
-        return valStmts.concat([`(global.set $${stmt.name})`]); 
+        return valStmts.concat([`(global.set $${stmt.name})`]);
       }
 
     case "return":
@@ -112,8 +114,8 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const thnIdx = env.labels.findIndex(e => e === stmt.thn);
       const elsIdx = env.labels.findIndex(e => e === stmt.els);
 
-      return [...codeGenValue(stmt.cond, env), 
-        `(if 
+      return [...codeGenValue(stmt.cond, env),
+      `(if 
           (then
             (local.set $$selector (i32.const ${thnIdx}))
             (br $loop)
@@ -140,7 +142,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const lhsStmts = codeGenValue(expr.left, env);
       const rhsStmts = codeGenValue(expr.right, env);
       var divbyzero = ``;
-      if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
+      if (expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
         // line number and column number
 
         divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
@@ -149,7 +151,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
 
     case "uniop":
       const exprStmts = codeGenValue(expr.expr, env);
-      switch(expr.op){
+      switch (expr.op) {
         case UniOp.Neg:
           return [`(i32.const 0)`, ...exprStmts, `(i32.sub)`];
         case UniOp.Not:
@@ -157,31 +159,36 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       }
 
     case "call":
-      if (expr.name=="print"){
-        var valStmts = expr.arguments.map(arg=>{
+      if (expr.name == "print") {
+        var valStmts = expr.arguments.map(arg => {
           let argCode = codeGenValue(arg, env);
-          switch (arg.a[0]){
-            case NUM:
-              argCode.push("(call $print_num)");
-              break;
-            case BOOL:
-              argCode.push("(call $print_bool)");
-              break;
-            case NONE:
-              argCode.push("(call $print_none)");
-              break;
-            default:
-              throw new RunTimeError("not implemented object print")
+          if (equalType(arg.a[0], CLASS("str"))) {
+            argCode.push("(call $print_str)");
+          } else {
+            switch (arg.a[0]) {
+              case NUM:
+                argCode.push("(call $print_num)");
+                break;
+              case BOOL:
+                argCode.push("(call $print_bool)");
+                break;
+              case NONE:
+                argCode.push("(call $print_none)");
+                break;
+              default:
+                throw new RunTimeError("not implemented object print")
+            }
           }
+
           argCode.push("drop");
           return argCode;
         }).flat();
-        return valStmts.slice(0,-1);
+        return valStmts.slice(0, -1);
       }
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);
       valStmts.push(`(call $stack_push)`);
-      if(expr.name === 'assert_not_none'){
+      if (expr.name === 'assert_not_none') {
         valStmts.push(`(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) `);
       }
       valStmts.push(`(call $${expr.name})`);
@@ -222,8 +229,8 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
   }
 }
 
-function codeGenBinOp(op : BinOp) : string {
-  switch(op) {
+function codeGenBinOp(op: BinOp): string {
+  switch (op) {
     case BinOp.Plus:
       return "(i32.add)"
     case BinOp.Minus:
@@ -255,17 +262,17 @@ function codeGenBinOp(op : BinOp) : string {
   }
 }
 
-function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
+function codeGenInit(init: VarInit<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   const value = codeGenValue(init.value, env);
   if (env.locals.has(init.name)) {
-    return [...value, `(local.set $${init.name})`]; 
+    return [...value, `(local.set $${init.name})`];
   } else {
-    return [...value, `(global.set $${init.name})`]; 
+    return [...value, `(global.set $${init.name})`];
   }
 }
 
-function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
-  var definedVars : Set<string> = new Set();
+function codeGenDef(def: FunDef<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
+  var definedVars: Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
   definedVars.add("$last");
   definedVars.add("$selector");
@@ -300,7 +307,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     (return))`];
 }
 
-function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
+function codeGenClass(cls: Class<[Type, SourceLocation]>, env: GlobalEnv): Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));

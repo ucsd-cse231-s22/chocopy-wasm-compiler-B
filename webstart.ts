@@ -1,7 +1,7 @@
 import { BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, CLASS } from './utils';
 import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint } from "./outputrender";
 import { log } from 'console';
@@ -47,6 +47,7 @@ function webStart() {
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
+        print_str: (arg: number) => renderPrint(CLASS("str"), arg, memory),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
@@ -62,8 +63,15 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
     );
-
     importObject.libset = setModule.instance.exports;
+
+    const stringModule = await fetch('string.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(strings =>
+      WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
+    );
+    importObject.libstring = stringModule.instance.exports;
+
     
     var repl = new BasicREPL(importObject);
 
