@@ -116,6 +116,10 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
 
     case "return":
       var valStmts = codeGenValue(stmt.value, env);
+      if(valueIsPointer(stmt.value, env)){ // if return a pointer, inc ref_count
+        valStmts.push(`;; inc ref count`);
+        valStmts.push(`call $inc_refcount`);
+      }
       valStmts.push("return");
       return valStmts;
 
@@ -302,12 +306,12 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
       ]
     }
   });
-  var dec_params: string[] = [];
+  var dec_refStmts: string[] = [];
   //dec refcount: the param and local_var
   def.parameters.forEach(p => { //dec refcount: the func param
     if(p.type.tag == "class"){
-      dec_params = [
-        ...dec_params,
+      dec_refStmts = [
+        ...dec_refStmts,
         `(local.get $${p.name})`,
         `(call $dec_refcount) ;; dec ref_count of param $${p.name}`,
         `(drop)`
@@ -316,8 +320,8 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   });
   def.inits.forEach(init => { //dec refcount: the local_var defined in the function
     if(init.type.tag == "class" && !init.name.includes("newObj")){
-      dec_params = [
-        ...dec_params,
+      dec_refStmts = [
+        ...dec_refStmts,
         `(local.get $${init.name})`,
         `(call $dec_refcount) ;; dec ref_count of field $${init.name}`,
         `(drop)`
@@ -341,9 +345,19 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     for (let i = 0; i < block.stmts.length; i++){
       let stmt = block.stmts[i];
       if(stmt.tag == "return"){
-        stmtsCommands.push("\n;; dec ref_count of params and fields before each return \n" + dec_params.join("\n"));
-      } 
-      stmtsCommands.push(codeGenStmt(stmt, env).join("\n"));
+        let returnStmts = codeGenStmt(stmt, env);
+        if(returnStmts.pop() !== "return"){
+          throw new Error("Error from Memory Management group.")
+        }
+        stmtsCommands.push(returnStmts.join("\n"));
+        stmtsCommands.push("\n;; dec ref_count of params and fields before each return \n" + dec_refStmts.join("\n"));
+        if(valueIsPointer(stmt.value, env)){ // if return a pointer; call dec_refcount
+          stmtsCommands.push("(call $dec_refcount)");
+        }
+        stmtsCommands.push("return");
+      } else {
+        stmtsCommands.push(codeGenStmt(stmt, env).join("\n"));
+      }
     }
     
     // console.log("====" + stmtsCommands + "====");
@@ -353,7 +367,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   // add dec ref_count if there is no return
-  bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_params.join("\n");
+  bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_refStmts.join("\n");
   env.locals.clear();
   env.local_type.clear();
   return [`(func $${def.name} ${params} (result i32)
@@ -382,22 +396,5 @@ function codeGenAlloc(type: Type, amount: Value<[Type, SourceLocation]>, env: Gl
     `(i32.const ${getTypeBits(type)})`, // type info
     `call $alloc`
   ];
-}
-
-/** Generate code to allocate an instance of a class
- *
- * This will be called by codeGenAlloc in most cases
- */
-function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
-  const ret_stmt: Array<string> = [];
-  return ret_stmt;
-}
-
-/** Generate code to decrease the reference counts of all local variables
- *
- * This will get called on all exit paths from a function
- */
-function freeAllLocals(env: GlobalEnv): Array<string> {
-  throw new Error("TODO: Memory management implementation");
 }
 

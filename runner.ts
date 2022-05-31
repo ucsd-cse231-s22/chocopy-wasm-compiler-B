@@ -10,7 +10,6 @@ import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
 import { Program, Type, Value, SourceLocation } from './ast';
 import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
 import { lowerProgram } from './lower';
-import { assert } from 'console';
 
 export type Config = {
   importObject: any;
@@ -53,7 +52,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
   prog.inits.forEach((v) => {
     newGlobals.set(v.name, true);
     global_type.set(v.name, v.type);
-    assert(global_type !== undefined)
+    // assert(global_type !== undefined)
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
@@ -125,6 +124,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $get_size (import "libmemory" "get_size") (param i32) (result i32))
     (func $get_type (import "libmemory" "get_type") (param i32) (result i32))
     (func $get_refcount (import "libmemory" "get_refcount") (param i32) (result i32))
+    (func $free_no_ref (import "libmemory" "free_no_ref") (param i32) (result i32))
     (func $test_refcount (import "libmemory" "test_refcount") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}

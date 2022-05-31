@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { FreeList } from "../allocator";
 
 enum Type { Num, Bool, None }
 
@@ -28,14 +29,28 @@ function assert_not_none(arg: any) : any {
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
+  const mem_allocator = new FreeList(100);
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory }, 
     console: {
-    log: function(arg: any) {
-      console.log(arg);
+      log: function(arg: any) {
+        console.log(arg);
+      }
+    }, 
+    memory_management: {
+      alloc_memory: function(size: any){
+        var addr = mem_allocator.alloc(size);
+        console.log(`Alloc ${size} byte + 3 byte for the header: ${addr}-${addr+(12+size*4)}`);
+        return addr;
+      },
+      free_memory: function(addr: any, size: any) {
+        mem_allocator.free(addr, size);
+        console.log(`Free ${size} byte + 3 byte for the header: ${addr}-${addr+(12+size*4)}`);
+      }
     }
-  }, })
+  })
   importObject.libmemory = memoryModule.instance.exports,
   importObject.memory_values = memory;
+  importObject.memory_allocator = mem_allocator;
   importObject.js = {memory};
   return importObject;
 }

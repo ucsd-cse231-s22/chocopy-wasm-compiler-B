@@ -63,6 +63,7 @@ export function decRefcount(name: string, env: GlobalEnv): Array<string> {
     return [
       `${(env.locals.has(name)) ? `local` : `global`}.get $${name}`,
       `call $dec_refcount`,
+      `call $free_no_ref`,
       `drop`
     ]
   }
