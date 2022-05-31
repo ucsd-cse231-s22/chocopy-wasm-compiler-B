@@ -119,6 +119,9 @@ The console right now is consist of textareas and the textarea will be mess if t
 
 To make our compiler more accepetable by users, we want to provide more themes so that the users can choose from.
 
+We provide multiple themes for users to choose. Users can also pick a random theme by clicking the theme button.
+![theme choosing](./theme.png)
+
 ### 7. Support other object like list, string
 
 We will implement the render to hanle other objects like list, string and dictionary. This design will be achieved in outputrender.ts in the same way as the class objects. Besides, the layout for displaying the list or dictionray in REPL area should be carefully design to make sure it is clean and obvious.
@@ -135,3 +138,9 @@ Our team have comunicated with team A and find that there is a tool called [phan
 
 The overall front page will looks like below:
 ![final front end](./Screen%20Shot%202022-05-21%20at%2000.09.37.png)
+
+### 10. Edit mode
+
+To provide an option for the editor preferences of users, we add vim edit mode for users to choose, user can choose to change to vim mode and use default vim keymap to edit their code. And user can switch between normal mode and vim mode by clicking the mode button.
+
+![vim mode](./vim.png)
