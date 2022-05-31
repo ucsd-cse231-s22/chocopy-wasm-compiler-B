@@ -4,20 +4,20 @@ import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 
-const nameCounters : Map<string, number> = new Map();
+const nameCounters : Map<string, bigint> = new Map();
 function generateName(base : string) : string {
   if(nameCounters.has(base)) {
     var cur = nameCounters.get(base);
-    nameCounters.set(base, cur + 1);
-    return base + (cur + 1);
+    nameCounters.set(base, cur + BigInt(1));
+    return base + (cur + BigInt(1));
   }
   else {
-    nameCounters.set(base, 1);
+    nameCounters.set(base, BigInt(1));
     return base + 1;
   }
 }
 
-// function lbl(a: Type, base: string) : [string, IR.Stmt<[Type, SourceLocation]>] {
+// function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }

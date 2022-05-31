@@ -1,19 +1,19 @@
 import { Value, Type } from "./ast";
 
-export function PyValue(typ: Type, result: number): Value {
+export function PyValue(typ: Type, result: bigint): Value {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
     case "bool":
       return PyBool(Boolean(result));
     case "class":
-      return PyObj(typ.name, result);
+      return PyObj(typ.name, Number(result));
     case "none":
       return PyNone();
   }
 }
 
-export function PyInt(n: number): Value {
+export function PyInt(n: bigint): Value {
   return { tag: "num", value: n };
 }
 
