@@ -159,8 +159,13 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       }
 
     case "call":
-      if (expr.name == "print") {
-        var valStmts = expr.arguments.map(arg => {
+      if (expr.name=="print"){
+        if (expr.arguments[0].a[0].tag === "set") {
+          let argCode = codeGenValue(expr.arguments[0], env);
+          argCode.push("(call $set$print)");
+          return argCode;
+        }
+        var valStmts = expr.arguments.map(arg=>{
           let argCode = codeGenValue(arg, env);
           if (equalType(arg.a[0], CLASS("str"))) {
             argCode.push("(call $print_str)");
