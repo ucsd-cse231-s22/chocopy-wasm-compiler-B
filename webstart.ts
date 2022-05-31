@@ -30,7 +30,7 @@ function stringify(typ: Type, arg: any) : string {
     case "number":
       return (arg as number).toString();
     case "bool":
-      return (arg as boolean)? "Hello" : "False";
+      return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
     case "class":
