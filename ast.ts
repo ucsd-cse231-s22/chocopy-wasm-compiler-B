@@ -26,6 +26,7 @@ export type FunDef<A> = { a?: A, name: string, parameters: Array<Parameter<A>>, 
 
 export type Stmt<A> =
   | {  a?: A, tag: "assign", name: string, value: Expr<A> }
+  | {  a?: A, tag: "assign-destr", destr: DestructureLHS<A>[], rhs:Expr<A> }
   | {  a?: A, tag: "return", value: Expr<A> }
   | {  a?: A, tag: "expr", expr: Expr<A> }
   | {  a?: A, tag: "pass" }
@@ -33,22 +34,25 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", vars: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>>, elseBody?: Array<Stmt<A>> }
+  | {  a?: A, tag: "break", loopCounter?: number }
+  | {  a?: A, tag: "continue", loopCounter?: number }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal<A> }
   | {  a?: A, tag: "id", name: string}
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
-  | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
-  | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression
+  | {  a?: A, tag: "non-paren-vals", values: Array<Expr<A>> }
 
 export type Literal<A> = 
     { a?: A, tag: "num", value: number }
@@ -64,3 +68,10 @@ export enum UniOp { Neg, Not };
 export type Value =
     Literal<null>
   | { tag: "object", name: string, address: number}
+
+export type DestructureLHS<A> = { a?: A, lhs: AssignTarget<A>, isStarred : boolean, isIgnore : boolean}
+
+export type AssignTarget<A> = 
+| {  a?: A,  tag : "id", name : string}
+| {  a?: A,  tag : "lookup", obj: Expr<A>, field: string }
+| {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
