@@ -141,7 +141,7 @@ export function isIterable(env: GlobalTypeEnv, t1: Type): [Boolean, Type] {
       return [true, t1.valueType];
     // string group makes string a literal rather than a type
     default:
-      return [false, undefined];
+      return [false, undefined]; 
   }
 }
 
@@ -178,6 +178,14 @@ export function convertToIterableObject(env : GlobalTypeEnv, iterable: Expr<[Typ
       return {a: [CLASS("ListIteratorInt"), iterable.a[1]], tag: "call", name: "listToListIteratorInt", arguments: [iterable] };
     if(iterable.a[0].type.tag==="bool")
       return {a: [CLASS("ListIteratorBool"), iterable.a[1]], tag: "call", name: "listToListIteratorBool", arguments: [iterable] };
+    else 
+      throw new TypeCheckError("Iterable not supported yet for lists of: ", iterable.a[1]);
+  }
+  else if (iterable.a[0].tag === "set") {
+    if(iterable.a[0].valueType.tag==="number")
+      return {a: [CLASS("SetIteratorInt"), iterable.a[1]], tag: "call", name: "setToSetIteratorInt", arguments: [iterable] };
+    else 
+      throw new TypeCheckError("Iterable not supported yet for sets of: ", iterable.a[1]);
   }
   if(iterable.a[0].tag === "class") {
     if(iterable.a[0].name==="str")
@@ -896,9 +904,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
             }
           } else {
             tArgs.forEach(t => {
-              if (t.tag === "literal" && tObj.a[0].tag === 'set'){
+              if (tObj.a[0].tag === 'set'){
                 // current item's type !== set type annotation
-                if (t.value.a[0] !== tObj.a[0].valueType){
+                if (t.a[0] !== tObj.a[0].valueType){
                   throw new TypeCheckError("Mismatched Type when calling method", expr.a)
                 }
               }else{
