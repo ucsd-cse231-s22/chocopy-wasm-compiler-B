@@ -268,15 +268,25 @@ f(5)` , ["25", "5", "-20"]);
 
 //Lists
 
-assertTCFail("length mismatch - lists", `
+assertTCFail("length mismatch - lists-R", `
 x : int = 2
 y : int = 12
 x,y = [1,2,3]`)
 
-assertTCFail("length mismatch - lists", `
+assertTCFail("length mismatch - lists-LR", `
+x : int = 2
+y : int = 12
+[x,y] = [1,2,3]`)
+
+assertTCFail("length mismatch - lists-R", `
 x : int = 2
 y : int = 12
 x,y,z = [1,2]`);
+
+assertTCFail("length mismatch - lists-L", `
+x : int = 2
+y : int = 12
+[x,y,z] = 1,2`);
 
 assertTCFail("type mismatch - list", `
 x : int = 2
@@ -289,35 +299,79 @@ x : int = 2
 y : int = 12
 x,y = [1+2]`);
 
-assertTCFail("length mismatch - lists - binop", `
+assertTCFail("length mismatch - lists - binop-LR", `
+x : int = 2
+y : int = 12
+[x,y] = [1+2]`);
+
+assertTCFail("length mismatch - lists - binop-R", `
 x : int = 2
 y : int = 12
 x,y,z = [1,2+3]`);
+
+assertTCFail("length mismatch - lists - binop-L", `
+x : int = 2
+y : int = 12
+[x,y,z] = 1,2+3`);
 
 assertTCFail("length mismatch - lists - ignore", `
 x : int = 2
 y : int = 12
 x,y,_ = [1,2]`);
 
+assertTCFail("length mismatch - lists - ignore-LR", `
+x : int = 2
+y : int = 12
+[x,y,_] = [1,2]`);
+
 assertTCFail("length mismatch - lists - ignore", `
 x : int = 2
 y : int = 12
 x,y,_ = [1,2,3,4]`);
+
+assertTCFail("length mismatch - lists - ignore-LR", `
+x : int = 2
+y : int = 12
+[x,y,_] = [1,2,3,4]`);
 
 assertTCFail("length mismatch - lists - ignore - binop", `
 x : int = 2
 y : int = 12
 x,y,_ = [1,2+3]`);
 
+assertTCFail("length mismatch - lists - ignore - binop-LR", `
+x : int = 2
+y : int = 12
+[x,y,_] = [1,2+3]`);
+
 assertTCFail("length mismatch - lists - ignore - binop", `
 x : int = 2
 y : int = 12
 x,y,_ = [1,2,3+4,5]`);
 
-assertPrint("basic-destr-list", `
+assertTCFail("length mismatch - lists - ignore - binop-LR", `
+x : int = 2
+y : int = 12
+[x,y,_] = [1,2,3+4,5]`);
+
+assertPrint("basic-destr-list-R", `
 x : int = 0
 y : int  = 0
 x, y = [5, 6]
+print(x)
+print(y)` , ["5", "6"]);
+
+assertPrint("basic-destr-list-L", `
+x : int = 0
+y : int  = 0
+[x, y] = 5, 6
+print(x)
+print(y)` , ["5", "6"]);
+
+assertPrint("basic-destr-list-LR", `
+x : int = 0
+y : int  = 0
+[x, y] = [5, 6]
 print(x)
 print(y)` , ["5", "6"]);
 
@@ -325,6 +379,13 @@ assertPrint("destr-underscore-list", `
 x : int = 0
 y : int  = 0
 x,_, y = [5, 6, 7]
+print(x)
+print(y)` , ["5", "7"]);
+
+assertPrint("destr-underscore-list-L", `
+x : int = 0
+y : int  = 0
+[x,_, y] = 5, 6, 7
 print(x)
 print(y)` , ["5", "7"]);
 
@@ -341,11 +402,28 @@ y : int = 12
 c = [int] = None
 x,y,_,*c = [2,3]`);
 
+assertTCFail("length mismatch - lists - ignore - star-LR", `
+x : int = 2
+y : int = 12
+c = [int] = None
+[x,y,_,*c] = [2,3]`);
+
 assertPrint("destr-list-star-1", `
 x : int = 2
 y : int = 12
 z : [int] = None
 x,y,*z = [1, 2, 3, 4, 5]
+print(x)
+print(y)
+print(z[0])
+print(z[1])
+print(z[2])`, ["1","2","3","4","5"]);
+
+assertPrint("destr-list-star-1-L", `
+x : int = 2
+y : int = 12
+z : [int] = None
+[x,y,*z] = 1, 2, 3, 4, 5
 print(x)
 print(y)
 print(z[0])
@@ -385,6 +463,17 @@ print(z[0])
 print(z[1])
 print(z[2])`, ["1","2","4","5","6"]);
 
+assertPrint("destr-list-star-ignore-1-LR", `
+x : int = 2
+y : int = 12
+z : [int] = None
+[x,y,_,*z] = [1, 2, 3, 4, 5, 6]
+print(x)
+print(y)
+print(z[0])
+print(z[1])
+print(z[2])`, ["1","2","4","5","6"]);
+
 assertPrint("destr-list-star-ignore-2", `
 x : int = 2
 y : int = 12
@@ -400,6 +489,16 @@ assertTCFail("destr-list-Type Mismatch - lists - star", `
 x : int = 2
 y : set[int] = None
 x,*y = [2,3,6,7]`);
+
+assertTCFail("destr-list-Type Mismatch - lists - star-LR", `
+x : int = 2
+y : set[int] = None
+[x,*y] = [2,3,6,7]`);
+
+assertTCFail("destr-list-Type Mismatch - list - set-LR", `
+x : int = 2
+y : int = None
+[x,y] = {2,3}`);
 
 assertPrint("destr-fnCallValid", `
 def f() -> int:
@@ -442,6 +541,19 @@ def f(a:int):
 
 f(5)` , ["6", "7", "8"]);
 
+assertPrint("destr-fnCallValidParam-lists-LR", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : int = 0
+
+    [x, y, z] = [a + 1 , a + 2, a + 3]
+    print(x)
+    print(y)
+    print(z)
+
+f(5)` , ["6", "7", "8"]);
+
 assertPrint("destr-fnCallValidParam-lists-ignore-star-1", `
 def f(a:int):
     x : int = 0
@@ -457,6 +569,20 @@ def f(a:int):
 
 f(5)` , ["6", "7", "9", "10", "11"]);
 
+assertPrint("destr-fnCallValidParam-lists-ignore-star-1-LR", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : [int] = None
+
+    [x, y,_, *z] = [a + 1 , a + 2, a + 3, a + 4, a + 5, a + 6 ]
+    print(x)
+    print(y)
+    print(z[0])
+    print(z[1])
+    print(z[2])
+
+f(5)` , ["6", "7", "9", "10", "11"]);
 
 assertPrint("destr-fnCallValidParam-lists-ignore-star-2", `
 def f(a:int):
@@ -492,6 +618,15 @@ assertPrint("basic-destr-multiple-list-1", `
 x : [int] = None
 y : [int]  = None
 x, y = [[5, 6],[7, 8]]
+print(x[0])
+print(x[1])
+print(y[0])
+print(y[1])` , ["5", "6", "7", "8"]);
+
+assertPrint("basic-destr-multiple-list-1-LR", `
+x : [int] = None
+y : [int]  = None
+[x, y] = [[5, 6],[7, 8]]
 print(x[0])
 print(x[1])
 print(y[0])
@@ -649,6 +784,11 @@ x : int = 2
 y : int = 12
 x,y,_ = {1,2,3,4}`);
 
+assertTCFail("length mismatch - set - ignore-LR", `
+x : int = 2
+y : int = 12
+{x,y,_} = {1,2,3,4}`);
+
 assertTCFail("length mismatch - set - ignore - binop", `
 x : int = 2
 y : int = 12
@@ -667,16 +807,25 @@ print(2 in a)
 print(3 in a)
 print(4 in a)` , ["True", "True", "False", "False"]);
 
+assertPrint("basic-destr-multiple-set-ignore-LR", `
+a : set[int] = None
+{a,_} = {1,2},{3,4}
+print(1 in a)
+print(2 in a)
+print(3 in a)
+print(4 in a)` , ["True", "True", "False", "False"]);
+
+
 assertPrint("basic-destr-set-remove-1", `
-  set_1 : set[int] = None
-  set_1 = {1,2,5,6,7}
-  set_1.remove(5)
-  set_1,_ = set_1,set_1
-  print(1 in set_1)
-  print(2 in set_1)
-  print(5 in set_1)
-  print(6 in set_1)
-  print(7 in set_1)`, ["True", "True", "False", "True", "True"]);   
+set_1 : set[int] = None
+set_1 = {1,2,5,6,7}
+set_1.remove(5)
+set_1,_ = set_1,set_1
+print(1 in set_1)
+print(2 in set_1)
+print(5 in set_1)
+print(6 in set_1)
+print(7 in set_1)`, ["True", "True", "False", "True", "True"]);   
 
 // Need support in lower
 // assertPrint("basic-destr-set-remove-2", `
@@ -701,6 +850,13 @@ assertPrint("destr-underscore-set", `
 x : int = 0
 y : int  = 0
 x,_, y = {5, 6, 7}
+print(x)
+print(y)` , ["5", "7"]);
+
+assertPrint("destr-underscore-set-L", `
+x : int = 0
+y : int  = 0
+{x,_, y} = 5, 6, 7
 print(x)
 print(y)` , ["5", "7"]);
 
@@ -730,6 +886,18 @@ def f(a:int):
 
 f(5)` , ["6", "7", "9"]);
 
+assertPrint("destr-fnCallValidParam-set-ignore-1-LR", `
+def f(a:int):
+    x : int = 0
+    y : int = 0
+    z : int = 0
+
+    {x, y,_,z}= {a + 1 , a + 2, a + 3, a + 4}
+    print(x)
+    print(y)
+    print(z)
+
+f(5)` , ["6", "7", "9"]);
 
 assertPrint("destr-fnCallValidParam-set-ignore-2", `
 def f(a:int):
@@ -825,6 +993,24 @@ print(x_1)
 print(x_2)
 print(x_3)`,["1", "2", "3"]);
 
+assertPrint("basic-descr-class-field-assign-1-LR",
+`
+class C(object):
+  x : [int] = None
+  def getX(y : int) -> int:
+    return y
+
+c : C = None
+x_1 : int = 0
+x_2 : int = 0
+x_3 : int = 0
+c = C()
+c.x = [1, 2, 3]
+[x_1, x_2, x_3] = c.x 
+print(x_1)
+print(x_2)
+print(x_3)`,["1", "2", "3"]);
+
 assertPrint("basic-descr-class-func-assign-1",
 `
 class C(object):
@@ -856,5 +1042,4 @@ print(x[0])
 print(x[1])
 print(x[2])
 print(y)`, ["66", "-5", "10", "6"]);
-
 });
