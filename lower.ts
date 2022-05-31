@@ -2,7 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
-import { equalType } from "./type-check"
+import { equalType } from "./type-check";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { createModuleResolutionCache } from 'typescript';
 import { defaultMaxListeners } from 'events';
