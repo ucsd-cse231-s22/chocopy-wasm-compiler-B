@@ -152,15 +152,15 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       const [iinits, istmts, ival] = flattenExprToVal(s.index, blocks, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, blocks, env);
 
-      const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
+      const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(iinits, istmts, ival, oval);
 
       if (s.obj.a[0].tag === "list") {
         pushStmtsToLastBlock(blocks,
           ...ostmts, ...istmts, ...nstmts, {
             tag: "store",
             a: s.a,
-            start: oval,
-            offset: offsetValue,
+            start: offsetValues[0],
+            offset: offsetValues[1],
             value: nval
           });
         return [...oinits, ...iinits, ...ninits];
@@ -437,13 +437,14 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
       // }
       if (e.obj.a[0].tag === "list") { 
-        const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
+        const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(iinits, istmts, ival, oval);
         return [[...oinits, ...iinits], [...ostmts, ...istmts], {
           a: e.a,
           tag: "load",
-          start: oval,
-          offset: offsetValue
+          start: offsetValues[0],
+          offset: offsetValues[1]
         }];
+
       }
       // if(e.obj.a[0].tag === "dict")){
       //   ...
@@ -477,7 +478,8 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       ];
     case "listliteral":
       const newListName = generateName("newList");
-      const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: e.elements.length + 1 } };
+      const newListElName = generateName("newListElements");
+      const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
       var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
       var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
       var storeLength : IR.Stmt<[Type, SourceLocation]> = {
@@ -486,20 +488,29 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         offset: { tag: "wasmint", value: 0 },
         value: { a: [{tag: "number"}, e.a[1]], tag: "num", value: BigInt(e.elements.length) }
       }
+      const allocListEl : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: e.elements.length } };
+      const pointToElements : IR.Stmt<[Type, SourceLocation]> = {
+        tag: "store",
+        start: { tag: "id", name: newListName },
+        offset: { tag: "wasmint", value: 1 },
+        value: { a: [{tag: "number"}, e.a[1]], tag: "id", name: newListElName }
+      }
       const assignsList : IR.Stmt<[Type, SourceLocation]>[] = e.elements.map((e, i) => {
         const [init, stmt, val] = flattenExprToVal(e, blocks, env);
         inits = [...inits, ...init];
         stmts = [...stmts, ...stmt];
         return {
           tag: "store",
-          start: { tag: "id", name: newListName },
-          offset: { tag: "wasmint", value: i+1 },
+          start: { tag: "id", name: newListElName },
+          offset: { tag: "wasmint", value: i },
           value: val
         }
       })
       return [
-        [ { name: newListName, type: e.a[0], value: { tag: "none" } }, ...inits ],
-        [ { a: e.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
+        [ { name: newListName, type: e.a[0], value: { tag: "none" } },
+              { name: newListElName, type: e.a[0], value: { tag: "none" } }, ...inits ],
+        [ { a: e.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength,
+              { a: e.a, tag: "assign", name: newListElName, value: allocListEl }, pointToElements, ...assignsList ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newListName } }
       ];
     case "id":
@@ -712,7 +723,7 @@ function flattenExprToVal(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<IR
 }
 
 
-function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], istmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[], ival: IR.Value<[AST.Type, AST.SourceLocation]>, oval: IR.Value<[AST.Type, AST.SourceLocation]>) : IR.Value<[AST.Type, AST.SourceLocation]> {
+function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], istmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[], ival: IR.Value<[AST.Type, AST.SourceLocation]>, oval: IR.Value<[AST.Type, AST.SourceLocation]>) : IR.Value<[AST.Type, AST.SourceLocation]>[] {
   // Check index is in bounds
   var listLength = generateName("listlength");
   var setLength : IR.Stmt<[Type, SourceLocation]> = {
@@ -730,16 +741,23 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
   const checkIndex: IR.Stmt<[Type, SourceLocation]> = { a: ival.a, tag: "expr", expr: { a: ival.a, tag: "call", name: `index_out_of_bounds`, arguments: [{tag: "id", name: listLength, a: ival.a}, ival]}}
   istmts.push(checkIndex);
 
-  // Get rest of index offsets
-  const value1: IR.Value<[Type, SourceLocation]> = { a: ival.a, tag: "wasmint", value: 1 };
-  const indexAdd1Expr: IR.Expr<[Type, SourceLocation]> = {  a: ival.a, tag: "binop", op: AST.BinOp.Plus, left: ival, right: value1};
-  const offsetName = generateName("offsetname");
-  const offsetInit: IR.VarInit<[Type, SourceLocation]> = { a: ival.a, name: offsetName, type: {tag: "number"}, value: { tag: "none" } }
-  iinits.push(offsetInit);
-  const setOffset : IR.Stmt<[Type, SourceLocation]> = { tag: "assign", a: ival.a, name: offsetName, value: indexAdd1Expr };
-  istmts.push(setOffset);
-  const offsetValue: IR.Value<[Type, SourceLocation]> = {tag: "id", name: offsetName, a: ival.a}
-  return offsetValue;
+  //get address of list elements
+  const elAddrName = generateName("elementsaddr");
+  const elAddrInit: IR.VarInit<[Type, SourceLocation]> = { a: ival.a, name: elAddrName, type: {tag: "number"}, value: { tag: "none" } }
+  iinits.push(elAddrInit);
+  var getAddr : IR.Stmt<[Type, SourceLocation]> = {
+    tag: "assign",
+    a: ival.a,
+    name: elAddrName,
+    value: {
+      a: ival.a,
+      tag: "load",
+      start: oval,
+      offset: { tag: "wasmint", value: 1 }} 
+  };
+  istmts.push(getAddr);
+  const elAddrVal: IR.Value<[Type, SourceLocation]> = { a: ival.a, tag: "id", name: elAddrName };
+  return [elAddrVal, ival];
 }
 
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, ...stmts: Array<IR.Stmt<[Type, SourceLocation]>>) {
