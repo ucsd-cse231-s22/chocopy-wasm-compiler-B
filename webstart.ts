@@ -138,7 +138,7 @@ function print(typ : Type, arg : number, load : any) : any {
   return arg;
 }
 
-function abs_big(arg : number, alloc : any, load : any, store : any) : any {
+export function abs_big(arg : number, alloc : any, load : any, store : any) : any {
   var bigInt = reconstructBigint(arg, load);
   if (bigInt >= BigInt(0)) {
     return arg;

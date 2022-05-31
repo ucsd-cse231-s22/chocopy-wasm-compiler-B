@@ -64,26 +64,6 @@ export const BuiltinLib:BuiltinFunc[] = [
     body: (x:number)=>x!=0,
     typeSig: [[NUM], BOOL]
   },
-  {
-    name: "abs",
-    body: Math.abs,
-    typeSig: [[NUM], NUM]
-  },
-  {
-    name: "min",
-    body: Math.min,
-    typeSig: [[NUM, NUM], NUM]
-  },
-  {
-    name: "max",
-    body: Math.max,
-    typeSig: [[NUM, NUM], NUM]
-  },
-  {
-    name: "pow",
-    body: Math.pow,
-    typeSig: [[NUM, NUM], NUM]
-  }
 ]
 
 
