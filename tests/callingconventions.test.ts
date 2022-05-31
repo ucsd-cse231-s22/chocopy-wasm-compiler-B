@@ -323,7 +323,7 @@ test(a = 1 + 2, b = 3)`
 
 describe("Type checks named arguments", () => {
   assertTCFail(
-    "Ensure all arguments are defined",
+    "Function: Ensure all arguments are defined",
     `
 def test(a : int, b : int, c : int):
   pass
@@ -332,16 +332,40 @@ test(b = 5, c = 3)`
   );
 
   assertTCFail(
-    "Ensure all arguments are defined (with default arguments)",
+    "Method: Ensure all arguments are defined",
+    `
+class C(object):
+  def test(self : C, a : int, b : int, c : int):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(b = 5, c = 3)`
+  );
+
+  assertTCFail(
+    "Function: Ensure all arguments are defined (with default arguments)",
     `
 def test(a : int, b : int, c : int = 5):
   pass
   
 test(b = 5, c = 3)`
   );
+  
+  assertTCFail(
+    "Method: Ensure all arguments are defined (with default arguments)",
+    `
+class C(object):
+  def test(self : C, a : int, b : int, c : int = 5):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(b = 5, c = 3)`
+  );
 
   assertTC(
-    "Allow only *non-default* arguments to be defined",
+    "Function: Allow only *non-default* arguments to be defined",
     `
 def test(a : int, b : int, c : int = 5) -> int:
   return a
@@ -349,45 +373,106 @@ def test(a : int, b : int, c : int = 5) -> int:
 test(b = 5, a = 3)`,
     NUM
   );
+  
+  assertTC(
+    "Method: Allow only *non-default* arguments to be defined",
+    `
+class C(object):
+  def test(self : C, a : int, b : int, c : int = 5) -> int:
+    return a
+  
+obj : C = None
+obj = C()
+obj.test(b = 5, a = 3)`,
+    NUM
+  );
 
   assertTCFail(
-    "Does not allow a named argument to be defined twice",
+    "Function: Does not allow a named argument to be defined twice",
     `
 def test(a : int, b : int):
   pass
   
 test(a = 3, a = 4)`
   );
+  
+  assertTCFail(
+    "Method: Does not allow a named argument to be defined twice",
+    `
+class C(object):
+  def test(self : C, a : int, b : int):
+    pass
+  
+obj : C = None
+obj = C()
+test(a = 3, a = 4)`
+  );
 
   assertTCFail(
-    "Does not allow a parameter to be defined positionally and via named arg",
+    "Function: Does not allow a parameter to be defined positionally and via named arg",
     `
 def test(a : int, b : int):
   pass
   
 test(3, a = 4)`
   );
+  
+  assertTCFail(
+    "Method: Does not allow a parameter to be defined positionally and via named arg",
+    `
+class C(object):
+  def test(self : C, a : int, b : int):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(3, a = 4)`
+  );
 
   assertTCFail(
-    "Only allows named arguments from those in the function",
+    "Function: Only allows named arguments from those in the function",
     `
 def test(a : int, b : int):
   pass
   
 test(3, c = 4)`
   );
+  
+  assertTCFail(
+    "Method: Only allows named arguments from those in the method",
+    `
+class C(object):
+  def test(self : C, a : int, b : int):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(3, c = 4)`
+  );
 
   assertTCFail(
-    "Ensure named arguments are typechecked",
+    "Function: Ensure named arguments are typechecked",
     `
 def test(a : int):
   pass
   
 test(a = False)`
   );
+  
+  assertTCFail(
+    "Method: Ensure named arguments are typechecked",
+    `
+class C(object):
+  def test(self : C, a : int):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(a = False)`
+  );
 
   assertTCFail(
-    "Ensure named arguments are typechecked when overriding default arguments",
+    "Function: Ensure named arguments are typechecked when overriding default arguments",
     `
 def test(a : int = 3):
   pass
@@ -395,35 +480,22 @@ def test(a : int = 3):
 test(a = False)`
   );
 
-  assertTC(
-    "Ensure methods are typechecked",
-    `
-class C(object):
-  def test(self : C, testNum : int) -> int:
-    return testNum
-    
-x : C = None
-x = C()
-x.test(testNum = 3)`,
-    NUM
-  );
-
   assertTCFail(
-    "Methods require all parameters to be defined",
+    "Method: Ensure named arguments are typechecked when overriding default arguments",
     `
 class C(object):
-  def test(self : C, a : int, b : int) -> int:
-    return b
-    
-x : C = None
-x = C()
-x.test(b = 3)`
+  def test(self : C, a : int = 3):
+    pass
+  
+obj : C = None
+obj = C()
+obj.test(a = False)`
   );
 });
 
 describe("Named arguments work at runtime", () => {
   assertPrint(
-    "Can successfully use named parameters in any order",
+    "Function: Can successfully use named parameters in any order",
     `
 def test(a : int, b : int, c : int):
   print(a)
@@ -432,10 +504,50 @@ def test(a : int, b : int, c : int):
   
 test(b = 2, c = 3, a = 1)`,
     ["1", "2", "3"]
+  )
+  
+  assertPrint(
+    "Method: Can successfully use named parameters in any order",
+    `
+class C(object):
+  def test(self : C, a : int, b : int, c : int):
+    print(a)
+    print(b)
+    print(c)
+  
+obj : C = None
+obj = C()
+obj.test(b = 2, c = 3, a = 1)`,
+    ["1", "2", "3"]
+  );;
+
+  assertPrint(
+    "Function: Can successfully use named parameters without defining default args",
+    `
+def test(a : int, b : int = 4):
+  print(a)
+  print(b)
+  
+test(a = 3)`,
+    ["3", "4"]
+  );
+  
+  assertPrint(
+    "Method: Can successfully use named parameters without defining default args",
+    `
+class C(object):
+  def test(self : C, a : int, b : int = 4):
+    print(a)
+    print(b)
+  
+obj : C = None
+obj = C()
+obj.test(a = 3)`,
+    ["3", "4"]
   );
 
   assertPrint(
-    "Can successfully use named parameters without defining default args",
+    "Function: Can successfully use named parameters without defining default args",
     `
 def test(a : int, b : int = 4):
   print(a)
@@ -446,7 +558,21 @@ test(a = 3)`,
   );
 
   assertPrint(
-    "Can override default args with named args",
+    "Method: Can successfully use named parameters without defining default args",
+    `
+class C(object):
+  def test(self : C, a : int, b : int = 4):
+    print(a)
+    print(b)
+  
+obj : C = None
+obj = C()
+obj.test(a = 3)`,
+    ["3", "4"]
+  );
+
+  assertPrint(
+    "Function: Can override default args with named args",
     `
 def test(a : int = 3):
   print(a)
@@ -454,9 +580,22 @@ def test(a : int = 3):
 test(a = 4)`,
     ["4"]
   );
+ 
+  assertPrint(
+    "Method: Can override default args with named args",
+    `
+class C(object):
+  def test(self : C, a : int = 3):
+    print(a)
+    
+obj : C = None
+obj = C()
+obj.test(a = 4)`,
+    ["4"]
+  );
 
   assertPrint(
-    "Can successfully use expressions as arguments to named values",
+    "Method: Can successfully use expressions as arguments to named values",
     `
 def test(a : int):
   print(a)
@@ -464,6 +603,16 @@ def test(a : int):
 test(a = 3 * 3)`,
     ["9"]
   );
+  
+  assertPrint("Method: Can successfully use expressions as arguments to named values",
+  `
+class C(object):
+  def test(self : C, a : int):
+    print(a)
+    
+obj : C = None
+obj = C()
+obj.test(a = 7)`, ["7"])
 });
 
 // Helpers
