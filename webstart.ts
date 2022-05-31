@@ -7,6 +7,8 @@ import { renderResult, renderError, renderPrint, renderDebug } from "./outputren
 import { log } from 'console';
 import { sources } from 'webpack';
 
+import { themeListExport } from "./themelist";
+
 import CodeMirror from "codemirror";
 import "codemirror/addon/edit/closebrackets";
 import "codemirror/mode/python/python";
@@ -209,6 +211,7 @@ function webStart() {
 
     dragbarFunction();
     promptTextArea();
+    themeDropDown(editor);
 
   });
 
@@ -273,6 +276,29 @@ function promptTextArea(){
     })   
   });
 
+}
+
+function themeDropDown (editor : any) {
+  // Load theme list
+  var themeList = themeListExport;
+  var dropdown = document.getElementById("config-theme");
+  themeList.forEach (theme => {
+    var option = document.createElement("option");
+    option.value = theme;
+    option.text = theme;
+    dropdown.appendChild(option);
+  });
+  // Create listener for theme dropdown
+  var themeDropDown = document.getElementById("config-theme") as HTMLSelectElement;
+  themeDropDown.addEventListener("change", (event) => {
+    editor.setOption("theme", themeDropDown.value);
+  });
+  // Create a random theme button
+  document.getElementById("random-theme").addEventListener("click", (e)=>{
+    const random = Math.floor(Math.random() * themeList.length);
+    var randomTheme = themeList[random];
+    editor.setOption("theme", randomTheme);
+  });
 }
 
 function printGlobalVariable(repl: BasicREPL){

@@ -1,5 +1,5 @@
 @import "codemirror/lib/codemirror.css";
-@import "codemirror/theme/blackboard.css";
+@import "themelist.scss";
 
 * {
   box-sizing: border-box;
@@ -95,6 +95,12 @@ html{
     background-color: white;
     cursor: pointer;
     border-right: 1px solid #dedede;
+}
+
+.button-compact {
+    padding: 2px 16px;
+    width: 100%;
+    box-sizing:border-box;
 }
 
 .label-left:hover{
