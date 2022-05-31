@@ -64,14 +64,6 @@ function optimizeIRExpr(expr: IR.Expr<[Type, SourceLocation]>): IR.Expr<[Type, S
             if (ufoldable.includes(expr.expr.tag)) 
                 return {tag: "value", value: foldUniop(expr.expr, expr.op), a: expr.a};
             return expr;
-        case "builtin1":
-            if (expr.name === "abs" && expr.arg.tag === "num")
-                return {tag: "value", value: {tag: "num", value: bigAbs(expr.arg.value), a: expr.arg.a}};
-            return expr;
-        case "builtin2": 
-            if (expr.left.tag === "num" && expr.right.tag === "num")
-                return {tag: "value", value: foldBuiltin2(expr.left, expr.right, expr.name), a: expr.a};
-            return expr;
         case "call":
             return expr;
         case "alloc":
