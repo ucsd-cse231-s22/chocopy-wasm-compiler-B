@@ -1,6 +1,6 @@
 import { Value, Type } from "./ast";
 
-export function PyValue(typ: Type, result: number): Value {
+export function PyValue(typ: Type, result: bigint): Value {
   switch (typ.tag) {
     case "number":
       return PyInt(result);
@@ -13,7 +13,7 @@ export function PyValue(typ: Type, result: number): Value {
   }
 }
 
-export function PyInt(n: number): Value {
+export function PyInt(n: bigint): Value {
   return { tag: "num", value: n };
 }
 
@@ -21,8 +21,8 @@ export function PyBool(b: boolean): Value {
   return { tag: "bool", value: b };
 }
 
-export function PyObj(name: string, address: number): Value {
-  if (address === 0) return PyNone();
+export function PyObj(name: string, address: bigint): Value {
+  if (address === BigInt(0)) return PyNone();
   else return { tag: "object", name, address };
 }
 

@@ -17,7 +17,7 @@ function generateName(base : string) : string {
   }
 }
 
-// function lbl(a: Type, base: string) : [string, IR.Stmt<[Type, SourceLocation]>] {
+// function lbl(a: Type, base: string) : [string, IR.Stmt<Type>] {
 //   const name = generateName(base);
 //   return [name, {tag: "label", a: a, name: name}];
 // }
