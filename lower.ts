@@ -345,11 +345,11 @@ function lowerAllDestructureForAssignments(blocks: { a?: [AST.Type, AST.SourceLo
       pushStmtsToLastBlock(blocks, ...valstmts);
       const iterClassName = r.a[0].name;
       if(va.tag==="id"){
-        var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] , a:[{ tag: "none" }, dummyLoc]}
-        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject},method: `hasnext`, arguments: [] , a:[{ tag: "none" }, dummyLoc]}        
+        var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] , a:[{ tag: "none" }, dummyLoc]};
+        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject},method: `hasnext`, arguments: [] , a:[{ tag: "none" }, dummyLoc]};        
         //will probably fail for cases like 'a,b,c = range(1,3),5
         while(lhs_index < lhs.length){
-          l = lhs[lhs_index].lhs
+          l = lhs[lhs_index].lhs;
           var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
           pushStmtsToLastBlock(blocks, ...stmts);
           allinits.push(...inits);
