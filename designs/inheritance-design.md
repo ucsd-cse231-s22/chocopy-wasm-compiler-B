@@ -530,3 +530,48 @@ Therefore, for now, we elect to not bother with this feature. If I'm missing som
 ## Multiple Inheritance
 We have decided not to pursue multiple inheritance anymore, since it's quite complicated and likely would require a major redesign of how we pass inherited fields and methods into subclasses. Better to focus on getting single inheritance 100% right.
 If this is bad, pls tell us :)
+
+# Week 9 Update
+
+## Expanding `__init__`
+
+Because our brand of Python differs so heavily from CPython, we decided to explicitly state the expected behavior of using `__init__`.
+
+`__init__` rules:
+1. If a classdef implements `__init__` explicitly, then obviously we just use that one regardless of any inherited `__init__` or the default no-op, no-arg `__init__`
+2. The constructor method call must align with the `__init__` method of the class
+3. If a classdef does not implement `__init__` explicitly, it inherits the one from its superclass. If no such method exists, use the no-op, no-arg one.
+
+Mostly representative example:
+```python
+class A(object):
+    x : int = 0
+    def __init__(self : A, arg : int):
+        self.x = arg
+    # if A did not implement __init__ here, it would default to what is effectively __init__(self): pass
+
+class B(A):
+    y : bool = True
+    def __init__(self : B):
+        print(self.y)
+
+class C(A):
+    z : int = 1
+    # don't override __init__
+
+a : A = None
+b : B = None
+c : C = None
+
+a = A(5) # this calls A's __init__
+print(a.x) # this prints 5
+
+b = B() # this calls B's __init__ and prints True
+print(b.x) # this prints 0
+b = B(6) # this would be a type error because the only __init__ method B has is the no-arg one
+
+c = C() # this would be a type error because the __init__ used is A's, which requires an argument
+# instead...
+c = C(4)
+print(c.x) # this prints 4
+```
