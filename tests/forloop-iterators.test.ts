@@ -312,9 +312,9 @@ class ListIteratorInt(object) :
    	self.index = self.index + 1
    	return ret
    def hasnext(self :  ListIteratorInt) -> bool : 
-    return self.index < len(self.list)
+    return self.index < len_list(self.list)
 
-def len(l: [int]) -> int:
+def len_list(l: [int]) -> int:
     return 5
 
 def listToListIteratorInt(initVal: [int]) -> ListIteratorInt :
@@ -341,9 +341,9 @@ class ListIteratorBool(object) :
    	self.index = self.index + 1
    	return ret
    def hasnext(self :  ListIteratorBool) -> bool : 
-    return self.index < len(self.list)
+    return self.index < len_list(self.list)
 
-def len(l: [bool]) -> int:
+def len_list(l: [bool]) -> int:
     return 5
 
 def listToListIteratorBool(initVal: [bool]) -> ListIteratorBool :
@@ -373,9 +373,9 @@ class ListIteratorInt(object) :
     return ret
 
   def hasnext(self :  ListIteratorInt) -> bool : 
-    return self.index < len(self.list)
+    return self.index < len_list(self.list)
 
-def len(l: [int]) -> int:
+def len_list(l: [int]) -> int:
     return 5
 
 def listToListIteratorInt(initVal: [int]) -> ListIteratorInt :
@@ -404,9 +404,9 @@ class ListIteratorBool(object) :
    	self.index = self.index + 1
    	return ret
    def hasnext(self :  ListIteratorBool) -> bool : 
-    return self.index < len(self.list)
+    return self.index < len_list(self.list)
 
-def len(l: [bool]) -> int:
+def len_list(l: [bool]) -> int:
     return 5
 
 def listToListIteratorBool(initVal: [bool]) -> ListIteratorBool :
@@ -424,7 +424,35 @@ print(next(_iter))
 ` ,["True", "False", "True", "False"]);
 
 
-assertPrint('iter() and next() for Custom iterators' , rangeStr + `
+assertPrint('iter() and next() for Custom iterators with iter()' , rangeStr + `
+class BoolIterable(object):
+    val:bool = True
+    num:int = 0
+    def __init__(self: BoolIterable):
+        pass
+    def next(self: BoolIterable) -> bool:
+        ret: bool = True
+        ret = self.val
+        self.num = self.num + 1
+        self.val = not self.val
+        return ret
+    def hasnext(self: BoolIterable) -> bool:
+        if self.num > 5:
+            return False
+        else:
+            return True
+    
+i: [bool] = None
+_iter : BoolIterable = None
+_iter = BoolIterable()
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+
+` ,["True", "False", "True", "False"]);
+
+assertPrint('iter() and next() for Custom iterators with iter()' , rangeStr + `
 class BoolIterable(object):
     val:bool = True
     num:int = 0
@@ -457,7 +485,7 @@ assertPrint('enumerate() on list of integers' , rangeStr + `
 def enumerate(initVal: [int]) -> EnumerateIteratorListInt :
     return EnumerateIteratorListInt().new(initVal)
 
-def len(l: [int]) -> int:
+def len_list(l: [int]) -> int:
     return 5
 
 class EnumerateIteratorListInt(object) : 
@@ -472,7 +500,7 @@ class EnumerateIteratorListInt(object) :
         self.index = self.index + 1
         return ret
     def hasnext(self : EnumerateIteratorListInt) -> bool : 
-        return self.index < len(self.list)
+        return self.index < len_list(self.list)
 
 l : [int] = None
 i: [int] = None
@@ -617,7 +645,6 @@ for i in range(0,5,10):
     print(i)
 continue
 `);
-});
 
 assertTCFail('next() only takes an iterable object 1', rangeStr + `
 class ListIteratorInt(object) : 
@@ -713,7 +740,7 @@ i = [1,2,3,4]
 print(iter(j))
 `);
 
-/*
+
 assertFail('Stop iteration in range', rangeStr + `
 
 class ListIteratorBool(object) : 
@@ -723,18 +750,16 @@ class ListIteratorBool(object) :
    	self.list = initVal
    	return self
 
-   def next(self :  ListIteratorBool) -> bool : 
-    if self.hasnext() == False:
-      
+   def next(self :  ListIteratorBool) -> bool :    
    	ret :  bool = False
    	ret = self.list[self.index]
    	self.index = self.index + 1
    	return ret
        
    def hasnext(self :  ListIteratorBool) -> bool : 
-    return self.index < len(self.list)
+    return self.index < len_list(self.list)
 
-def len(l: [bool]) -> int:
+def len_list(l: [bool]) -> int:
     return 5
 
 def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
@@ -743,7 +768,7 @@ def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
 i: [bool] = None
 _iter: ListIteratorBool = None
 i = [True, False, True, False]
-_iter = iter(BoolIterable())
+_iter = listToIteratorBool(i)
 print(next(_iter))
 print(next(_iter))
 print(next(_iter))
@@ -751,7 +776,7 @@ print(next(_iter))
 print(next(_iter))
 print(next(_iter))
 `);
-*/
+});
 
 /**
  * Ensure during typechecking, a TypeError is thrown.

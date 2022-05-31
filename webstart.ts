@@ -43,7 +43,7 @@ function webStart() {
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
-        end_of_iterator: (arg:any) => RUNTIME_ERROR.end_of_iterator(arg),
+        StopIteration: (arg:any) => RUNTIME_ERROR.StopIteration(arg),
         assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),

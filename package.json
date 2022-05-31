@@ -11,6 +11,7 @@
     "test-for": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/forloop-iterators.test.ts",
     "test-string": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/string.test.ts",
     "test-set-only": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/set.test.ts",
+    "test-for-only": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/forloop-iterators.test.ts",
     "build": "tsc debuggerstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debuggerstart.js",
     "prestart": "npm run build"
