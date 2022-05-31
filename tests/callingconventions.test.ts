@@ -83,7 +83,7 @@ print(test(3))`
 def test(x : bool = 3 != 5) -> bool:
   return x
 
-print(test())`,
+test()`,
     BOOL
   );
 
@@ -341,6 +341,8 @@ def test(a : int = 3):
   
 test(a = False)`);
 
+  assertTCFail("print cannot have named arguments", `print(1,test = 5)`);
+  assertTC("print with normal arguments is fine", `print(5)`, NONE);
 });
 
 describe("Named arguments work at runtime", () => {

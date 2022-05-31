@@ -16,8 +16,7 @@ import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
 import "./style.scss";
-
-
+import {BuiltinLib} from "./builtinlib"
 
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
@@ -37,8 +36,9 @@ function webStart() {
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
 
-    var importObject = {
+    var importObject:any = {
       imports: {
+        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
@@ -56,6 +56,15 @@ function webStart() {
       memory_values: memory, //it is kind of pointer pointing to heap
       js: {memory: memory}
     };
+
+    const setModule = await fetch('sets.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
+    );
+
+    importObject.libset = setModule.instance.exports;
+    
     var repl = new BasicREPL(importObject);
 
     function setupRepl() {
