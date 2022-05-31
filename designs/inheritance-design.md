@@ -539,6 +539,7 @@ Because our brand of Python differs so heavily from CPython, we decided to expli
 
 `__init__` rules:
 1. If a classdef implements `__init__` explicitly, then obviously we just use that one regardless of any inherited `__init__` or the default no-op, no-arg `__init__`
+   This means that the typechecking rule must treat it differently: the explicit one does not have to match the signature of the inherited one.
 2. The constructor method call must align with the `__init__` method of the class
 3. If a classdef does not implement `__init__` explicitly, it inherits the one from its superclass. If no such method exists, use the no-op, no-arg one.
 
