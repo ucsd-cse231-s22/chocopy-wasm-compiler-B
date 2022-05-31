@@ -39,12 +39,10 @@ export async function addLibs() {
     memory_management: {
       alloc_memory: function(size: any){
         var addr = mem_allocator.alloc(size);
-        console.log(`Alloc ${size} byte + 3 byte for the header: ${addr}-${addr+(12+size*4)}`);
         return addr;
       },
       free_memory: function(addr: any, size: any) {
         mem_allocator.free(addr, size);
-        console.log(`Free ${size} byte + 3 byte for the header: ${addr}-${addr+(12+size*4)}`);
       }
     }
   })
