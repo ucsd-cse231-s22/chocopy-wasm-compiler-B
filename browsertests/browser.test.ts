@@ -104,6 +104,9 @@ export async function assertPrint(name:string, source: string, expected: Array<s
         await textAreas[1].sendKeys(reverseAutoComplete(source));
         await driver.findElement(webdriver.By.id("run")).click(); 
         //Check output length is equal to expected
+        if (expected.length!==0) {
+            await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath(`//*[@id=\"output\"]/pre[${expected.length}]`)));
+        }
         let vars = await driver.findElements(webdriver.By.xpath("//*[@id=\"output\"]/pre"));
         if (vars.length/2!==expected.length && vars.length!==expected.length) expect(vars.length/2).to.deep.eq(expected.length);
         let results = [];
@@ -143,7 +146,6 @@ export async function assertRunTimeFail(name: string, source: string){
         //Check output
         await driver.wait(webdriver.until.elementLocated(webdriver.By.xpath("//*[@id=\"output\"]/pre")));
         let vars = await driver.findElements(webdriver.By.xpath("//*[@id=\"output\"]/pre"));
-        expect(vars.length).to.deep.eq(2);
         expect(await driver.findElement(webdriver.By.xpath(`//*[@id=\"output\"]/pre[${1}]`)).getText()).to.contain("RUNTIME ERROR:");
     });
 }
