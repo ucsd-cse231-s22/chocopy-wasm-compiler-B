@@ -181,7 +181,7 @@ f: Callable[[int], int] = None
 f = getAdder(1)
 print(f(2))
 ```
-
+    
 Current output :
 
 > Error: TYPE ERROR: x is not callable
