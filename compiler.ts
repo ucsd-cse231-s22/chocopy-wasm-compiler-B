@@ -2,7 +2,6 @@ import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
 import { ftruncateSync } from "fs";
-import { assert } from "console";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -280,12 +279,10 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   definedVars.forEach(env.locals.add, env.locals);
   def.inits.forEach(v => {
     env.local_type.set(v.name, v.type);
-    assert(v.type !== undefined);
   })
   def.parameters.forEach(p => env.locals.add(p.name));
   def.parameters.forEach(p => {
     env.local_type.set(p.name, p.type);
-    assert(p.type !== undefined);
   })
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
