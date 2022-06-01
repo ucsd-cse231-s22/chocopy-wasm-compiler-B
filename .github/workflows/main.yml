@@ -76,7 +76,9 @@ jobs:
         run: |
           npm install
           make
+          echo 0
           npm run build-web
+          echo 0.5
           cd build/
           echo 1
           python3 -m http.server 8000 &
