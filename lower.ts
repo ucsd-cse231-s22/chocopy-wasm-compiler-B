@@ -23,7 +23,9 @@ function generateName(base : string) : string {
 // }
 
 export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : GlobalEnv) : IR.Program<[Type, SourceLocation]> {
-    resetLoopLabels();
+  console.log("Before")
+  console.log(p)  
+  resetLoopLabels();
     var blocks : Array<IR.BasicBlock<[Type, SourceLocation]>> = [];
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
@@ -431,7 +433,11 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
       const className = objTyp.name;
-      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a:e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}}
+      var callerArg = objval;
+      if (objval.tag === "id" && env.classesMethods.has(objval.name)) {
+        callerArg = argvals[0]; // use the "self" arg for checking not none, but still keep the class name in the arglist for the compiler
+      }
+      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a:e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [callerArg]}}
       const callMethod : IR.Expr<[Type, SourceLocation]> = {
         a:e.a,
         tag: "call_indirect",

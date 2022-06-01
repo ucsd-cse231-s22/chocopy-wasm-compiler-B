@@ -39,6 +39,7 @@ export type GlobalTypeEnv = {
   classes: Map<string, [Array<string>, Map<string, Type>, Map<string, [Array<Type>, Type]>]>,
   classOrder?: Array<string>,
   classMap?:Map<string,Class<any>>
+  currClass?:string
 }
 
 export type LocalTypeEnv = {
@@ -56,11 +57,7 @@ BuiltinLib.forEach(x=>{
 })
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 
-// To track the ordering of classes in the program
-const classOrder: Array<String> = new Array<string>();
-// Map from class name to Class<A>
-// Needed because we need to populate all the super class fields and methods in subclass
-const classMap: Map<string,Class<null>> = new Map();
+
 
 
 export const defaultTypeEnv = {
@@ -241,6 +238,7 @@ export function tc(env : GlobalTypeEnv, program : Program<SourceLocation>) : [Pr
     newEnv.globals.set(name, locals.vars.get(name));
   }
   const aprogram: Program<[Type, SourceLocation]> = {a: [lastTyp, program.a], inits: tInits, funs: tDefs, classes: tClasses, stmts: tBody};
+  console.log(aprogram);
   return [aprogram, newEnv];
 }
 
@@ -298,7 +296,9 @@ export function tcSign(env: GlobalTypeEnv, clsName: string) {
 
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class<[Type, SourceLocation]> {
-
+  if(env.currClass===undefined) {
+    env.currClass = cls.name;
+  }
   if(env.classOrder == undefined){
     env.classOrder = new Array<string>();
   }
@@ -443,6 +443,7 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
   
   const newClassMap : Class<[Type, SourceLocation]> = {a: [NONE, cls.a], generics: cls.generics, supers: cls.supers, name: cls.name, fields: tFields, methods: orderMethod};
   env.classMap.set(cls.name,newClassMap);
+  env.currClass=undefined;
   return newClassMap;
 }
 
@@ -743,6 +744,17 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if (env.globals.has(compvarName)) {
         return {...expr, a: [env.globals.get(compvarName), expr.a], name: compvarName};
       }
+      // Atul changed
+      if(expr.name==="super" && env.currClass!=undefined){
+        var superClass = env.classes.get(env.currClass)[0][0];
+        expr.name = superClass;
+        return {...expr,a:[CLASS(superClass),expr.a]};
+      }
+      if(env.classes.has(expr.name) && env.currClass!=undefined){
+        var superClass = env.classes.get(env.currClass)[0][0];
+        return {...expr, a:[CLASS(superClass),expr.a]};
+      }
+      // Atul change end here
       if (locals.vars.has(expr.name)) {
         return {...expr, a: [locals.vars.get(expr.name), expr.a]};
       } else if (env.globals.has(expr.name)) {
@@ -801,6 +813,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if (expr.name === "print") {
         if (expr.arguments.length===0)
           throw new TypeCheckError("print needs at least 1 argument");
+        //const newExpr = {a:[CLASS("A"),expr.a],tag: "id", name: "super"}
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         return {...expr, a: [NONE, expr.a], arguments: tArgs};
       }
@@ -850,7 +863,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
     case "lookup":
-      var tObj = tcExpr(env, locals, expr.obj); // super(B) -> call
+      var tObj = tcExpr(env, locals, expr.obj); // With addition of super() and A. A -> id, super -> call
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
           const [_,fields] = env.classes.get(tObj.a[0].name);
@@ -859,7 +872,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           } else {
             throw new TypeCheckError(`could not found field ${expr.field} in class ${tObj.a[0].name}`, expr.a);
           }
-        } else {
+        } 
+        else {
           throw new TypeCheckError("field lookup on an unknown class", expr.a);
         }
       } else {
@@ -867,13 +881,19 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       }
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
+      
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
           const [_, __, methods] = env.classes.get(tObj.a[0].name);
+          var realArgs = [tObj].concat(tArgs);
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
-            const realArgs = [tObj].concat(tArgs);
+            if(tObj.tag === "id"){
+              if(env.classes.has(tObj.name)){
+                realArgs.shift();
+              }
+            }
             if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
                 return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};

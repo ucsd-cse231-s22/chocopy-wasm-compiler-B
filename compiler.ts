@@ -233,12 +233,32 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     (i32.add 1) <-- add the method offset
     (call_indirect (type $C$foo))
     */
-      var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat(); // load arguments onto stack
+      var valStmts : Array<string> = [];
+      const firstArg = expr.arguments[0];
+      if (firstArg.tag == "id" && env.classVTableOffsets.has(firstArg.name)) {
+        valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat(); // load arguments onto stack except for the class name, which gets turned into a no-op basically
+        valStmts.push(`(i32.const ${env.classVTableOffsets.get(firstArg.name)})`); // class offset
+      } else {
+        valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat(); // load arguments onto stack
+        // duplicate the address
+        valStmts.push(...codeGenValue(expr.arguments[0], env));
+        valStmts.push(`(i32.load)`); // load the class offset
+      }
 
-      // duplicate the address
-      valStmts.push(...codeGenValue(expr.arguments[0], env));
-
-      valStmts.push(`(i32.load)`); // load the class offset
+      /*
+      class A(object):
+          x : int = 0
+          def foo(self : A):
+              print(self.A)
+      class B(A):
+          def foo(self : B):
+              self.x = 3
+              A.foo(self) ==> the arglist is [A, self]
+      b : B = None
+      b = B()
+      b.foo()
+      # we expect this to print 3
+      */
 
       valStmts.push(`(i32.add (i32.const ${expr.method_offset}))`); // add the method offset
 
@@ -273,7 +293,9 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "none":
       return [`(i32.const 0)`];
     case "id":
-      if (env.locals.has(val.name)) {
+      if (env.classVTableOffsets.has(val.name)) {
+        return [];
+      } else if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];
       } else {
         return [`(global.get $${val.name})`];
@@ -322,7 +344,8 @@ function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : 
     return [...value, `(global.set $${init.name})`]; 
   }
 }
-
+// super().show()
+// A.show() -> A -> id -> call_indirect A$show
 function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));

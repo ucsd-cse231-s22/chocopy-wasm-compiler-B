@@ -104,6 +104,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
   }
   const globalEnv = augmentEnv(config.env, tprogram);
   var irprogram = lowerProgram(tprogram, globalEnv);
+  console.log("After")
+  console.log(irprogram)
 
   if(irOpt){
     irprogram = optimizeIr(irprogram);

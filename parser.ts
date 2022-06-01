@@ -274,7 +274,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       }
     case "MemberExpression":
       c.firstChild(); // Focus on object
+      const isSuper = s.substring(c.from, c.to) === "super()";
+
       var objExpr = traverseExpr(c, s);
+
+      if(isSuper){
+        objExpr = {a: location,tag:"id",name:"super"};
+      }
       c.nextSibling(); // Focus on . or [
       var dotOrBracket = s.substring(c.from, c.to);
       if( dotOrBracket === "[") {
