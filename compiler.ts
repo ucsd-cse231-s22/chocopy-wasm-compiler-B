@@ -2,7 +2,7 @@ import { BinOp, SourceLocation, Type, UniOp } from "./ast";
 import { RunTimeError } from "./error_reporting";
 import { Class, Expr, FunDef, Program, Stmt, Value, VarInit } from "./ir";
 import { equalType } from "./type-check";
-import { BOOL, CLASS, NONE, NUM } from "./utils";
+import { BOOL, CLASS, PrintType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -167,6 +167,19 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         var valStmts = expr.arguments.map(arg=>{
           let argCode = codeGenValue(arg, env);
           if (arg.a[0].tag === "class" && arg.a[0].name === "list") {
+            var typeToPrint = 0;
+            var listType = arg.a[0].type;
+            while (listType.tag === "class" && listType.name === "list") {
+              typeToPrint += PrintType["list"];
+              listType = listType.type;
+            }
+            if (listType.tag in PrintType) {
+              typeToPrint += PrintType[listType.tag as keyof typeof PrintType];
+            }
+            else {
+              throw new RunTimeError("List print type not supported: " + listType.tag);
+            }
+            argCode.push(`(i32.const ${typeToPrint})`);
             argCode.push("(call $print_list)");
           } else {
             switch (arg.a[0]){

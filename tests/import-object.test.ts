@@ -2,18 +2,26 @@ import { readFileSync } from "fs";
 import { Type } from "../ast";
 import { BuiltinLib} from "../builtinlib";
 import * as RUNTIME_ERROR from '../runtime_error'
-import { BOOL, CLASS, NONE, NUM } from '../utils';
+import { BOOL, CLASS, NONE, NUM, PrintType } from '../utils';
 
 
-function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory): string {
-  switch(typ.tag) {
+function stringify(typ: PrintType, arg: any, mem?: WebAssembly.Memory, typeNum?: number) : string {
+  switch(PrintType[typ]) {
     case "number":
       return (arg as number).toString();
     case "bool":
-      return (arg as boolean) ? "True" : "False";
+      return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
-    case "class":
+    // case "class":
+    //   return typ.name;
+    // case "set":
+    //   return "Set";
+    // case "dict":
+    //   return "Dict";
+    // case "str":
+    //   return (arg as string);
+    case "list":
       var bytes = new Uint8Array(mem.buffer, arg, 4);
       var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
       bytes = new Uint8Array(mem.buffer, arg + 4, 4);
@@ -22,7 +30,12 @@ function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory): string {
       console.log(elementArray[0]);
       var string = "[";
       for (let i = 0; i < length; i++) {
-        string += stringify(NUM, elementArray[i], mem);
+        if (typeNum > PrintType.list) {
+          string += stringify(typ, elementArray[i], mem, typeNum - PrintType.list);
+        }
+        else {
+          string += stringify(typeNum, elementArray[i], mem);
+        }
         if (i < length - 1) {
           string += ", ";
         }
@@ -32,8 +45,8 @@ function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory): string {
   }
 }
 
-function print(typ: Type, arg: any, mem?: WebAssembly.Memory): any {
-  importObject.output += stringify(typ, arg, mem);
+function print(typ: PrintType, arg: any, mem?: WebAssembly.Memory, typeNum?: number): any {
+  importObject.output += stringify(typ, arg, mem, typeNum);
   importObject.output += "\n";
   return arg;
 }
@@ -49,7 +62,7 @@ export async function addLibs() {
   importObject.libset = setModule.instance.exports;
   const listModule = await WebAssembly.instantiate(listBytes, {...importObject, js: {mem: memory}});
   importObject.liblist = listModule.instance.exports;
-  importObject.imports.print_list = (arg: number) => print(CLASS("list", null, NUM), arg, memory)
+  importObject.imports.print_list = (arg: number, typeNum: number) => print(PrintType.list, arg, memory, typeNum);
   importObject.memory_values = memory;
   importObject.js = {memory};
   return importObject;
@@ -66,9 +79,9 @@ export const importObject : any = {
     index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
     stack_clear: () => RUNTIME_ERROR.stack_clear(),
     stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
-    print_num: (arg: number) => print(NUM, arg),
-    print_bool: (arg: number) => print(BOOL, arg),
-    print_none: (arg: number) => print(NONE, arg),
+    print_num: (arg: number) => print(PrintType.number, arg),
+    print_bool: (arg: number) => print(PrintType.bool, arg),
+    print_none: (arg: number) => print(PrintType.none, arg),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
 

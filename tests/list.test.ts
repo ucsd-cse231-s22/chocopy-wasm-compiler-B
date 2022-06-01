@@ -135,6 +135,16 @@ describe("Extra list tests", () => {
     print(a[0][1])
     print(a[1][0])
     print(a[2][2])`, [`4`, `5`, `3`])
+
+    assertPrint("print-a-bool-list", `
+    a: [bool] = None
+    a = [True, False, True]
+    print(a)`, [`[True, False, True]`])
+    
+    assertPrint("print-nested-lists", `
+    a: [[[bool]]] = None
+    a = [[[True], [False, True]]]
+    print(a)`, [`[[[True], [False, True]]]`])
 });
 
 describe("Milestone 2 list tests", () => {

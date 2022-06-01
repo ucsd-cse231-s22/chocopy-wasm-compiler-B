@@ -1,6 +1,6 @@
 import { parse } from "./parser";
 import { BasicREPL } from "./repl";
-import { addLibs } from "./tests/import-object.test";
+import { importObject, addLibs  } from "./tests/import-object.test";
 
 // entry point for debugging
 async function debug() {

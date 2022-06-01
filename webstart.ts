@@ -11,7 +11,7 @@ import { renderError, renderPrint, renderResult } from "./outputrender";
 import { BasicREPL } from './repl';
 import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import { BOOL, CLASS, NONE, NUM } from './utils';
+import { BOOL, CLASS, NONE, NUM, PrintType } from './utils';
 
 function webStart() {
   var filecontent: string | ArrayBuffer;
@@ -33,10 +33,10 @@ function webStart() {
         index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
-        print_num: (arg: number) => renderPrint(NUM, arg),
-        print_bool: (arg: number) => renderPrint(BOOL, arg),
-        print_none: (arg: number) => renderPrint(NONE, arg),
-        print_list: (arg: number) => renderPrint(CLASS("list", null, NUM), arg, memory),
+        print_num: (arg: number) => renderPrint(PrintType.number, arg),
+        print_bool: (arg: number) => renderPrint(PrintType.bool, arg),
+        print_none: (arg: number) => renderPrint(PrintType.none, arg),
+        print_list: (arg: number, typeNum: number) => renderPrint(PrintType.list, arg, memory, typeNum),
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {})
       },
       libmemory: memoryModule.instance.exports,

@@ -30,6 +30,17 @@ export function PyNone(): Value {
   return { tag: "none" };
 }
 
+export enum PrintType {
+  number = 1,
+  bool,
+  none,
+  class,
+  set,
+  dict,
+  str,
+  list
+}
+
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
