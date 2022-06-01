@@ -167,14 +167,6 @@ function optimizeBuiltin(expr: Expr<[Type, SourceLocation]>, optArgs: Expr<[Type
                     return { ...expr, arguments: optArgs };
                 }
             }
-            case "randint": {
-                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
-                    const result = BuiltinLib[1].body(optArgs[0].value.value, optArgs[1].value.value);
-                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
-                } else {
-                    return { ...expr, arguments: optArgs };
-                }
-            }
             case "gcd": {
                 if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && optArgs[1].tag === "literal" && optArgs[1].value.tag === "num") {
                     const result = BuiltinLib[2].body(optArgs[0].value.value, optArgs[1].value.value);
@@ -206,20 +198,6 @@ function optimizeBuiltin(expr: Expr<[Type, SourceLocation]>, optArgs: Expr<[Type
                 } else {
                     return { ...expr, arguments: optArgs };
                 }
-            }
-            case "randrange": {
-                if (optArgs[0].tag === "literal" && optArgs[0].value.tag === "num" && 
-                optArgs[1].tag === "literal" && optArgs[1].value.tag === "num" &&
-                optArgs[2].tag === "literal" && optArgs[2].value.tag === "num") {
-                    const result = BuiltinLib[6].body(optArgs[0].value.value, optArgs[1].value.value, optArgs[2].value.value);
-                    return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
-                } else {
-                    return { ...expr, arguments: optArgs };
-                }
-            }
-            case "time": {
-                const result = BuiltinLib[7].body();
-                return { a: expr.a, tag: "literal", value: { a: expr.a, tag:"num", value:result } };
             }
             // sleep does not need optimization
             case "int": {

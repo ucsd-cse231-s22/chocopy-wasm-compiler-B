@@ -54,15 +54,6 @@ x = factorial(1*2*3) + x
 print(x)
   `),
   // 9
-  assertOptimize("Constant Folding (builtin-randint)",
-  `
-x:int = 0
-x = randint(3, 5) + 1
-x = randint(1+2, 6*7) + x
-x = randint(3*2*1, 5+6+7) + x
-print(x)
-  `),
-  // 10
   assertOptimize("Constant Folding (builtin-gcd)",
   `
 x:int = 0
@@ -71,7 +62,7 @@ x = gcd(gcd(12, 9), gcd(4*4, 4+4)) + x
 x = gcd((2+3)*5*6, 4+5+1+2+3) + x
 print(x)
   `),
-  // 11
+  // 10
   assertOptimize("Constant Folding (builtin-lcm)",
   `
 x:int = 0
@@ -80,7 +71,7 @@ x = lcm(lcm(12, 9), lcm(4*4, 4+4)) + x
 x = lcm((2+3)*5*6, 4+5+1+2+3) + x
 print(x)
   `),
-  // 12
+  // 11
   assertOptimize("Constant Folding (builtin-comb)",
   `
 x:int = 0
@@ -89,7 +80,7 @@ x = comb(comb(5+1, 2), comb(2*2, 1+1)) + x + 10
 x = comb((2+3)*6, 1+2+3) + x
 print(x)
   `),
-  // 13
+  // 12
   assertOptimize("Constant Folding (builtin-perm)",
   `
 x:int = 0
@@ -98,23 +89,7 @@ x = perm(perm(2+1, 2), perm(1*2, 1+1)) + x + 5
 x = perm((2+3)*3, 1+2+3) + x
 print(x)
   `),
-  // 14
-  assertOptimize("Constant Folding (builtin-randrange)",
-  `
-x:int = 0
-x = randrange(2, 5, 1) + 1
-x = randrange(randrange(2, 5, 2), randrange(12, (4+4)*2, 3), randrange(1+1, 5+1, 2+1)) + x
-x = randrange((2+3)*5*6, (4+5+1+2+3)*10, 2*3*(1+2)) + x
-print(x)
-  `),
-  // 15
-  assertOptimize("Constant Folding (builtin-time)",
-  `
-x:int = 0
-x = time() + time()
-print(x)
-  `),
-  // 16
+  // 13
   assertOptimize("Constant Folding (builtin-int)",
   `
 x:int = 0
@@ -123,7 +98,7 @@ y = int(True)
 x = int(True) + int(False) + int(True)
 print(x+y)
   `),
-  // 17
+  // 14
   assertOptimize("Constant Folding (builtin-bool)",
   `
 x:bool = True
@@ -132,7 +107,7 @@ y = bool(2*(1+2+3))
 x = bool(0) or bool(1) and bool(2)
 print(x or y)
   `),
-  // 18
+  // 15
   assertOptimize("Constant Folding (builtin-abs)",
   `
 x:int = 0
@@ -143,21 +118,21 @@ y = abs(-2) * abs(3-5)
 z = -x - y
 print(x + y + abs(z))
   `),
-  // 19
+  // 16
   assertOptimize("Constant Folding (mod)",
   `
 x:int = 1
 x = 8 % 3
 print(x)
   `)
-  // 20
+  // 17
   assertOptimize("Constant Folding (greater than)",
   `
 x:bool = True
 x = 0 > 1
 print(x)
   `),
-  // 21
+  // 18
   assertOptimize("Constant Folding (Not equal)",
   `
 x:bool = True
@@ -165,7 +140,7 @@ x = 1 != 1
 print(x)
   `),
 
-  // 24
+  // 19
   assertOptimize("Dead code elimination (while loop)",
   `
 a:int = 0
@@ -176,7 +151,7 @@ while a < 5:
     a = a + 1
 `),
 
-  // 22
+  // 20
   assertOptimize("Dead code elimination (statements after return)",
   `
 def f() -> int:
@@ -184,7 +159,7 @@ def f() -> int:
     print(100)
 f()
 `),
-  // 23
+  // 21
   assertOptimize("Dead code elimination (if branch)",
 `
 print(100)
@@ -199,7 +174,17 @@ else:
     print(1*2*3*4)
   `)
 
-  // 25
+  // 22
+  assertOptimize("Dead code elimination (while loop)",
+  `
+a:int = 0
+while False:
+    a = a + 100000
+while a < 5:
+    print(a)
+    a = a + 1
+`),
+  // 23
   assertPass("Dead code elimination (pass statement)",
   `
 a:int = 0
@@ -217,7 +202,7 @@ while False:
 pass
 print(1*2*3*4)
 `),
-  // 26
+  // 24
   assertPass("Dead code elimination (pass statement with one line)",
   `
 def f():
@@ -227,7 +212,7 @@ pass
 f()
 pass
 `),
-  // 27
+  // 25
   assertOptimize("Dead code elimination (Nested while and if)",
   `
 a:int = 0
@@ -247,7 +232,7 @@ while a > 0:
 pass
 print(a)
 `),
-  // 28
+  // 26
   assertOptimize("Optimization (Class definition)",
   `
 class Rat(object):
@@ -266,7 +251,7 @@ r = Rat()
 r.f()
 r.b()
 `),
-  // 29
+  // 27
   assertOptimize("Optimization (Anonymous Class)",
   `
 class Rat(object):
@@ -283,7 +268,7 @@ class Rat(object):
 Rat().f()
 Rat().b()
 `),
-  // 30
+  // 28
   assertOptimize("Optimization (UniOp)",
   `
 a:int = 0
@@ -296,7 +281,7 @@ else:
 if not False:
     print((1+2+3+4)*1*2*3)
 `),
-  // 31
+  // 29
   assertOptimize("Optimization (Return in if branch)",
   `
 class C(object):
@@ -307,7 +292,7 @@ class C(object):
             return 1
 C().f()
 `),
-  // 32
+  // 30
   assertOptimize("Optimization (Return in while loop)",
   `
 def f() -> int:
@@ -319,7 +304,7 @@ def f() -> int:
     pass
     return 100
 `),
-  // 33
+  // 31
   assertOptimize("Optimization (Linkedlist)",
   `
 class LinkedList(object):
@@ -351,7 +336,7 @@ l.f()
 while False:
     l = LinkedList()
 `),
-  // 34
+  // 32
   assertOptimize("Optimization (And/Or ops for boolean literals)",
   `
 x:bool = True
@@ -364,7 +349,7 @@ y = False or False or True or False
 z = (True or False) and False or (True or False) and (False or False)
 a = True or (False and (True or (False and True)))
 `),
-  // 35
+  // 33
   // Calculate the variance of [2, 3, 4]
   assertOptimize("Optimization (Calculate variance)",
   `
@@ -372,7 +357,7 @@ variance:int = 0
 variance = pow(((2+3+4)//3 - 2), 2) + pow(((2+3+4)//3 - 2), 3) + pow(((2+3+4)//3 - 2), 4)
 print(variance)
 `),
-  // 36
+  // 34
   // There is 5 balls, 3 red and 2 blue, what's the probability of taking 2 balls and all of them blue
   // Result should be 0 since there is no float division
   assertOptimize("Optimization (Calculate probability using builtin)",
@@ -385,7 +370,7 @@ print(a)
 print(b)
 print(a // b)
 `),
-  // 37
+  // 35
   assertOptimize("Optimization (Number comparison)",
   `
 a:bool = False
@@ -397,14 +382,14 @@ c = c and True and (100!=200)
 print(a)
 print(b)
 `),
-  // 38
+  // 36
   assertOptimize("Optimization (Modulus)",
   `
 b:int = 0
 b = (100 % 3) % 10 % 2 % 1
 print(b)
 `);
-  // 39
+  // 37
   assertOptimize("Optimization (Multiple while loop and if branch)",
 `
 a:int = 5
@@ -423,7 +408,7 @@ while a < 0:
     pass
 pass
 `),
-  // 40
+  // 38
   assertOptimize("Optimization (Multiple builtins 1)",
 `
 a:int = 5
@@ -434,35 +419,7 @@ print(a)
 print(b)
 print(min(a, b))
 `),
-  // 41
-  assertOptimize("Optimization (Multiple builtins 2)",
-`
-a:int = 5
-b:int = 0
-a = pow(comb(a, 2), gcd(2, 3+b+2))
-b = factorial(3)
-print(a)
-print(b)
-print(randrange(randint(3, 5), max(a, b), lcm(12, 2)))
-`),
-  // 42
-  assertOptimize("Optimization (time and sleep)",
-`
-a:int = 5
-b:int = 0
-pass
-a = time()
-b = time()
-if True:
-    print(time())
-sleep(1*2)
-print(a)
-sleep(1+2+3)
-print(b)
-print(a == b)
-sleep(1+2)
-`),
-  // 43
+  // 39
   assertOptimize("Optimization (Field assignment 1)",
 `
 class X(object):
