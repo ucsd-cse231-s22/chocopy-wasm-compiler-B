@@ -7,10 +7,10 @@ assertPrint("sleep 2 seconds",`
 st:int = 0
 ed:int = 0
 st = time()
-sleep(10)
+sleep(2)
 ed = time()
 print(ed-st)
-`, ["10"])
+`, ["2"])
 
 assertPrint("factorial", `
 c : int = 4
