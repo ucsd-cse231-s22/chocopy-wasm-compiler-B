@@ -115,10 +115,10 @@ class SetIteratorInt(object):
         if(self.hasnext() == True):
             self.currElement = self.set.next(self.currElement)
         return ret
-    def hasnext(self :  SetIteratorInt) -> bool : 
-        if(self.index == 0):
-            return True
-        return self.set.hasnext(self.currElement)
+    def hasnext(self : SetIteratorInt) -> bool : 
+        if(self.currElement == -1):
+            return False
+        return True
 
 def setToSetIteratorInt(initVal: set[int]) -> SetIteratorInt :
     return SetIteratorInt().new(initVal)
@@ -481,7 +481,6 @@ assertPrint('iter() and next() on string' , rangeStr + `
 class StringIterator(object):
   val:str = "a"
   index:int = 0
-  
   
   def new(self:StringIterator, initVal:str ) -> StringIterator:
     self.val = initVal
