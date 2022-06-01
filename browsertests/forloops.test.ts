@@ -371,39 +371,39 @@ checkForLoop(2)
 // for 1+2 in cls:
 //   print(i)`,[`Iterator must be a variable`])}),
 //13
-assertPrint("for-loop multiple-loops for same object", `
-class Range(object):
-  current : int = 0
-  min : int = 0
-  max : int = 0
-  def new(self:Range, min:int, max:int)->Range:
-    self.min = min
-    self.current = min
-    self.max = max
-    return self
-  def next(self:Range)->int:
-    c : int = 0
-    c = self.current
-    self.current = self.current + 1
-    return c
-  def hasnext(self:Range)->bool:
-    return self.current < self.max
-  def reset(self:Range) :
-    self.current = self.min
+// assertPrint("for-loop multiple-loops for same object", `
+// class Range(object):
+//   current : int = 0
+//   min : int = 0
+//   max : int = 0
+//   def new(self:Range, min:int, max:int)->Range:
+//     self.min = min
+//     self.current = min
+//     self.max = max
+//     return self
+//   def next(self:Range)->int:
+//     c : int = 0
+//     c = self.current
+//     self.current = self.current + 1
+//     return c
+//   def hasnext(self:Range)->bool:
+//     return self.current < self.max
+//   def reset(self:Range) :
+//     self.current = self.min
 
-i:int = 0
-cls: Range = None
-cls = Range().new(1,3)
+// i:int = 0
+// cls: Range = None
+// cls = Range().new(1,3)
 
-for i in cls:
-  print(i)
+// for i in cls:
+//   print(i)
 
-for i in cls:
-  print(i)
-`, [`1`, 
-   `2`,
-  `1`,
-   `2`]);
+// for i in cls:
+//   print(i)
+// `, [`1`, 
+//    `2`,
+//   `1`,
+//    `2`]);
 //14 FAIL test case
 // assertPrint("for-loop nested-for-loops", `
 // class Range(object):
