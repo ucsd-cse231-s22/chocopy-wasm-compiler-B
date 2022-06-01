@@ -36,8 +36,9 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
 
-    const memory = new WebAssembly.Memory({initial:10, maximum:100});
-    const mem_allocator = new FreeList(100);
+    const max_mem_pages = 100;
+    const memory = new WebAssembly.Memory({initial:10, maximum:max_mem_pages});
+    const mem_allocator = new FreeList(max_mem_pages);
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
     ).then(bytes => 

@@ -28,8 +28,9 @@ function assert_not_none(arg: any) : any {
 
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
-  const memory = new WebAssembly.Memory({initial:10, maximum:100});
-  const mem_allocator = new FreeList(100);
+  const max_mem_pages = 100;
+  const memory = new WebAssembly.Memory({initial:10, maximum:max_mem_pages});
+  const mem_allocator = new FreeList(max_mem_pages);
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory }, 
     console: {
       log: function(arg: any) {
