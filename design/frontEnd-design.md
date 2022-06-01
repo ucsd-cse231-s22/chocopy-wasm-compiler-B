@@ -135,7 +135,6 @@ shown in the picture below, CodeMirror is able to underline the error
 
 Our team have comunicated with team A and find that there is a tool called [phantomjs](https://learnku.com/docs/node-lessons/browser-side-test-mocha-chai-phantomjs/6131) for front end testing.
 
-
 The overall front page will looks like below:
 ![final front end](./Screen%20Shot%202022-05-21%20at%2000.09.37.png)
 
