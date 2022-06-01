@@ -1,9 +1,65 @@
 @import "codemirror/lib/codemirror.css";
 @import "themelist.scss";
 
+.isa_info, .isa_success, .isa_warning, .isa_error {
+    margin: 10px 0px;
+    padding:12px;
+ 
+}
+.isa_info {
+    color: #00529B;
+    background-color: #BDE5F8;
+}
+.isa_success {
+    color: #4F8A10;
+    background-color: #DFF2BF;
+}
+.isa_warning {
+    color: #9F6000;
+    background-color: #FEEFB3;
+}
+.isa_error {
+    color: #3e26b6c5;
+    background-color: #4528ea;
+    border-radius: 3px; 
+    -moz-border-radius: 3px; 
+    -webkit-border-radius: 3px; 
+    border: 1px solid #b2b6bb;
+    box-sizing:border-box;
+}
+
+.rounded{
+    border-radius: 3px; 
+    -moz-border-radius: 3px; 
+    -webkit-border-radius: 3px; 
+    border: 1px solid #b2b6bb;
+    box-sizing:border-box;
+  }
+
 * {
   box-sizing: border-box;
 }
+
+.line-error {
+    background: #2e0000 !important;
+    color: #8a1f11 !important;
+}
+
+.breakpoints {width: .9em;}
+.breakpoints { color: #822; }
+// .error {width: .10em;}
+// .error { color: rgb(239, 237, 237); }
+// .inMarker {width: .2em;}
+// .inMarker { color: #822; }
+
+.noEval{
+    background-color:rgb(224, 224, 128); 
+  }
+.noEvalFirst{
+    border-top:2px dotted rgb(207, 74, 30); 
+}
+
+//original css 
 
 html{
     // background-color: rgb(248, 246, 221);
@@ -189,9 +245,7 @@ html{
     width: 100%;
     // margin-left: 1em;
     // position:absolute;
-    padding-top: 1em;
-    padding-left: 1em;
-    padding-right: 1em;
+    padding: 1em;
     height: 100%;
     border: none;
     overflow: scroll;
@@ -199,7 +253,6 @@ html{
     line-height: 1.2em;
     font-size: 1.2em;
     min-height: 100%;
-    position: relative;
 }
 
 .output{
@@ -208,7 +261,7 @@ html{
     // line-height: 1.2em;
     // font-size: 1.2em;
     // margin-right: 1.5em;
-    
+    color: #48c4f5;
 }
 
 .console-prompt{
@@ -252,13 +305,30 @@ html{
     // display: flex;
 
 }
+
 .output pre {
     max-width: 100%;
     line-break: anywhere;
-    margin: 0;
     word-wrap: break-word;
     white-space: break-spaces;
+    margin: 10px 0px;
+    padding:12px;
+    color: #D8000C;
+    background-color: #FFD2D2;
+    border-radius: 3px; 
+    -moz-border-radius: 3px; 
+    -webkit-border-radius: 3px; 
+    border: 1px solid #b2b6bb;
+    box-sizing:border-box;
 }
+
+// .output pre {
+//     max-width: 100%;
+//     line-break: anywhere;
+//     margin: 0;
+//     word-wrap: break-word;
+//     white-space: break-spaces;
+// }
 
 .prompt-cursor{
     display: block;
@@ -299,4 +369,8 @@ html{
     // padding:5px;
     // margin:10px;
     border-radius: 2%;
+  }
+
+  .error_content {
+    text-decoration: rgb(249, 3, 3) wavy underline;
   }

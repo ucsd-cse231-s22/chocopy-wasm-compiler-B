@@ -1,11 +1,7 @@
 import { BasicREPL} from './repl';
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint, renderDebug } from "./outputrender";
-import { log } from 'console';
-import { sources } from 'webpack';
 
 import { themeListExport } from "./themelist";
 
@@ -21,8 +17,11 @@ import "codemirror/addon/dialog/dialog";
 import "codemirror/addon/edit/matchbrackets";
 import "codemirror/addon/search/searchcursor"
 import "codemirror/keymap/vim";
+
 import "./style.scss";
-import {BuiltinLib} from "./builtinlib"
+
+const breakpointLines = new Set<number>(); 
+var breakpointPrev: number = -1;
 
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
@@ -45,7 +44,6 @@ function webStart() {
 
     var importObject:any = {
       imports: {
-        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
@@ -97,21 +95,19 @@ function webStart() {
           
           // elt.value = source;
           replCodeElement.value = "";
-
-          var codeHeight = -20
-          if(source !== ""){
-            repl.run(source).then((r) => {
-              // console.log(r);
-              var objectTrackList = repl.trackObject(r, repl.trackHeap());
-              renderResult(r, objectTrackList);
-              console.log("run finished");
-            })
-              .catch((e) => { renderError(e); console.log("run failed", e) });
-            codeHeight = 20;
+    
+          if(source === ""){
+            return false;
           }
-          var interactions = document.getElementById("interactions") as HTMLDivElement;
-          interactions.scrollTop = interactions.scrollHeight + codeHeight;
-          // console.log(interactions.scrollTop);
+          repl.run(source).then((r) => {
+            // console.log(r);
+            var objectTrackList = repl.trackObject(r, repl.trackHeap());
+            renderResult(r, objectTrackList);
+            console.log("run finished");
+          })
+            .catch((e) => { 
+              renderError(e); 
+              console.log("run failed", e) });;
         }
       });
     }
@@ -120,12 +116,6 @@ function webStart() {
 
     function resetRepl() {
       document.getElementById("output").innerHTML = "";
-      var beforeText = document.querySelector(".prompt-text") as HTMLElement;
-      beforeText.innerHTML = "";
-      var afterText = document.getElementById("prompt-text-after") as HTMLSpanElement;
-      afterText.innerHTML = "";
-      var sourceCode = document.getElementById("next-code") as HTMLTextAreaElement;
-      sourceCode.value = "";
     }
 
     document.getElementById("clear").addEventListener("click", (e)=>{
@@ -133,24 +123,69 @@ function webStart() {
       //resets environment
       repl = new BasicREPL(importObject);
       //clear editor
-      // var element = document.getElementById("user-code") as HTMLTextAreaElement;
-      var element = document.querySelector(".CodeMirror") as any;
-      var editor = element.CodeMirror;
       editor.setValue("");
-      editor.clearHistory();
     })
 
     document.getElementById("run").addEventListener("click", function (e) {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
+      var text = source.value;
+      if (breakpointPrev != -1){
+        var codeLines = text.split('\n')
+        console.log("eval part of lines:",codeLines);
+        console.log("breakpoint:",breakpointPrev);
+        //if( codeLines.length == 0 || codeLines.length == 1 && codeLines[0].trim().length == 0) return
+        text = getCodeUntillBreakpoint(codeLines);
+      }
+      console.log("code to be executed:",text)
       resetRepl();
-      repl.run(source.value).then((r) => {
+      repl.run(text).then((r) => {
         var objectTrackList = repl.trackObject(r, repl.trackHeap());
         renderResult(r, objectTrackList);
         console.log("run finished")
 
       })
-        .catch((e) => { renderError(e); console.log("run failed", e) });;
+        .catch((e) => { renderError(e); 
+        //console.log(e);
+        if (e.stack!=undefined){
+          //console.log(e.line);
+          //console.log("highlight the error line")
+          //console.log(e.stack)
+          //highlightError(1,e);
+          //var info = editor.lineInfo(1);
+          //console.log("reading info: "+info);
+          //makeMarkerErrorMarker()
+          console.log("name:",e.name);
+          var lineNum = parseLineLocation(e)-1;
+          var endIndex = parseCharLocation(e);
+          if (lineNum != null){
+            editor.setGutterMarker(lineNum, 'breakpoints',  makeMarkerErrorMarker());
+            editor.addLineClass(lineNum, 'background', 'line-error');
+            console.log("error line marked")
+            //editor.markText({line:lineNum,ch:1},{line:3,ch:1},{readOnly:true});
+            var lineString =  editor.getLine(lineNum);
+            var startIndex = getStartIndex(lineString, endIndex);
+            console.log("lineString:",lineString);
+            console.log("startIndex:",startIndex);
+            console.log("endIndex:",endIndex);
+            editor.markText({line:lineNum,ch:startIndex+1},{line:lineNum,ch:endIndex}, { className: "error_content" });
+          }
+        }
+        console.log("run failed", e)});;
+    });
+
+    
+    document.getElementById("reset").addEventListener("click", function (e) {
+      editor.refresh();
+      editor.setValue("");
+      console.log("editor reset")
+    });
+
+    document.getElementById("refresh").addEventListener("click", function (e) {
+      var text = editor.getValue();
+      editor.refresh();
+      editor.setValue(text);
+      console.log("editor refreshed")
     });
 
     document.getElementById("choose_file").addEventListener("change", function (e) {
@@ -196,10 +231,11 @@ function webStart() {
       keyMap: "default",
       matchBrackets: true,
       showCursorWhenSelecting: true,
-      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter","breakpoints","error","CodeMirror-lint-markers"],
       extraKeys: {
         "Ctrl": "autocomplete",
       },
+      lint: true,
       // scrollbarStyle: "simple",
     } as any);
     var commandDisplay = document.getElementById('command-display');
@@ -219,6 +255,17 @@ function webStart() {
     console.log('thy this is not run textarea', textarea)
     console.log(editor)
     
+    editor.on('gutterClick', function(cm, lineNum) {
+      console.log("breakpoint click");
+      var info = cm.lineInfo(lineNum);
+      if (info.gutterMarkers) breakpointLines.delete(lineNum);
+      else breakpointLines.add(lineNum);
+      cm.setGutterMarker(lineNum, 'breakpoints', info.gutterMarkers ? null : makeMarkerBreakPoint());
+      var startLine = colorLinesAfterBreakpoint(cm,lineNum, breakpointLines);
+      //highlightError(1, cm.lineInfo(lineNum).text);
+      //cm.setGutterMarker(lineNum, 'error', info.gutterMarkers ? null : makeMarkerErrorMarker());
+    });
+
     editor.on("change", (cm, change) => {
 
         textarea.value = editor.getValue();
@@ -235,7 +282,6 @@ function webStart() {
     promptTextArea();
     themeDropDown(editor);
     modeDropDown(editor, editMode);
-
   });
 
 }
@@ -362,5 +408,149 @@ function printGlobalVariable(repl: BasicREPL){
   })
 }
 
+function makeMarkerBreakPoint() {
+  const marker = document.createElement('div');
+  marker.style.color = "#ffffff";
+  marker.innerHTML = '⬤';
+  return marker;
+}
+
+function makeMarkerErrorMarker() {
+  const marker = document.createElement('div');
+  marker.style.color = "#ff0800";
+  marker.innerHTML = 'ⓧ';
+  return marker;
+}
+
+// function makeInLineErrorMarker() {
+//   const marker = document.createElement('div');
+//   marker.style.color = "#ffFFFF";
+//   marker.innerHTML = 'X';
+//   return marker;
+// }
+
 webStart();
 
+function highlightError(lineNum: number, message: any) {
+  var area = document.querySelector(".CodeMirror") as any;
+  var editor = area.CodeMirror;
+  editor.setGutterMarker(lineNum, "error", makeMarkerError(message));
+  console.log("error line marked")
+  editor.addLineClass(lineNum, "background", "line-error");
+}
+
+
+function makeMarkerError(message: any): any {
+  const marker = document.createElement("div");
+  marker.classList.add("error-marker");
+  marker.innerHTML = "&nbsp;";
+
+  const error = document.createElement("div");
+  error.innerHTML = message;
+  error.classList.add("error-message");
+  marker.appendChild(error);
+
+  return marker;
+}
+
+function parseLineLocation(e: any) {
+  console.log("msg:",e);
+  var eles = e.toString().split(" ") ;
+  for (var i = 0; i < eles.length; i++){
+    if (eles[i]=="line"){
+      break;
+    }
+  }
+  if (i==eles.length){return null;}
+  var lineIndex = eles[i+1];
+  console.log("line:",lineIndex);
+  return lineIndex;
+}
+
+function parseCharLocation(e: any) {
+  console.log("msg:",e);
+  var raw  = e.toString().split("\n");
+  var eles = raw[0].split(" ") ;
+  
+  for (var i = 0; i < eles.length; i++){
+    if (eles[i]=="column"){
+      break;
+    }
+  }
+  if (i==eles.length){return null;}
+  var columnIndex = eles[i+1];
+  console.log("column:",columnIndex);
+  return columnIndex;
+}
+
+function parseCharLocationEnd(e: any) {
+  console.log("msg:",e);
+  var eles = e.toString().split(" ") ;
+  for (var i = 0; i < eles.length; i++){
+    if (eles[i]=="column"){
+      break;
+    }
+  }
+  if (i==eles.length){return null;}
+  var columnIndex = eles[i+1];
+  console.log("column:",columnIndex);
+  return columnIndex;
+}
+
+function colorLinesAfterBreakpoint(cm: CodeMirror.Editor, lineNum: number, breakpointLines: Set<number>) {
+  if (breakpointLines.size==0){
+    clearColorLine(cm,breakpointPrev);
+    breakpointPrev = -1;
+    return;
+  }
+  if (breakpointPrev != -1){
+    clearColorLine(cm,breakpointPrev);
+  }
+  var startLine = getArrayMin(breakpointLines);
+  breakpointPrev = startLine;
+  console.log("break line:",startLine);
+  cm.addLineClass(startLine,"background","noEvalFirst")
+  for(let i=startLine; i<cm.lineCount(); i++){
+    cm.addLineClass(i,"background","noEval")
+  }
+  return startLine;
+}
+
+function getArrayMin(array: Set<number>){
+  return Math.min.apply(this, [...array]);
+}
+
+function clearColorLine(cm: CodeMirror.Editor, breakpointPrev: number) {
+  for (let i=0;i<cm.lineCount();i++){
+    cm.removeLineClass(i,"background","noEvalFirst")
+    cm.removeLineClass(i,"background","noEval")
+  }
+}
+function getCodeUntillBreakpoint(codeLines: string[]): string {
+  let lineStop = breakpointPrev+1 //switch to one-based indexing
+	if(lineStop > codeLines.length){
+		lineStop = breakpointPrev = -1 //user got rid of new line, so get rid of unnecessary break
+		console.debug("stop at line " + lineStop + " the number of lines: " + codeLines.length)
+	}
+	else if(lineStop > 0){
+		codeLines = codeLines.slice(0,lineStop-1)
+	}
+	return codeLines.join('\n');
+}
+
+function getStartIndex(lineString: string, endIndex: number) {
+  var start = 0;
+  for (var i:number = 0; i < lineString.length; i++){
+    //console.log(i);
+    //console.log(endIndex);
+    if (i>=endIndex-1 ){
+      //console.log("match");
+      return start;
+    }
+    if (lineString.charAt(i) == " "){
+      //console.log("space at",i);
+      start = i;
+    }
+  }
+  return 0;
+}
