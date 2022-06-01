@@ -665,7 +665,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if (targs[0].a[0].tag !== "list") {
           throw new TypeCheckError("len() incorrect argument type");
         }
-        return { a: [{ tag: "number" }, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
+        return { a: [NUM, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
