@@ -1,7 +1,5 @@
-// import { TreeCursor } from "@lezer/common";
-// import { parser } from "@lezer/python";
-import { TreeCursor } from "lezer-tree"
-import { parser } from "lezer-python"
+import { TreeCursor } from "@lezer/common";
+import { parser } from "@lezer/python";
 import { AssignTarget, BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Parameter, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from "./ast";
 import { ParseError } from "./error_reporting";
 import { stringifyTree } from "./treeprinter";
