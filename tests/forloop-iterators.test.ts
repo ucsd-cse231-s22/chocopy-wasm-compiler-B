@@ -123,6 +123,27 @@ class SetIteratorInt(object):
 def setToSetIteratorInt(initVal: set[int]) -> SetIteratorInt :
     return SetIteratorInt().new(initVal)
 
+class StringIterator(object):
+    val:str = "a"
+    index:int = 0
+    
+    
+    def new(self:StringIterator, initVal:str ) -> StringIterator:
+      self.val = initVal
+      return self
+    
+    def next(self :  StringIterator) -> str :    
+         ret :  str = "a"
+         ret = self.val[self.index]
+         self.index = self.index + 1
+         return ret
+      
+    def hasnext(self :  StringIterator) -> bool : 
+      return self.index < len(self.val)
+    
+def strtoStringIterator(initVal: str) -> StringIterator :
+    return StringIterator().new(initVal)
+
 `
 
 describe("Basic range and custom iteratable functionalities", () => {
@@ -500,27 +521,6 @@ for i in enumerate(l):
 ` ,["0","1","1","2","2","3","3","4","4","5"]);
 
 assertPrint('String Iterator' , rangeStr + `
-
-class StringIterator(object):
-  val:str = "a"
-  index:int = 0
-  
-  
-  def new(self:StringIterator, initVal:str ) -> StringIterator:
-    self.val = initVal
-    return self
-  
-  def next(self :  StringIterator) -> str :    
-   	ret :  str = "a"
-   	ret = self.val[self.index]
-   	self.index = self.index + 1
-   	return ret
-    
-  def hasnext(self :  StringIterator) -> bool : 
-    return self.index < len(self.val)
-  
-def strtoStringIterator(initVal: str) -> StringIterator :
-    return StringIterator().new(initVal)
   
 s:str = "iterator"
 i:str = "a"
@@ -529,7 +529,52 @@ for i in s:
     print(i)
 
 ` ,["i", "t", "e", "r", "a", "t", "o", "r"]);
+
 assertPrint('Set Iterator Int' , rangeStr + `
+
+l : set[int] = None
+i: int = 0
+l = {1,2,3}
+for i in l:
+    print(i)
+
+` ,["1","2","3"]);
+
+assertPrint('iter on Sets of ints' , rangeStr + `
+
+l : set[int] = None
+i: int = 0
+l = {1,2,3}
+
+_iter: SetIteratorInt = None
+_iter = iter(l)
+print(next(_iter))
+print(next(_iter))
+print(next(_iter))
+
+` ,["1","2","3"]);
+
+assertPrint('Generics Iterator' , `
+T: TypeVar = TypeVar('T')
+class ListIterator(Generic[T]) : 
+    list :  T = {}
+    index : int = 0
+    def new(self :  ListIterator[T], initVal :  T) -> ListIteratorInt : 
+        self.list = initVal
+        return self
+    def next(self :  ListIteratorInt) -> int : 
+        ret :  int = 0
+        ret = self.list[self.index]
+        self.index = self.index + 1
+        return ret
+    def hasnext(self :  ListIteratorInt) -> bool : 
+        return self.index < len_list_int(self.list)
+    
+def len_list_int(l: [int]) -> int:
+    return 5
+
+def listToListIteratorInt(initVal: [int]) -> ListIteratorInt :
+    return ListIteratorInt().new(initVal)
 
 l : set[int] = None
 i: int = 0
@@ -673,31 +718,6 @@ print(iter(j))
 
 
 assertFail('Stop iteration in range', rangeStr + `
-<<<<<<< HEAD
-
-class ListIteratorBool(object) : 
-   list :  [bool] = None
-   index : int = 0
-   def new(self :  ListIteratorBool, initVal :  [bool]) -> ListIteratorBool : 
-   	self.list = initVal
-   	return self
-
-   def next(self :  ListIteratorBool) -> bool :    
-   	ret :  bool = False
-   	ret = self.list[self.index]
-   	self.index = self.index + 1
-   	return ret
-    
-   def hasnext(self :  ListIteratorBool) -> bool : 
-    return self.index < len_list(self.list)
-
-def len_list(l: [bool]) -> int:
-    return 5
-
-def listToIteratorBool(initVal: [bool]) -> ListIteratorBool :
-    return ListIteratorBool().new(initVal)
-=======
->>>>>>> 9cd7d76a0ffeab203d0d67c410e4c0497b056980
     
 i: [bool] = None
 _iter: ListIteratorBool = None
