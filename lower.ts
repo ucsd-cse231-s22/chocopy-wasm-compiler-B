@@ -2,7 +2,7 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
-import { equalType } from "./type-check";
+import { equalType, isIterableObject } from "./type-check";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
 import { createModuleResolutionCache } from 'typescript';
 import { defaultMaxListeners } from 'events';
@@ -664,6 +664,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           callMethod
         ];
       }
+      
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }

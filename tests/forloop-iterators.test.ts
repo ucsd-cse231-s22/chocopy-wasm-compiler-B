@@ -741,7 +741,7 @@ assertFail('Stop iteration in range', rangeStr + `
     
 i: [bool] = None
 _iter: ListIteratorBool = None
-i = [True, False, True, False]
+i = [True, False, True, False, True, False]
 _iter = listToListIteratorBool(i)
 print(next(_iter))
 print(next(_iter))

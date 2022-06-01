@@ -836,9 +836,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
             //@ts-ignore
             const [_, methods] = env.classes.get(tArgs[0].a[0].name);
             const [methodArgs, methodRet] = methods.get(expr.name);
-            // const callStopIteration: Expr<[Type, SourceLocation]> = { a:tArgs[0].a, tag: "call",  name: "StopIteration", arguments: tArgs }
-            // return { a: [ methodRet, expr.a], tag: "method-call", obj: callStopIteration, method: "next", arguments: []}
-          return { a: [ methodRet, expr.a], tag: "method-call", obj: tArgs[0], method: "next", arguments: []}
+            const hasNextCall: Expr<[Type, SourceLocation]> =  { a: [ BOOL, expr.a], tag: "method-call", obj: tArgs[0], method: "hasnext", arguments: []}
+            const callStopIteration: Expr<[Type, SourceLocation]> = { a:tArgs[0].a, tag: "call",  name: "StopIteration", arguments: [tArgs[0], hasNextCall] }
+            return { a: [ methodRet, expr.a], tag: "method-call", obj: callStopIteration, method: "next", arguments: []}
+          //return { a: [ methodRet, expr.a], tag: "method-call", obj: tArgs[0], method: "next", arguments: []}
           
       } else if (expr.name == "len") {
         //built in len function (This is the string groups implementation)
