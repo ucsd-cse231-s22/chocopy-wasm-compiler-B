@@ -4,17 +4,16 @@
 // - https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API
 
 import wabt from 'wabt';
+import { Program, SourceLocation, Type, Value } from './ast';
+import { BuiltinLib } from './builtinlib';
 import { compile, GlobalEnv } from './compiler';
-import {parse} from './parser';
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Program, Type, Value, SourceLocation } from './ast';
+import { lowerProgram } from './lower';
 import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
-import { lowerProgram } from './lower';
-import { BuiltinLib } from './builtinlib';
-import { BlobOptions } from 'buffer';
+import { parse } from './parser';
 import { removeGenerics } from './remove-generics';
+import { GlobalTypeEnv, tc } from './type-check';
+import { NONE, PyValue } from "./utils";
 
 export type Config = {
   importObject: any;

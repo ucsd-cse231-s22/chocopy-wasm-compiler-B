@@ -1,5 +1,4 @@
-import { assert, assertPrint, assertFail, assertTCFail, assertTC, assertParserFail } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertParserFail, assertPrint, assertTCFail } from "./asserts.test";
 
 
 describe("Destructuring Tests", () => {

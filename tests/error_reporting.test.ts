@@ -1,7 +1,7 @@
-import "mocha";
+import { fail } from 'assert';
 import { expect } from "chai";
-import {run} from "./helpers.test";
-import { fail } from 'assert'
+import "mocha";
+import { run } from "./helpers.test";
 
 export function assertParseFail(name: string, source: string, line: number, col: number, sourceCode: string ) {
     it(name, async () => {

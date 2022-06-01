@@ -1,22 +1,18 @@
-import { BasicREPL} from './repl';
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
-import * as RUNTIME_ERROR from './runtime_error'
-import { renderResult, renderError, renderPrint } from "./outputrender";
-import { log } from 'console';
-import { sources } from 'webpack';
-
 import CodeMirror from "codemirror";
 import "codemirror/addon/edit/closebrackets";
-import "codemirror/mode/python/python";
-import "codemirror/addon/hint/show-hint";
-import "codemirror/addon/fold/foldcode";
-import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
+import "codemirror/addon/fold/foldcode";
+import "codemirror/addon/fold/foldgutter";
+import "codemirror/addon/hint/show-hint";
+import "codemirror/mode/python/python";
+import { BuiltinLib } from "./builtinlib";
+import { renderError, renderPrint, renderResult } from "./outputrender";
+import { BasicREPL } from './repl';
+import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import {BuiltinLib} from "./builtinlib"
+import { BOOL, NONE, NUM } from './utils';
+
 
 function webStart() {
   var filecontent: string | ArrayBuffer;

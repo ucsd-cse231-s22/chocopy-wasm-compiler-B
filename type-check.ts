@@ -1,13 +1,7 @@
-
-import { table } from 'console';
-import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation, DestructureLHS } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
-import { emptyEnv } from './compiler';
-import { TypeCheckError } from './error_reporting'
+import { BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from './ast';
 import { BuiltinLib } from './builtinlib';
-import exp from 'constants';
-import { listenerCount } from 'process';
-import { IgnorePlugin } from 'webpack';
+import { TypeCheckError } from './error_reporting';
+import { BOOL, CLASS, NONE, NUM } from './utils';
 
 const compvars : Map<string, [string, number]> = new Map();
 function generateCompvar(base : string) : string {

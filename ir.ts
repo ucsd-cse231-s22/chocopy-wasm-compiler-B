@@ -1,4 +1,4 @@
-import {Type, BinOp, UniOp, Parameter} from './ast';
+import { BinOp, Parameter, Type, UniOp } from './ast';
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, body: Array<BasicBlock<A>> }
 

@@ -1,5 +1,5 @@
-import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
+import { ObjectField } from "./repl";
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {

@@ -1,9 +1,9 @@
-import {parser} from "@lezer/python";
-import { TreeCursor} from "@lezer/common";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, DestructureLHS, AssignTarget } from "./ast";
-import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
+import { TreeCursor } from "@lezer/common";
+import { parser } from "@lezer/python";
+import { AssignTarget, BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Parameter, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from "./ast";
+import { ParseError } from "./error_reporting";
 import { stringifyTree } from "./treeprinter";
-import { ParseError} from "./error_reporting";
+import { BOOL, CLASS, NONE, NUM, TYPE_VAR } from "./utils";
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {

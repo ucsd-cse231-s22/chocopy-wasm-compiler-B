@@ -1,7 +1,7 @@
-import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp, SourceLocation } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BinOp, SourceLocation, Type, UniOp } from "./ast";
 import { RunTimeError } from "./error_reporting";
+import { Class, Expr, FunDef, Program, Stmt, Value, VarInit } from "./ir";
+import { BOOL, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;

@@ -1,4 +1,4 @@
-import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class} from './ast';
+import { BinOp, Class, Expr, FunDef, Literal, Program, SourceLocation, Stmt, Type, UniOp } from './ast';
 
 
 let isChanged = false;

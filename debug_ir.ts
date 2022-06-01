@@ -1,14 +1,14 @@
-import {parse} from './parser';
-import { run, Config, augmentEnv } from "./runner";
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Program, Type, Value, SourceLocation, BinOp, UniOp, Parameter } from './ast';
-import { lowerProgram } from './lower';
-import { importObject, addLibs  } from "./tests/import-object.test";
-import { BasicREPL } from "./repl";
-import * as ir from './ir';
 import { CliRenderer } from "@diagrams-ts/graphviz-cli-renderer";
+import { BinOp, Parameter, SourceLocation, Type, UniOp } from './ast';
+import * as ir from './ir';
+import { lowerProgram } from './lower';
 import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
+import { parse } from './parser';
+import { BasicREPL } from "./repl";
+import { augmentEnv, Config } from "./runner";
+import { addLibs } from "./tests/import-object.test";
+import { tc } from './type-check';
 
 
 export function printProgIR(p: ir.Program<[Type, SourceLocation]>) {
@@ -115,10 +115,6 @@ function exprStr(expr: ir.Expr<[Type, SourceLocation]>): string {
     return `${valStr(expr.left)} ${BinOp[expr.op]} ${valStr(expr.right)}`
   case "uniop":
     return `${UniOp[expr.op]} ${valStr(expr.expr)}`;
-  case "builtin1":
-    return `${expr.name} ${valStr(expr.arg)}`;
-  case "builtin2":
-    return `${expr.name}(${valStr(expr.left)}, ${valStr(expr.right)})`;
   case "call":
     const argStrs = expr.arguments.map(valStr).join(", ");
     return `${expr.name}(${argStrs})`;
@@ -301,10 +297,6 @@ function exprInline(expr: ir.Expr<[Type, SourceLocation]>): string {
       return valInline(expr.left) + " " + BinOp[expr.op] + " " + valInline(expr.right);
     case "uniop":
       return UniOp[expr.op] + " " + valInline(expr.expr);
-    case "builtin1":
-      return expr.name + " " + valInline(expr.arg);
-    case "builtin2":
-      return valInline(expr.left) + " " + expr.name + " " + valInline(expr.right);
     case "call":
       const argStrs = expr.arguments.map(valInline);
       return expr.name + "(" + argStrs.join(", ") + ")";

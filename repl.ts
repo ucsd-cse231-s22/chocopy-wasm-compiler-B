@@ -1,10 +1,10 @@
-import { run, Config } from "./runner";
+import { Type, Value } from "./ast";
 // import { GlobalEnv } from "./compiler";
 import { GlobalEnv } from "./compiler";
-import { tc, defaultTypeEnv, GlobalTypeEnv } from "./type-check";
-import { Value, Type } from "./ast";
 import { parse } from "./parser";
 import { removeGenerics } from "./remove-generics";
+import { Config, run } from "./runner";
+import { defaultTypeEnv, GlobalTypeEnv, tc } from "./type-check";
 
 export type ObjectField = 
 |{tag:"num", fieldName: string, value: Value}

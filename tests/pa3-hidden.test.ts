@@ -1,5 +1,5 @@
-import { assertPrint, assertTCFail, assertTC, assertFail } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertFail, assertPrint, assertTC, assertTCFail } from "./asserts.test";
+import { BOOL, CLASS, NONE, NUM } from "./helpers.test";
 
 describe("PA3 hidden tests", () => {
 

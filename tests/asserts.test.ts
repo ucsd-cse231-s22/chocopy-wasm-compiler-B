@@ -1,10 +1,10 @@
-import "mocha";
+import { fail } from 'assert';
 import { expect } from "chai";
-import { BasicREPL } from "../repl";
+import "mocha";
 import { Value } from "../ast";
-import { importObject, addLibs } from "./import-object.test";
-import {run, typeCheck} from "./helpers.test";
-import { fail } from 'assert'
+import { BasicREPL } from "../repl";
+import { run, typeCheck } from "./helpers.test";
+import { addLibs, importObject } from "./import-object.test";
 
 
 
