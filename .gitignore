@@ -6,4 +6,8 @@ cli
 *.sw*
 mochawesome-report
 *lock*
-debugstart.ts
+**/*.png
+**/*.svg
+!/designs/example.svg
+**/.DS_Store
+.vscode
