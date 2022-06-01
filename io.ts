@@ -52,11 +52,6 @@ def open(mode : int) -> File:
     newFile.fd = jsopen(mode)
     newFile.filelength = jslength(0)
     return newFile
-
-f : File = None
-f = open(1)
-f.write(1234)
-f.close()
 `
 
 export function jslength(dummy: number) : number {

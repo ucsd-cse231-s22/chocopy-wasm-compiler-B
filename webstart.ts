@@ -59,8 +59,8 @@ function webStart() {
     ).then(bytes => 
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-    const s = document.getElementById("user-code") as HTMLTextAreaElement;
-    s.value = fileObjectDefinition;
+    // const s = document.getElementById("user-code") as HTMLTextAreaElement;
+    // s.value = fileObjectDefinition;
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
@@ -144,7 +144,7 @@ function webStart() {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       resetRepl();
-      repl.run(source.value).then((r) => { renderResult(r); console.log ("run finished") })
+      repl.run(fileObjectDefinition + source.value).then((r) => { renderResult(r); console.log ("run finished") })
           .catch((e) => { renderError(e); console.log("run failed", e) });;
     });
     setupRepl();
