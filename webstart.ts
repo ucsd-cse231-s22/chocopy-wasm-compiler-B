@@ -11,14 +11,8 @@ import { renderError, renderPrint, renderResult } from "./outputrender";
 import { BasicREPL } from './repl';
 import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import { BOOL, NONE, NUM } from './utils';
+import { BOOL, NONE, NUM, LIST } from './utils';
 
-function index_out_of_bounds(length: any, index: any): any {
-  if (index < 0 || index >= length)
-    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
-  
-  return index;
-}
 function webStart() {
   var filecontent: string | ArrayBuffer;
   document.addEventListener("DOMContentLoaded", async function() {
@@ -34,19 +28,16 @@ function webStart() {
     var load = memoryModule.instance.exports.load;
     var importObject:any = {
       imports: {
-        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
-        index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
-        division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
-        stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
-        stack_clear: () => RUNTIME_ERROR.stack_clear(),
         assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
+        division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+        index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
+        stack_clear: () => RUNTIME_ERROR.stack_clear(),
+        stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
+        print_list: (arg: number) => renderPrint(LIST, arg, memory),
+        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {})
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory, //it is kind of pointer pointing to heap

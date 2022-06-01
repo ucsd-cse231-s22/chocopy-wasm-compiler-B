@@ -165,18 +165,22 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         }
         var valStmts = expr.arguments.map(arg=>{
           let argCode = codeGenValue(arg, env);
-          switch (arg.a[0]){
-            case NUM:
-              argCode.push("(call $print_num)");
-              break;
-            case BOOL:
-              argCode.push("(call $print_bool)");
-              break;
-            case NONE:
-              argCode.push("(call $print_none)");
-              break;
-            default:
-              throw new RunTimeError("not implemented object print")
+          if (arg.a[0].tag === "list") {
+            argCode.push("(call $print_list)");
+          } else {
+            switch (arg.a[0]){
+              case NUM:
+                argCode.push("(call $print_num)");
+                break;
+              case BOOL:
+                argCode.push("(call $print_bool)");
+                break;
+              case NONE:
+                argCode.push("(call $print_none)");
+                break;
+              default:
+                throw new RunTimeError("not implemented object print")
+            }
           }
           argCode.push("drop");
           return argCode;

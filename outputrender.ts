@@ -1,7 +1,8 @@
 import { Type, Value } from "./ast";
 import { ObjectField } from "./repl";
+import { NUM } from "./utils";
 
-function stringify(typ: Type, arg: any, mem?:WebAssembly.Memory) : string {
+function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory) : string {
   switch(typ.tag) {
     case "number":
       return (arg as number).toString();
@@ -11,20 +12,16 @@ function stringify(typ: Type, arg: any, mem?:WebAssembly.Memory) : string {
       return "None";
     case "class":
       return typ.name;
-    //change
     case "list":
       var bytes = new Uint8Array(mem.buffer, arg, 4);
       var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
-      console.log(length);
       bytes = new Uint8Array(mem.buffer, arg + 4, 4);
       var address = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
-      console.log(address);
-
       var elementArray = new Int32Array(mem.buffer, address, length);
       console.log(elementArray[0]);
       var string = "[";
       for (let i = 0; i < length; i++) {
-        string += stringify(typ.type, elementArray[i], mem);
+        string += stringify(NUM, elementArray[i], mem);
         if (i < length - 1) {
           string += ", ";
         }
@@ -151,11 +148,11 @@ export function renderResult(result : Value, objectTrackList: Array<ObjectField>
   }
 }
 
-export function renderPrint(typ: Type, arg : number) : any {
+export function renderPrint(typ: Type, arg : number, mem?: WebAssembly.Memory) : any {
   // console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  elt.innerText = stringify(typ, arg, mem);
   return arg;
 }
 
