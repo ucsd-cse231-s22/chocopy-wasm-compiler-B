@@ -4,6 +4,7 @@ import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint, renderDebug } from "./outputrender";
 
 import { themeListExport } from "./themelist";
+import {BuiltinLib} from "./builtinlib"
 
 import CodeMirror from "codemirror";
 import "codemirror/addon/edit/closebrackets";
@@ -44,6 +45,7 @@ function webStart() {
 
     var importObject:any = {
       imports: {
+        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
@@ -86,28 +88,23 @@ function webStart() {
           const prompt = document.createElement("span");
           prompt.innerText = "» " + source;
           output.appendChild(prompt);
-          // const elt = document.createElement("textarea");
-          // // elt.type = "text";
-          // elt.disabled = true;
-          // elt.className = "repl-code";
-          // output.appendChild(elt);
           document.getElementById("output").appendChild(output);
           
-          // elt.value = source;
           replCodeElement.value = "";
     
-          if(source === ""){
-            return false;
+          var codeHeight = -20
+          if(source !== ""){
+            repl.run(source).then((r) => {
+              var objectTrackList = repl.trackObject(r, repl.trackHeap());
+              renderResult(r, objectTrackList);
+              console.log("run finished");
+            })
+              .catch((e) => { renderError(e); console.log("run failed", e) });
+            codeHeight = 20;
           }
-          repl.run(source).then((r) => {
-            // console.log(r);
-            var objectTrackList = repl.trackObject(r, repl.trackHeap());
-            renderResult(r, objectTrackList);
-            console.log("run finished");
-          })
-            .catch((e) => { 
-              renderError(e); 
-              console.log("run failed", e) });;
+
+          var interactions = document.getElementById("interactions") as HTMLDivElement;
+          interactions.scrollTop = interactions.scrollHeight + codeHeight;
         }
       });
     }
@@ -116,6 +113,12 @@ function webStart() {
 
     function resetRepl() {
       document.getElementById("output").innerHTML = "";
+      var beforeText = document.querySelector(".prompt-text") as HTMLElement;
+      beforeText.innerHTML = "";
+      var afterText = document.getElementById("prompt-text-after") as HTMLSpanElement;
+      afterText.innerHTML = "";
+      var sourceCode = document.getElementById("next-code") as HTMLTextAreaElement;
+      sourceCode.value = "";
     }
 
     document.getElementById("clear").addEventListener("click", (e)=>{
@@ -123,7 +126,10 @@ function webStart() {
       //resets environment
       repl = new BasicREPL(importObject);
       //clear editor
+      var element = document.querySelector(".CodeMirror") as any;
+      var editor = element.CodeMirror;
       editor.setValue("");
+      editor.clearHistory();
     })
 
     document.getElementById("run").addEventListener("click", function (e) {
