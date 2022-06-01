@@ -98,6 +98,7 @@ export async function assertPrint(name:string, source: string, expected: Array<s
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+        await driver.wait(webdriver.until.elementLocated(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")));
         await driver.findElement(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")).click();
         let textAreas = await driver.findElements(webdriver.By.css("textarea"));
         await textAreas[1].sendKeys(reverseAutoComplete(source));
@@ -117,6 +118,7 @@ export async function assertTCFail(name: string, source: string){
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+        await driver.wait(webdriver.until.elementLocated(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")));
         await driver.findElement(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")).click();
         let textAreas = await driver.findElements(webdriver.By.css("textarea"));
         await textAreas[1].sendKeys(reverseAutoComplete(source));
@@ -133,6 +135,7 @@ export async function assertRunTimeFail(name: string, source: string){
     it(name, async function () {
         //Send and run source
         await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+        await driver.wait(webdriver.until.elementLocated(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")));
         await driver.findElement(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")).click();
         let textAreas = await driver.findElements(webdriver.By.css("textarea"));
         await textAreas[1].sendKeys(reverseAutoComplete(source));
@@ -155,6 +158,7 @@ export async function assertRepr(name: string, source: string, repls: Array<stri
         if (!emptyStatement(source)){
             //Send and run source
             await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
+            await driver.wait(webdriver.until.elementLocated(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")));
             await driver.findElement(webdriver.By.className("CodeMirror cm-s-blackboard CodeMirror-wrap")).click();
             let textAreas = await driver.findElements(webdriver.By.css("textarea"));
             await textAreas[1].sendKeys(reverseAutoComplete(source));
