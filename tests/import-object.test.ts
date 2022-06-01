@@ -121,6 +121,11 @@ function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
+// printing within sets
+function set_print(type: Type, arg: number) : any {
+  return arg; 
+}
+
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
     throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
@@ -373,6 +378,9 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
     */ 
+
+   // added so $print_num in sets won't crash testing due to an import in sets.wat 
+    print_num: (arg: number) => set_print(Type.Num, arg),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
   output: "",
