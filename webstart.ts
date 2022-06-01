@@ -2,6 +2,7 @@ import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { FreeList } from "./allocator";
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -36,10 +37,26 @@ function webStart() {
     // https://github.com/mdn/webassembly-examples/issues/5
 
     const memory = new WebAssembly.Memory({initial:10, maximum:100});
+    const mem_allocator = new FreeList(100);
     const memoryModule = await fetch('memory.wasm').then(response => 
       response.arrayBuffer()
     ).then(bytes => 
-      WebAssembly.instantiate(bytes, { js: { mem: memory } })
+      WebAssembly.instantiate(bytes, { js: { mem: memory },
+        console: {
+          log: function(arg: any) {
+            console.log(arg);
+          }
+        }, 
+        memory_management: {
+          alloc_memory: function(size: any){
+            var addr = mem_allocator.alloc(size);
+            return addr;
+          },
+          free_memory: function(addr: any, size: any) {
+            mem_allocator.free(addr, size);
+          }
+        }
+      })
     );
 
     var importObject = {
