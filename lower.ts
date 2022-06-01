@@ -115,12 +115,12 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       //   ...valstmts,
       //   { a: s.a, tag: "assign", name: s.name, value: vale}
       // ]];
-      case "assign-destr":
-        var allinits:Array<IR.VarInit<[Type, SourceLocation]>> = []
-        var lhs = s.destr
-        var rhs = s.rhs
-        lowerAllDestructureAssignments(blocks, lhs, rhs, env, allinits, s.a[1]);
-        return allinits
+    case "assign-destr":
+      var allinits:Array<IR.VarInit<[Type, SourceLocation]>> = []
+      var lhs = s.destr
+      var rhs = s.rhs
+      lowerAllDestructureAssignments(blocks, lhs, rhs, env, allinits, s.a[1]);
+      return allinits
     case "return":
     var [valinits, valstmts, val] = flattenExprToVal(s.value, blocks, env);
     blocks[blocks.length - 1].stmts.push(
@@ -451,12 +451,32 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       // I dont think that we need to worry about any of the class specific information
       var objTyp = e.obj.a[0];
       if(objTyp.tag === "set") {
-        const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
-        return [
-          [...objinits, ...arginits],
-          [...objstmts, ...argstmts],
-          callMethod
-        ];
+        // set_a.update([...]) ==> set_a.update({...})
+        if (e.method === "update" && e.arguments[0].tag == "listliteral") {
+          e.arguments[0] = {
+            a: e.arguments[0].a,
+            tag: "set",
+            values: e.arguments[0].elements
+          }
+          const newargpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
+          const newarginits = newargpairs.map(cp => cp[0]).flat();
+          const newargstmts = newargpairs.map(cp => cp[1]).flat();
+          const newargvals = newargpairs.map(cp => cp[2]).flat();
+
+          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...newargvals] } 
+          return [
+            [...objinits, ...newarginits],
+            [...objstmts, ...newargstmts],
+            callMethod
+          ];
+        } else {
+          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
+          return [
+            [...objinits, ...arginits],
+            [...objstmts, ...argstmts],
+            callMethod
+          ];
+        }
       }
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
@@ -558,6 +578,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
     case "literal":
       return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
+
     case "set":
       const newSetName = generateName("newSet");
       // 10 buckets for now
@@ -569,6 +590,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         const [init, stmt, value] = flattenExprToVal(e, blocks, env);
         inits = [...inits, ...init];
         stmts = [...stmts, ...stmt];
+        // return an IR.Stmt
         return {
           a: e.a,
           tag: "expr",
@@ -577,10 +599,10 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       })
       return [
         [ { a: e.a, name: newSetName, type: e.a[0], value: { tag: "none" } }, ...inits ],
-        //[ { tag: "assign", name: newSetName, value: allocSet }, ...stmts, storeLength, ...assignsSet ], 
         [ { tag: "assign", name: newSetName, value: allocSet }, ...stmts, ...assignsSet ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newSetName } }
       ];
+
     case "ternary":
     case "comprehension":
       return flattenExprToExprWithBlocks(e, blocks, env);
