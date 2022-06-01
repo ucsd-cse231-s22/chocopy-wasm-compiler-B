@@ -277,37 +277,70 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on . or [
       var dotOrBracket = s.substring(c.from, c.to);
-      if( dotOrBracket === "[") {
-        var start_index: Expr<any>;
-        var stop_index: Expr<any>;
-        var step: Expr<any> = {
+      if (dotOrBracket === "[") {
+        var start_index: Expr<SourceLocation> = {
+          tag: "literal",
+          value: { tag: "num", value: 0 }
+        };;
+        var stop_index: Expr<SourceLocation> = {
+          tag: "literal",
+          value: { tag: "num", value: 2147483647 }
+        };;
+        var step: Expr<SourceLocation> = {
           tag: "literal",
           value: { tag: "num", value: 1 }
         };
 
-        var indexItems = "";
+        var isSlice = false; 
+        var numItems = 0;
         c.nextSibling();
-        while (s.substring(c.from, c.to) != "]") {
-          indexItems += s.substring(c.from, c.to);
-          c.nextSibling();
+        
+        for (let i = 0; i < 3; i++) {
+          if(s.substring(c.from, c.to) != "]" && s.substring(c.from, c.to) != ":"){
+            numItems++;
+            switch (i){
+              case 0:
+                start_index = traverseExpr(c, s);
+                break;
+              case 1:
+                stop_index = traverseExpr(c, s);
+                break;
+              case 2:
+                step = traverseExpr(c, s);
+                break;
+            }
+            c.nextSibling(); 
+          }
+          
+          if (s.substring(c.from, c.to) === ":"){
+            isSlice = true;
+            c.nextSibling();
+          }
+          else if (s.substring(c.from, c.to) !== "]"){
+            throw new ParseError("Could not parse index expression at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
+          }
         }
+        
+        if(numItems === 0) {
+          throw new ParseError("Brackets empty at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
+        }
+        
         c.parent();
         c.firstChild(); // str object name
         c.nextSibling(); // "[""
         c.nextSibling(); // start index
 
-        if(indexItems.length === 0) {
-          throw new ParseError("Brackets empty at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
-        }
-
-        var sliced_indices = indexItems.split(":");
-        if(sliced_indices.length > 3){
-          throw new ParseError("More than three indices given at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
-        }
-
-        start_index = traverseExpr(c, s)
-
         c.parent();
+        if (isSlice){
+          return {
+            a: location,
+            tag: "index",
+            obj: objExpr,
+            index: start_index,
+            end: stop_index,
+            steps: step
+          }
+        }
         return {
           a: location,
           tag: "index",
