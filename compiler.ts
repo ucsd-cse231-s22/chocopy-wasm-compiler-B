@@ -35,6 +35,7 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 }
 
 export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
+  console.log(ast)
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
@@ -163,25 +164,21 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
           argCode.push("(call $set$print)");
           return argCode;
         }
-        var valStmts = expr.arguments.map(arg=>{
-          let argCode = codeGenValue(arg, env);
-          switch (arg.a[0]){
-            case NUM:
-              argCode.push("(call $print_num)");
-              break;
-            case BOOL:
-              argCode.push("(call $print_bool)");
-              break;
-            case NONE:
-              argCode.push("(call $print_none)");
-              break;
-            default:
-              throw new RunTimeError("not implemented object print")
-          }
-          argCode.push("drop");
-          return argCode;
-        }).flat();
-        return valStmts.slice(0,-1);
+        let argCode = codeGenValue(expr.arguments[0], env);
+        switch (expr.arguments[0].a[0]){
+          case NUM:
+            argCode.push("(call $print_num)");
+            break;
+          case BOOL:
+            argCode.push("(call $print_bool)");
+            break;
+          case NONE:
+            argCode.push("(call $print_none)");
+            break;
+          default:
+            throw new RunTimeError("not implemented object print")
+        }
+        return argCode;
       }
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);

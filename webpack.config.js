@@ -36,13 +36,5 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "build"),
     filename: 'webstart.js'
-  },
-  plugins: [
-
-    new HtmlWebpackPlugin({
-      hash: true,
-      template: "./index.html",
-    }),
-  ],
-  
+  }
 };

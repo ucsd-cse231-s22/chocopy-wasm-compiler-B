@@ -381,6 +381,27 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           ];  
         }
       }
+      if(e.name ==="print"){
+        if (e.arguments.length >1){
+          const printpairs = e.arguments.map(arg=>flattenExprToVal({
+            ...e,
+            arguments: [arg]
+          },blocks,env))
+          return [printpairs.map(x=>x[0]).flat(), printpairs.map(x=>x[1]).flat(),{ a:e.a, tag:"value", value:{a:e.a, tag:"none"}}]
+        }
+        if(e.arguments[0].a[0].tag==="class"){
+          return flattenExprToExpr({
+            ...e,
+            arguments:[{
+              a:[NUM, e.arguments[0].a[1]], // Notice!!! for now it is num, should be str
+              tag:"method-call",
+              obj: e.arguments[0],
+              method: "__str__",
+              arguments:[]
+            }]
+          },blocks, env);
+        }
+      }
       const callpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
       const callinits = callpairs.map(cp => cp[0]).flat();
       const callstmts = callpairs.map(cp => cp[1]).flat();
