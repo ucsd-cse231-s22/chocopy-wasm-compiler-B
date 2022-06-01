@@ -25,10 +25,10 @@ describe("List tests", () => {
     a[4]`);
 
     // 5    
-    assertFail("negative-index", `
-    a: [int] = None
-    a = [1, 2, 3]
-    a[-1]`);
+    // assertFail("negative-index", `
+    // a: [int] = None
+    // a = [1, 2, 3]
+    // a[-1]`);
 
     // 6
     assertPrint("expr-elements", `
@@ -63,8 +63,9 @@ describe("List tests", () => {
     assertTC("create-bool-list", `
     a: [bool] = None
     a = [True]`, NONE);
+});
 
-
+describe("Extra list tests", () => {
     //////// new tests ////////
 
     assertPrint("list-as-param", `
@@ -134,4 +135,94 @@ describe("List tests", () => {
     print(a[0][1])
     print(a[1][0])
     print(a[2][2])`, [`4`, `5`, `3`])
+});
+
+describe("Milestone 2 list tests", () => {
+    // 1
+    assertPrint("print-a-list", `
+    a: [int] = None
+    a = [1, 2, 3]
+    print(a)`, [`[1, 2, 3]`])
+
+    // 2
+    assertPrint("obtain-list-length", `
+    a: [int] = None
+    a = [1, 2, 3]
+    print(len(a))`, [`3`])
+
+    // 3
+    assertPrint("functional-negative-indexing", `
+    a: [int] = None
+    a = [1, 2, 3]
+    print(a[-1])`, [`3`])
+
+    // 4
+    assertPrint("list-slicing", `
+    a: [int] = None
+    b: [int] = None
+    a = [2, 4, 6, 8]
+    b = a[0:2]
+    print(b)`, [`[2, 4]`])
+
+    // 5
+    assertPrint("list-slicing-step", `
+    a: [int] = None
+    b: [int] = None
+    a = [2, 4, 6, 8]
+    b = a[0:3:2]
+    print(b)`, [`[2, 6]`])
+
+    // 6
+    assertPrint("slicing-negative-step", `
+    a: [int] = None
+    b: [int] = None
+    a = [2, 4, 6, 8]
+    b = a[::-1]
+    print(b)`, [`[8, 6, 4, 2]`])
+
+    // 7
+    assertPrint("list-append", `
+    a: [int] = None
+    a = [1, 2, 3]
+    a.append(4)
+    print(a)`, [`[1, 2, 3, 4]`])
+
+    // 8
+    assertPrint("list-copy", `
+    a: [int] = None
+    b: [int] = None
+    a = [1, 2, 3]
+    b = a.copy()
+    a.append(4)
+    print(b)`, [`[1, 2, 3]`])
+
+    // 9
+    assertPrint("list-insert", `
+    a: [int] = None
+    a = [1, 2, 3]
+    a.insert(1, 4)`, [`[1, 4, 2, 3]`])
+
+    // 10
+    assertPrint("list-pop", `
+    a: [int] = None
+    a = [1, 2, 3]
+    a.pop(-1)
+    print(a)`, [`[1, 2]`])
+
+    // 11
+    assertPrint("list-concat", `
+    a: [int] = None
+    b: [int] = None
+    c: [int] = None
+    a = [1, 2, 3]
+    b = [4, 5, 6]
+    c = a + b
+    print(c)`, [`[1, 2, 3, 4, 5, 6]`])
+
+    // 12
+    assertPrint("list-literal-concat", `
+    a: [int] = None
+    a = [1, 2, 3] + [4, 5, 6]
+    print(a)`, [`[1, 2, 3, 4, 5, 6]`])
+
 });
