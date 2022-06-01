@@ -79,9 +79,8 @@ export type TypeError = {
 export function equalType(t1: Type, t2: Type): boolean {
   return (
     t1 === t2 ||
-    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name) ||
+    (t1.tag === "class" && t2.tag === "class" && t1.name === t2.name && (t1.name !== "list" || (equalType(t1.type, t2.type) || t1.type === NONE))) ||
     (t1.tag === "set" && t2.tag == "set") ||
-    (t1.tag === "list" && t2.tag === "list" && (equalType(t1.type, t2.type) || t1.type === NONE)) ||
     (t1.tag === "generator" && t2.tag === "generator" && equalType(t1.type, t2.type))
   );
 }
@@ -94,7 +93,6 @@ export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
   return (
     equalType(t1, t2) ||
     (t1.tag === "none" && t2.tag === "class") ||
-    (t1.tag === "none" && t2.tag === "list") ||
     (t1.tag === "none" && t2.tag === "set") ||
     (t1.tag === "none" && t2.tag === "generator") ||
     // can assign generator created with comprehension to generator class object
@@ -117,6 +115,9 @@ export function isIterable(env: GlobalTypeEnv, t1: Type) : [Boolean, Type] {
     case "class":
       // check if class has next and hasnext method
       // need to talk to for-loop group
+      if (t1.name === "list") {
+        return [true, t1.type];
+      }
       var classMethods = env.classes.get(t1.name)[1];
       if(!(classMethods.has("next") && classMethods.has("hasnext"))) {
         return [false, undefined];
@@ -124,7 +125,6 @@ export function isIterable(env: GlobalTypeEnv, t1: Type) : [Boolean, Type] {
       return [true, classMethods.get("next")[1]];
     // assume more iterable types will be implemented by other groups
     case "generator":
-    case "list":
       return [true, t1.type];
     // case "tuple":
     // case "dictionary":
@@ -364,7 +364,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         // }
         throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, stmt.a);
       }
-      if (tObj.a[0].tag === "list") {
+      if (tObj.a[0].tag === "class" && tObj.a[0].name === "list") {
         if (!isAssignable(env, tVal.a[0], tObj.a[0].type)) {
           throw new TypeCheckError(`Could not assign value of type: ${tVal.a[0].tag}; List expected type: ${tObj.a[0].type.tag}`, stmt.a);
         }
@@ -561,7 +561,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "listliteral":
       if(expr.elements.length == 0) {
         const elements: Expr<[Type, SourceLocation]>[] = [];
-        return {...expr, elements, a: [{tag: "list", type: NONE}, expr.a]};
+        return {...expr, elements, a: [{tag: "class", name: "list", type: NONE}, expr.a]};
       }
 
       const elementsWithTypes: Array<Expr<[Type, SourceLocation]>> = [];
@@ -585,7 +585,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         elementsWithTypes.push(checkedI); //add expression w/ type annotation to new elements list
       }
 
-      return {...expr, elements: elementsWithTypes, a: [{tag: "list", type: proposedType}, expr.a]};
+      return {...expr, elements: elementsWithTypes, a: [{tag: "class", name: "list", type: proposedType}, expr.a]};
     case "index":
       var tObj: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.obj);
       var tIndex: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.index);
@@ -598,7 +598,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // if (equalType(tObj.a[0], CLASS("str"))) {
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
       // }
-      if (tObj.a[0].tag === "list") {
+      if (tObj.a[0].tag === "class" && tObj.a[0].name === "list") {
         if ("end" in expr){
           var tEnd: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.end);
           var tStep: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.steps);
@@ -670,7 +670,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // if (!equalType({ tag: "list", type: { tag: "none" } }, targs[0].a[0])) {
         //   throw new TypeCheckError("len() incorrect arugment type");
         // }
-        if (targs[0].a[0].tag !== "list") {
+        if (!(targs[0].a[0].tag === "class" && targs[0].a[0].name === "list")) {
           throw new TypeCheckError("len() incorrect argument type");
         }
         return { a: [NUM, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
@@ -723,8 +723,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
               if (tArgs[0].a[0].valueType !== tObj.a[0].valueType) {
                 throw new TypeCheckError("Mismatched Type when calling method", expr.a)
               }
-            } else if (tArgs[0].a[0].tag === 'list') {
-              if (tArgs[0].a[0].type !== tObj.a[0].valueType) {
+            } else if (tArgs[0].a[0].tag === "class" && tArgs[0].a[0].name === "list") {
+              if (tArgs[0].a[0] !== tObj.a[0].valueType) {
                 throw new TypeCheckError("Mismatched Type when calling method", expr.a)
               }
             } else {
@@ -803,9 +803,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       }
       const tLhs = tcExpr(env, locals, expr.lhs);
       // TODO: need to talk to the other groups
-      if (expr.type.tag == "generator"
-        || expr.type.tag == "list"
-      ) {
+      if (expr.type.tag == "generator"){
+        expr.type = { ...(expr.type), type: itemTyp };
+      }
+      if (expr.type.tag == "class" && expr.type.name === "list") {
         expr.type = { ...(expr.type), type: itemTyp };
       }
       if (expr.type.tag == "set"

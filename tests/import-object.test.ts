@@ -1,18 +1,19 @@
 import { readFileSync } from "fs";
+import { Type } from "../ast";
 import { BuiltinLib} from "../builtinlib";
 import * as RUNTIME_ERROR from '../runtime_error'
+import { BOOL, CLASS, NONE, NUM } from '../utils';
 
-enum Type { Num, Bool, None, List }
 
 function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory): string {
-  switch (typ) {
-    case Type.Num:
+  switch(typ.tag) {
+    case "number":
       return (arg as number).toString();
-    case Type.Bool:
+    case "bool":
       return (arg as boolean) ? "True" : "False";
-    case Type.None:
+    case "none":
       return "None";
-    case Type.List:
+    case "class":
       var bytes = new Uint8Array(mem.buffer, arg, 4);
       var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
       bytes = new Uint8Array(mem.buffer, arg + 4, 4);
@@ -21,7 +22,7 @@ function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory): string {
       console.log(elementArray[0]);
       var string = "[";
       for (let i = 0; i < length; i++) {
-        string += stringify(Type.Num, elementArray[i], mem);
+        string += stringify(NUM, elementArray[i], mem);
         if (i < length - 1) {
           string += ", ";
         }
@@ -48,7 +49,7 @@ export async function addLibs() {
   importObject.libset = setModule.instance.exports;
   const listModule = await WebAssembly.instantiate(listBytes, {...importObject, js: {mem: memory}});
   importObject.liblist = listModule.instance.exports;
-  importObject.imports.print_list = (arg: number) => print(Type.List, arg, memory)
+  importObject.imports.print_list = (arg: number) => print(CLASS("list", null, NUM), arg, memory)
   importObject.memory_values = memory;
   importObject.js = {memory};
   return importObject;
@@ -65,10 +66,9 @@ export const importObject : any = {
     index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
     stack_clear: () => RUNTIME_ERROR.stack_clear(),
     stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
-    print: (arg: any) => print(Type.Num, arg),
-    print_num: (arg: number) => print(Type.Num, arg),
-    print_bool: (arg: number) => print(Type.Bool, arg),
-    print_none: (arg: number) => print(Type.None, arg),
+    print_num: (arg: number) => print(NUM, arg),
+    print_bool: (arg: number) => print(BOOL, arg),
+    print_none: (arg: number) => print(NONE, arg),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
 

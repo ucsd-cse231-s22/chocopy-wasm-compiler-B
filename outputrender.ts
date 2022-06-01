@@ -1,6 +1,5 @@
 import { Type, Value } from "./ast";
 import { ObjectField } from "./repl";
-import { NUM } from "./utils";
 
 function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory) : string {
   switch(typ.tag) {
@@ -11,23 +10,24 @@ function stringify(typ: Type, arg: any, mem?: WebAssembly.Memory) : string {
     case "none":
       return "None";
     case "class":
-      return typ.name;
-    case "list":
-      var bytes = new Uint8Array(mem.buffer, arg, 4);
-      var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
-      bytes = new Uint8Array(mem.buffer, arg + 4, 4);
-      var address = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
-      var elementArray = new Int32Array(mem.buffer, address, length);
-      console.log(elementArray[0]);
-      var string = "[";
-      for (let i = 0; i < length; i++) {
-        string += stringify(NUM, elementArray[i], mem);
-        if (i < length - 1) {
-          string += ", ";
+      if (typ.name === "list") {
+        var bytes = new Uint8Array(mem.buffer, arg, 4);
+        var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
+        bytes = new Uint8Array(mem.buffer, arg + 4, 4);
+        var address = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
+        var elementArray = new Int32Array(mem.buffer, address, length);
+        console.log(elementArray[0]);
+        var string = "[";
+        for (let i = 0; i < length; i++) {
+          string += stringify(typ.type, elementArray[i], mem);
+          if (i < length - 1) {
+            string += ", ";
+          }
         }
+        string += "]";
+        return string;
       }
-      string += "]";
-      return string;
+      return typ.name;
   }
 }
 

@@ -3,6 +3,7 @@ import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { equalType } from './type-check';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -153,8 +154,8 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, blocks, env);
 
       const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(blocks, iinits, istmts, ival, ostmts, oval, env);
-
-      if (s.obj.a[0].tag === "list") {
+      
+      if (s.obj.a[0].tag === "class" && s.obj.a[0].name === "list") {
         pushStmtsToLastBlock(blocks,
           ...istmts, ...nstmts, {
             tag: "store",
@@ -427,7 +428,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           ];
         }
       }
-      if (objTyp.tag === "list") {
+      if (objTyp.tag === "class" && objTyp.name === "list") {
         const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `list$${e.method}`, arguments: [objval, ...argvals] };
         return [
           [...objinits, ...arginits],
@@ -465,7 +466,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       // if(equalType(e.a[0], CLASS("str"))){
       //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
       // }
-      if (e.obj.a[0].tag === "list") { 
+      if (e.obj.a[0].tag === "class" && e.obj.a[0].name === "list") { 
         const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(blocks, iinits, istmts, ival, ostmts, oval, env);
         return [[...oinits, ...iinits], [...istmts], {
           a: e.a,
@@ -648,7 +649,6 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       var nextValType = undefined;
       switch (e.a[0].tag) {
         case "generator":
-        case "list":
           nextValType = e.a[0].type;
           break;
         case "set":
@@ -656,6 +656,10 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
           nextValType = e.a[0].valueType;
           break;
         case "class":
+          if (e.a[0].name === "list") {
+            nextValType = e.a[0].type;
+            break;
+          }
           nextValType = NONE; // any way to access type info here?
           break;
         default:

@@ -11,7 +11,7 @@ import { renderError, renderPrint, renderResult } from "./outputrender";
 import { BasicREPL } from './repl';
 import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import { BOOL, NONE, NUM, LIST } from './utils';
+import { BOOL, CLASS, NONE, NUM } from './utils';
 
 function webStart() {
   var filecontent: string | ArrayBuffer;
@@ -36,7 +36,7 @@ function webStart() {
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
-        print_list: (arg: number) => renderPrint(LIST, arg, memory),
+        print_list: (arg: number) => renderPrint(CLASS("list", null, NUM), arg, memory),
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {})
       },
       libmemory: memoryModule.instance.exports,

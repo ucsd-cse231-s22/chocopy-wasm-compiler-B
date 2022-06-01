@@ -5,8 +5,7 @@ export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
-  | {tag: "list", type: Type}
-  | {tag: "class", name: string, genericArgs?: Array<Type>}
+  | {tag: "class", name: string, genericArgs?: Array<Type>, type?: Type}
   | {tag: "either", left: Type, right: Type }
   | {tag: "generator", type: Type } // generator type
   | {tag: "set", valueType: Type }

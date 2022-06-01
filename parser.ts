@@ -408,7 +408,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           compTyp = { tag: "generator", type: NONE };
           break;
         case "[":
-          compTyp = { tag: "list", type: NONE };
+          compTyp = { tag: "class", name: "list", type: NONE };
           break;
         case "{":
           compTyp = { tag: "set", valueType: NONE }; // need to add dictionary case in the future
@@ -792,7 +792,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
         }
         c.parent(); //up from ArrayExpression
 
-        return {tag: "list", type};
+        return { tag: "class", name: "list", type: type };
     } else {
       //object
       const genericRegex = /\[[A-Za-z]*\]/g;

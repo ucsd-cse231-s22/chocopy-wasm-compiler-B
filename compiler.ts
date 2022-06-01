@@ -1,7 +1,8 @@
 import { BinOp, SourceLocation, Type, UniOp } from "./ast";
 import { RunTimeError } from "./error_reporting";
 import { Class, Expr, FunDef, Program, Stmt, Value, VarInit } from "./ir";
-import { BOOL, NONE, NUM } from "./utils";
+import { equalType } from "./type-check";
+import { BOOL, CLASS, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -165,7 +166,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         }
         var valStmts = expr.arguments.map(arg=>{
           let argCode = codeGenValue(arg, env);
-          if (arg.a[0].tag === "list") {
+          if (arg.a[0].tag === "class" && arg.a[0].name === "list") {
             argCode.push("(call $print_list)");
           } else {
             switch (arg.a[0]){
