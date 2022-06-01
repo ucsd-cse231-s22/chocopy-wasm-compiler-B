@@ -18,11 +18,14 @@ export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Pro
     do {
         isChanged = false;
         const cfa: CFA = flow_wklist(program.inits, program.body);
+        console.log("afasfs");
+        console.log(cfa);
         printCFA(cfa);
         const optFuns = newProgram.funs.map(optimizeFuncDef);
         const optClss = newProgram.classes.map(optimizeClass);
         var optStmts = newProgram.body.map(optBasicBlock);
         optStmts = needednessDCE(optStmts);
+        optStmts = livenessDCE(optStmts);
         newProgram = {...newProgram, funs: optFuns, classes: optClss, body: optStmts};
         console.log(isChanged);
     } while(isChanged);
@@ -204,12 +207,15 @@ export function needednessAnalysis(blocks: Array<IR.BasicBlock<[Type, SourceLoca
 
 function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>> {
     const np: needed_predicate = needednessAnalysis(blocks);
+    const lp: live_predicate = liveness_analysis(blocks);
+    //console.log(np);
+    //console.log(lp);
     var blockStmts = [];
     const newBlocks = [];
     for (let block of blocks) {
         blockStmts = [];
         for (const [stmtIndex, stmt] of block.stmts.entries()) {
-            let stmtLabel = block.label+stmtIndex.toString();
+            let stmtLabel = block.label+stmtIndex.toString();           
             if (stmt.tag === "assign" && !np.get(stmtLabel).has(stmt.name)) {
                 let isFound = false;
                 for (let valueSet of np.values()) {
@@ -231,6 +237,146 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
         newBlocks.push(newBlock);
     }
     return newBlocks;
+}
+export function livenessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>>{
+    const lp: live_predicate = liveness_analysis(blocks);
+    var blockStmts = [];
+    const newBlocks = [];
+    for (let block of blocks) {
+        blockStmts = [];
+        for (const [stmtIndex, stmt] of block.stmts.entries()) {
+            let stmtLabel = block.label+stmtIndex.toString();
+            if (stmt.tag === "assign") {                
+                for (let key of lp.keys()){
+                    // no var is found in successor line
+                    if (key === stmtLabel) {
+                        isChanged = true;
+                        break;
+                    } else {
+                        let value = lp.get(key);
+                        if (value.has(stmt.name)) {
+                            blockStmts.push(stmt);
+                            break;
+                        } 
+                    }
+                }
+            } else {
+                blockStmts.push(stmt);
+            }
+        }
+        let newBlock = {...block, stmts:blockStmts};
+        newBlocks.push(newBlock);
+    }
+    return newBlocks;
+}
+
+export function constantPropagation(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, cfa:CFA, program: IR.Program<[Type, SourceLocation]>): Array<IR.BasicBlock<[Type, SourceLocation]>>{
+    var blockStmts = [];
+    const newBlocks = [];
+    for (let block of blocks) {
+        blockStmts = [];
+        for (const [stmtIndex, stmt] of block.stmts.entries()) {
+            //let stmtLabel = block.label+stmtIndex.toString();
+            if (stmt.tag === "assign") {
+                 
+                if (stmt.value.tag === "value") {
+                    if(stmt.value.value.tag === "id") {
+                        if (findReachingDef(cfa, stmt.value.value.name, block.label)){
+                            for(let init of program.inits) {
+                                if (init.name === stmt.value.value.name) {
+                                    let new_val = {tag: "wasmint", value: init.value, a: stmt.value.value.a};
+                                    let new_expr = {tag: "value", value : new_val, a: stmt.value.a};
+                                    let new_stmt = {tag: "assign", name: stmt.name, value: new_expr,a:stmt.a};
+                                    blockStmts.push(new_stmt);
+                                    break;
+                                }
+                            }
+                        } else{
+                            blockStmts.push(stmt);
+                        }
+                    } else {
+                        blockStmts.push(stmt);
+                    }
+                } else if (stmt.value.tag === "binop") {
+                    
+                    if(stmt.value.left.tag === "id") {
+                        if (findReachingDef(cfa, stmt.value.left.name, block.label)){
+                            
+                            for(let init of program.inits) {
+                                //find left
+                                if (init.name === stmt.value.left.name) {
+                                    if (stmt.value.right.tag === "id") {
+                                        if (findReachingDef(cfa, stmt.value.right.name, block.label)){
+                                            //find right
+                                            for(let init of program.inits) {
+                                                if (init.name === stmt.value.right.name) {
+                                                    let new_val_r = {tag: "wasmint", value: init.value, a: stmt.value.right.a};
+                                                    let new_val_l = {tag: "wasmint", value: init.value, a: stmt.value.left.a};
+                                                    let new_expr = {tag: "value", left: new_val_l,right : new_val_r, a: stmt.value.a};
+                                                    let new_stmt = {tag: "assign", name: stmt.name, value: new_expr,a:stmt.a};
+                                                    blockStmts.push(new_stmt);
+                                                    break;
+                                                } 
+                                            }
+                                        }
+                                    }
+
+                                    let new_val = {tag: "wasmint", value: init.value, a: stmt.value.left.a};
+                                    let new_expr = {tag: "value", left: new_val,right : stmt.value.right, a: stmt.value.a};
+                                    let new_stmt = {tag: "assign", name: stmt.name, value: new_expr,a:stmt.a};
+                                    blockStmts.push(new_stmt);
+                                    break;
+                                }
+                            }
+                        } else{
+                            blockStmts.push(stmt);
+                        }
+                    } else if (stmt.value.right.tag === "id") {
+                        if (findReachingDef(cfa, stmt.value.right.name, block.label)){
+                            for(let init of program.inits) {
+                                if (init.name === stmt.value.right.name) {
+                                    let new_val = {tag: "wasmint", value: init.value, a: stmt.value.right.a};
+                                    let new_expr = {tag: "value", left: stmt.value.left,right : new_val, a: stmt.value.a};
+                                    let new_stmt = {tag: "assign", name: stmt.name, value: new_expr,a:stmt.a};
+                                    blockStmts.push(new_stmt);
+                                    break;
+                                }
+                            }
+                        } else{
+                            blockStmts.push(stmt);
+                        }
+                    }else {
+                        blockStmts.push(stmt);
+                    }
+                }  else {
+                    blockStmts.push(stmt);
+                }
+            } else {
+                blockStmts.push(stmt);
+            }
+        }
+        let newBlock = {...block, stmts:blockStmts};
+        newBlocks.push(newBlock);
+    }
+    return newBlocks;
+}
+export function findReachingDef(cfa: CFA, id : string, label:string): boolean{
+    let isFound = false;
+    for (let l of cfa) {
+        if (l.line.block === label) {
+            l.varant.forEach((val, key) => {
+                if (key === id) {
+                    val.forEach( line => {
+                        if(line.block === "$varInit"){
+                            isFound = true;
+                
+                        }
+                    })
+                }
+            })
+        } 
+    }
+    return isFound;
 }
 
 function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock<[Type, SourceLocation]> {
