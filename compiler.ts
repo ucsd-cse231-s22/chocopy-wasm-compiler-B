@@ -35,7 +35,6 @@ export function makeLocals(locals: Set<string>) : Array<string> {
 }
 
 export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : CompileResult {
-  console.log(ast)
   const withDefines = env;
 
   const definedVars : Set<string> = new Set(); //getLocals(ast);
@@ -165,18 +164,18 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
           return argCode;
         }
         let argCode = codeGenValue(expr.arguments[0], env);
-        switch (expr.arguments[0].a[0]){
-          case NUM:
+        switch (expr.arguments[0].a[0].tag){
+          case "number":
             argCode.push("(call $print_num)");
             break;
-          case BOOL:
+          case "bool":
             argCode.push("(call $print_bool)");
             break;
-          case NONE:
+          case "none":
             argCode.push("(call $print_none)");
             break;
           default:
-            throw new RunTimeError("not implemented object print")
+            throw new RunTimeError(` ${expr.arguments[0].a[0].tag} print not implemented yet`)
         }
         return argCode;
       }

@@ -604,9 +604,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "call":
       if (expr.name === "print") {
         if (expr.arguments.length===0)
-          throw new TypeCheckError("print needs at least 1 argument");
-        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        return {...expr, a: [NONE, expr.a], arguments: tArgs};
+          throw new TypeCheckError("print needs at least 1 argument", expr.a);
+        let args = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        args.forEach(arg=> {
+          if(arg.a[0].tag==="class" && ! env.classes.get(arg.a[0].name)[1].has('__str__'))
+            throw new TypeCheckError("To print an object, you need to first define __str__ method", expr.a);
+        })
+        return {...expr, a: [NONE, expr.a], arguments: args};
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor

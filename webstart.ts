@@ -47,10 +47,6 @@ function webStart() {
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory, //it is kind of pointer pointing to heap
