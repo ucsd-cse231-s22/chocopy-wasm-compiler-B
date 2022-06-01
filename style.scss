@@ -13,20 +13,26 @@
 .isa_success {
     color: #4F8A10;
     background-color: #DFF2BF;
-}
-.isa_warning {
-    color: #9F6000;
-    background-color: #FEEFB3;
-}
-.isa_error {
-    color: #3e26b6c5;
-    background-color: #4528ea;
     border-radius: 3px; 
     -moz-border-radius: 3px; 
     -webkit-border-radius: 3px; 
     border: 1px solid #b2b6bb;
     box-sizing:border-box;
 }
+.isa_error {
+    color: #f2f2f2;
+    background-color: #f81707;
+}
+
+// .isa_error {
+//     color: #3e26b6c5;
+//     background-color: #4528ea;
+//     border-radius: 3px; 
+//     -moz-border-radius: 3px; 
+//     -webkit-border-radius: 3px; 
+//     border: 1px solid #b2b6bb;
+//     box-sizing:border-box;
+// }
 
 .rounded{
     border-radius: 3px; 
@@ -265,8 +271,9 @@ html{
     // line-height: 1.2em;
     // font-size: 1.2em;
     // margin-right: 1.5em;
-    color: #48c4f5;
 }
+
+
 
 .console-prompt{
     color: #008AFF;
@@ -274,6 +281,7 @@ html{
     // line-height: 1.2em;
     // font-size: 1.2em;
 }
+
 
 .repl-code {
     text-align: left;
@@ -317,14 +325,48 @@ html{
     white-space: break-spaces;
     margin: 10px 10px;
     padding:6px;
-    color: #041b22;
-    background-color: #FFD2D2;
+    color: #f6efef;
+    background-color: #67b37c;
     border-radius: 3px; 
     -moz-border-radius: 3px; 
     -webkit-border-radius: 3px; 
     border: 1px solid #b2b6bb;
     box-sizing:border-box;
 }
+
+// .output err {
+//     max-width: 100%;
+//     line-break: anywhere;
+//     word-wrap: break-word;
+//     white-space: break-spaces;
+//     margin: 10px 10px;
+//     padding:6px;
+//     color: #010405;
+//     background-color: #d71212;
+//     border-radius: 3px; 
+//     -moz-border-radius: 3px; 
+//     -webkit-border-radius: 3px; 
+//     border: 1px solid #b2b6bb;
+//     box-sizing:border-box;
+// }
+
+
+.output .isa_error {
+    max-width: 100%;
+    line-break: anywhere;
+    word-wrap: break-word;
+    white-space: break-spaces;
+    margin: 10px 10px;
+    padding:6px;
+    color: #010405;
+    background-color: #da4b4b;
+    border-radius: 3px; 
+    -moz-border-radius: 3px; 
+    -webkit-border-radius: 3px; 
+    border: 1px solid #b2b6bb;
+    box-sizing:border-box;
+}
+
 
 // .output pre {
 //     max-width: 100%;
