@@ -599,7 +599,15 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
       // }
       if (tObj.a[0].tag === "list") {
-        return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
+        if ("end" in expr){
+          var tEnd: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.end);
+          var tStep: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.steps);
+          if (tEnd.a[0].tag !== "number" || tStep.a[0].tag !== "number"){
+            throw new TypeCheckError(`Index is of non-integer type`, tObj.a[1]);
+          }
+          return { a: [tObj.a[0].type, expr.a], tag: "index", obj: tObj, index: tIndex, end: tEnd, steps: tStep };
+        }
+        return { a: [tObj.a[0].type, expr.a], tag: "index", obj: tObj, index: tIndex };
       }
       // if (tObj.a[0].tag === "tuple") {
       //   ...
