@@ -297,6 +297,9 @@ function valInline(val: ir.Value<[Type, SourceLocation]>): string {
 async function debug(optAst: boolean = false, optIR: boolean = false) {
   var source = 
 `
+p: int = 1
+x: int = 2
+z: int = 3
 def f() -> int:
   p:int = 1
   x:int = 5
@@ -306,6 +309,12 @@ def f() -> int:
     z = z + 1
     x = x - 1
   return p
+
+while x > 0:
+  p = p * x
+  z = z + 1
+  x = x - 1
+print(p)
 `
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2));
@@ -323,12 +332,15 @@ def f() -> int:
   console.log(JSON.stringify(irprogram, (k, v) => typeof v === "bigint" ? v.toString(): v, 2));
   printProgIR(irprogram);
 
-  const lp: live_predicate = liveness_analysis(irprogram.body);
+  const lp: live_predicate = liveness_analysis(irprogram.funs[0].body);
   const np: needed_predicate = needednessAnalysis(irprogram.funs[0].body);
   console.log("Liveness Analysis");
   console.log(lp);
-  console.log("Needed Analysis");
+  console.log("Needed Analysis, fuction body");
   console.log(np);
+  console.log("Needed Analysis, main body");
+  const np_main: needed_predicate = needednessAnalysis(irprogram.body);
+  console.log(np_main);
   // const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
   // const dot = dotProg(irprogram);
   // await render(dot);

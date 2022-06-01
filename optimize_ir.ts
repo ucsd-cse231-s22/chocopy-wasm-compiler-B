@@ -172,6 +172,7 @@ function getNeededStmt(stmt: IR.Stmt<[Type, SourceLocation]>, nextLineNec: Set<s
             }
             return jmpNeeded;
         case "pass":
+            return nextLineNec;
         default:
             return new Set();
     }
@@ -220,22 +221,27 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
         blockStmts = [];
         for (const [stmtIndex, stmt] of block.stmts.entries()) {
             let stmtLabel = block.label+stmtIndex.toString();           
-            if (stmt.tag === "assign" && stmt.value.tag != "call" && !np.get(stmtLabel).has(stmt.name)) {
-                let isFound = false;
-                for (let valueSet of np.values()) {
-                    if (valueSet.has(stmt.name)) {
-                        isFound = true;
-                        break;
-                    }
-                }
-                if (isFound) {
-                    blockStmts.push(stmt);
-                } else {
-                    isChanged = true;
-                }
-            } else {
-                blockStmts.push(stmt);
+            // if needed is empty OR not present
+            if (!np.has(stmtLabel) || np.get(stmtLabel).size == 0) {
+                continue;
             }
+            blockStmts.push(stmt);
+            // if (stmt.tag === "assign" && stmt.value.tag != "call" && !np.get(stmtLabel).has(stmt.name)) {
+            //     let isFound = false;
+            //     for (let valueSet of np.values()) {
+            //         if (valueSet.has(stmt.name)) {
+            //             isFound = true;
+            //             break;
+            //         }
+            //     }
+            //     if (isFound) {
+            //         blockStmts.push(stmt);
+            //     } else {
+            //         isChanged = true;
+            //     }
+            // } else {
+            //     blockStmts.push(stmt);
+            // }
         }
         let newBlock = {...block, stmts:blockStmts};
         newBlocks.push(newBlock);
