@@ -35,3 +35,6 @@ export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export const TYPE_VAR : Type = {tag: "type-var"};
 export function CLASS(name : string, genericArgs: Array<Type> = null) : Type {return {tag: "class", name, genericArgs}};
+
+// mod$var -> var; basically give rest of the string after the first '$'
+export function unmangle(s:string) {return s.slice(s.indexOf('$')+1, s.length)}

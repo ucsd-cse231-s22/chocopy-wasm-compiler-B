@@ -1,7 +1,7 @@
 
 import { table } from 'console';
 import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Class, SourceLocation, DestructureLHS } from './ast';
-import { NUM, BOOL, NONE, CLASS } from './utils';
+import { NUM, BOOL, NONE, CLASS, unmangle} from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
 import { BuiltinLib } from './builtinlib';
@@ -267,8 +267,8 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       } else {
         throw new TypeCheckError("Unbound id: " + stmt.name, stmt.a);
       }
-      console.log("nameTyp: ", nameTyp);
-      console.log("left: ", tValExpr.a[0] );
+      // console.log("nameTyp: ", nameTyp);
+      // console.log("left: ", tValExpr.a[0] );
       if(!isAssignable(env, tValExpr.a[0], nameTyp)) 
         throw new TypeCheckError("`" + tValExpr.a[0].tag + "` cannot be assigned to `" + nameTyp.tag + "` type", stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
@@ -631,7 +631,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else if(env.functions.has(expr.name)) {
         const [argTypes, retType] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        console.log(tArgs);
+        // console.log(tArgs);
 
         if(argTypes.length === expr.arguments.length &&
            tArgs.every((tArg, i) => isAssignable(env, tArg.a[0], argTypes[i]))) {
@@ -647,7 +647,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           throw new Error("Set constructor can only accept bracket variable");
         }
         var initial_value = tcExpr(env, locals, expr.arguments[0]);
-        console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
+        // console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
         return {...expr, a: initial_value.a, arguments: [initial_value]};
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);

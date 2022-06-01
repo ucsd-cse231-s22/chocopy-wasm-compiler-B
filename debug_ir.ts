@@ -335,7 +335,7 @@ async function debug(optAst: boolean = false, optIR: boolean = false) {
 g: int = 0
 g = 1 + 2
 `
-  const parsed = parse(source);
+  const parsed = parse({main:source});
   // console.log(JSON.stringify(parsed, null, 2));
   const repl = new BasicREPL(await addLibs());
   // const program_type = repl.tc(source);

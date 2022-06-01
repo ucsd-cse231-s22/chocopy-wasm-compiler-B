@@ -65,20 +65,17 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "import", mod: string, names: Array<ImportName> | "*" }
   | {  a?: A, tag: "for", vars: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>>, elseBody?: Array<Stmt<A>> }
   | {  a?: A, tag: "break", loopCounter?: number }
   | {  a?: A, tag: "continue", loopCounter?: number }
-
-export type ImportName =
-  // from mod import x as y --> name=x, alias=y
-  { tag: "import-name", name: string, alias: string }
 
 export type Expr<A> =
     {  a?: A, tag: "literal", value: Literal<A> }
   | {  a?: A, tag: "id", name: string}
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
+  | {  a?: A, tag: "builtin1", name: string, arg: Expr<A> }
+  | {  a?: A, tag: "builtin2", name: string, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }

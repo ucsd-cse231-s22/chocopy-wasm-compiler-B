@@ -9,7 +9,13 @@ import { ParseError} from "./error_reporting";
 export let currentModule : string = ""
 export let modulesContext : ModulesContext = {
 }
-
+export let noMangle : {[name:string]: string} = { // don't name mangle these, use this map
+  "range" : "range",
+  "Range" : "Range",
+  "TypeVar" : "TypeVar",
+  "set" : "set",
+  "Set" : "Set"
+}
 export let localCtx :string[] = [] // variable names available locally
 export let curCtx :'global'|'func'|'class' = 'global' // current scope
 
@@ -77,8 +83,10 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       }      
     case "VariableName":
       name = s.substring(c.from, c.to)
-      // check if name is there in module.nsMap & not in localCtx
-      if(module.nsMap[name] && !localCtx.includes(name)){
+      if(name in noMangle){ // a reserved keyword or something
+        name = noMangle[name];
+      } else if(module.nsMap[name] && !localCtx.includes(name)){
+        // check if name is there in module.nsMap & not in localCtx
         name = module.nsMap[name]
       }
       return {
@@ -151,7 +159,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         throw new Error("Parse error after " + s.substring(c.from, c.to));
       }
 
-      console.log(elements)
+      // console.log(elements)
 
       c.parent(); //up from ArrayExpression
       return { 
@@ -321,7 +329,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
               a: location,
               tag: "id",
               //eg. import lib as x; x.y -> mod$y
-              name: `${module.modMap[objExpr.name]}$${propName}`
+              name: noMangle[name] || `${module.modMap[objExpr.name]}$${propName}`
             }
       }
       return {
@@ -740,7 +748,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
         return {tag: "list", type};
 
       } else if(c.name === 'VariableName'){ // classType
-          return CLASS(module.nsMap[name]); // get the mangled name
+          return CLASS(noMangle[name] || module.nsMap[name]); // get the mangled name
 
       } else if(c.name === 'MemberExpression' && s.substring(c.from, c.from+7) !== 'Generic') { // module.classType
         let exp = traverseExpr(c, s) // will return the mangled name
@@ -789,7 +797,7 @@ export function traverseVarInit(c : TreeCursor, s : string) : VarInit<SourceLoca
   var location = getSourceLocation(c, s);
   c.firstChild(); // go to name
   var name = s.substring(c.from, c.to);
-  name = curCtx === 'global'? `${currentModule}$${name}` : name;
+  name = curCtx === 'global'? (noMangle[name] || `${currentModule}$${name}`) : name;
   c.nextSibling(); // go to : type
 
   if(c.type.name !== "TypeDef") {
@@ -814,7 +822,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
   c.firstChild();  // Focus on def
   c.nextSibling(); // Focus on name of function
   var name = s.substring(c.from, c.to)
-  name = curCtx == 'global'? `${currentModule}$${name}`: name;
+  name = curCtx == 'global'? (noMangle[name] || `${currentModule}$${name}`): name;
   c.nextSibling(); // Focus on ParamList
   var parameters = traverseParameters(c, s)
   c.nextSibling(); // Focus on Body or TypeDef
@@ -888,7 +896,7 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.firstChild();
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
-  let name = curCtx === 'global'? `${currentModule}$${className}`:className;
+  let name = curCtx === 'global'? (noMangle[className] || `${currentModule}$${className}`):className;
   let oldCtx = curCtx
   curCtx = 'class'
   c.nextSibling(); // Focus on arglist/superclass
