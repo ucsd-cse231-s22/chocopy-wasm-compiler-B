@@ -1,7 +1,7 @@
 import {BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { NUM, BOOL, NONE } from './utils';
-import { jsopen, jsclose, jsread, jswrite, fileObjectDefinition } from './io';
+import { jsopen, jsclose, jsread, jswrite, jslength, fileObjectDefinition } from './io';
 
 declare global {
   interface Window { 
@@ -73,8 +73,9 @@ function webStart() {
         pow: Math.pow,
         jsopen: (arg: number) => jsopen(arg),
         jsclose: (arg: number) => jsclose(arg),
-        jsread: (arg: number) => jsread(arg),
-        jswrite: (fd : number, content : number) => jswrite(fd, content)
+        jsread: (fd: number, ptr: number) => jsread(fd, ptr),
+        jswrite: (fd : number, content : number, ptr: number) => jswrite(fd, content, ptr),
+        jslength: (dummy: number) => jslength(dummy)
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,

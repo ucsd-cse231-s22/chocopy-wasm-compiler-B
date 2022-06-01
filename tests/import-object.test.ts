@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { jsopen, jsclose, jsread, jswrite } from '../io';
+import { jsopen, jsclose, jsread, jswrite, jslength } from '../io';
 enum Type { Num, Bool, None }
 
 function stringify(typ: Type, arg: any): string {
@@ -52,8 +52,9 @@ export const importObject : any = {
     pow: Math.pow,
     jsopen: (arg: number) => jsopen(arg),
     jsclose: (arg: number) => jsclose(arg),
-    jsread: (arg: number) => jsread(arg),
-    jswrite: (fd : number, content : number) => jswrite(fd, content)
+    jsread: (fd: number, ptr: number) => jsread(fd, ptr),
+    jswrite: (fd : number, content : number, ptr: number) => jswrite(fd, content, ptr),
+    jslength: (dummy: number) => jslength(dummy)
   },
 
   output: "",

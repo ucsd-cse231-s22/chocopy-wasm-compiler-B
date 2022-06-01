@@ -26,8 +26,9 @@ defaultGlobalFunctions.set("pow", [[NUM, NUM], NUM]);
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("jsopen", [[NUM], NUM]);
 defaultGlobalFunctions.set("jsclose", [[NUM], NUM]);
-defaultGlobalFunctions.set("jsread", [[NUM], NUM]);
-defaultGlobalFunctions.set("jswrite", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("jsread", [[NUM, NUM], NUM]);
+defaultGlobalFunctions.set("jswrite", [[NUM, NUM, NUM], NUM]);
+defaultGlobalFunctions.set("jslength", [[NUM], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),

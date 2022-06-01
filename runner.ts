@@ -116,6 +116,7 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $jsclose (import "imports" "jsclose") (param i32) (result i32))
     (func $jsread (import "imports" "jsread") (param i32) (result i32))
     (func $jswrite (import "imports" "jswrite") (param i32) (param i32) (result i32))
+    (func $jslength (import "imports" "jslength") (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
