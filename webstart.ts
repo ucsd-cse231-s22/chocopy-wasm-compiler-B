@@ -181,13 +181,6 @@ function webStart() {
         console.log("run failed", e)});;
     });
 
-    
-    document.getElementById("reset").addEventListener("click", function (e) {
-      editor.refresh();
-      editor.setValue("");
-      console.log("editor reset")
-    });
-
     document.getElementById("refresh").addEventListener("click", function (e) {
       var text = editor.getValue();
       editor.refresh();
@@ -222,10 +215,6 @@ function webStart() {
       var blob = new Blob([source], { type: "text/plain;charset=utf-8" });
       FileSaver.saveAs(blob, title);
     });
-
-    document.getElementById("debug_button").addEventListener("click", e =>{
-      printGlobalVariable(repl);
-    })
 
     const textarea = document.getElementById("user-code") as HTMLTextAreaElement;
     const editor = CodeMirror.fromTextArea(textarea, {
