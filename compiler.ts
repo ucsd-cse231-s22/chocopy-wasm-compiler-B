@@ -200,7 +200,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
               break;
             case NONE:
               argCode.push("(call $print_none)");
-              break;
+              break;  
             default:
               throw new RunTimeError("not implemented object print")
           }

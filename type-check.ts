@@ -274,6 +274,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
 export function tcSign(env: GlobalTypeEnv, clsName: string) {
   const [supers, fields, methods] = env.classes.get(clsName);
   methods.forEach((sign, name) => {
+    if(name!=='__init__') {
     var [argTyp, retTyp] = sign;
     argTyp = argTyp.slice(1,argTyp.length);
     supers.forEach(sup=> {
@@ -289,7 +290,8 @@ export function tcSign(env: GlobalTypeEnv, clsName: string) {
         }
       }
     });
-  });
+   }
+});
   
 }
 
@@ -338,7 +340,8 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
       }
     });
   });
-  
+  // To be used for __init__ inheritance
+  const initMethod = cls.methods.find(method => method.name === "__init__")
   // Update env with super class field and methods
   cls.supers.forEach(sup=>{
     const supClass = env.classMap.get(sup);
@@ -354,9 +357,15 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
       if(!currMethod.has(methodName)){
         currMethod.set(methodName,supMethodType);
       }
-
-    })
-  }) 
+      if(methodName === '__init__' && initMethod.body.length === 0 && f.body.length !==0){
+        currMethod.set(methodName, supMethodType);
+        let initRef = cls.methods.find(method => method.name === "__init__")
+        initRef.body = f.body;
+        initRef.parameters = initRef.parameters.concat(f.parameters.slice(1, f.parameters.length))
+      }
+    }
+    )
+  })
   const tFields = cls.fields.map(field => tcInit(env, field));
   
   // Populate tFields with super class Fields as well
@@ -388,8 +397,10 @@ export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class
   // To check if we have method overwritten with different signature in the derived class
   tcSign(env, cls.name);
   
+  // 
   const init = cls.methods.find(method => method.name === "__init__") // we'll always find __init__
-  if (init.parameters.length !== 1 ||
+  
+  if (// init.parameters.length !== 1 ||
     init.parameters[0].name !== "self" ||
     !equalType(init.parameters[0].type, CLASS(cls.name)) ||
     init.ret !== NONE)
@@ -795,7 +806,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
-        const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
+        const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name, parameters: tArgs };
 
         //To support range class for now
         if (expr.name === "range") {
@@ -838,7 +850,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
     case "lookup":
-      var tObj = tcExpr(env, locals, expr.obj);
+      var tObj = tcExpr(env, locals, expr.obj); // super(B) -> call
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
           const [_,fields] = env.classes.get(tObj.a[0].name);

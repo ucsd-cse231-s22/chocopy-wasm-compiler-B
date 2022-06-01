@@ -571,8 +571,34 @@ b = B() # this calls B's __init__ and prints True
 print(b.x) # this prints 0
 b = B(6) # this would be a type error because the only __init__ method B has is the no-arg one
 
-c = C() # this would be a type error because the __init__ used is A's, which requires an argument
+# c = C() # this would be a type error because the __init__ used is A's, which requires an argument
 # instead...
 c = C(4)
 print(c.x) # this prints 4
+# print: 5 True 0 4
+``` 
+
+``` python
+class A(object):
+  x : int = 0
+  def __init__(self: A, x: int):
+    self.x = x
+class B(A):
+  y : bool = False
+a : B = None
+a = B(3)
+print(a.x) # print 3
+```
+```python
+class A(object):
+    x:int = 0
+    def __init__(self:A,arg:int):
+        self.x = arg
+    def show(self:A):
+        print(self.x)
+class B(A):
+    def __init__(self:B):
+        pass
+    def show(self:B, superObj: A):
+        super().show()
 ```

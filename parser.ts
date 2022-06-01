@@ -946,12 +946,12 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
     if(generics.length > 0) {
       const genericTypes = generics.map(g => CLASS(g));
       methods.push({ a: location, name: "__init__", parameters: 
-        [{ name: "self", type: CLASS(className, genericTypes) }], ret: NONE, inits: [], body: [] 
+        [{ name: "self", type: CLASS(className, genericTypes) }], ret: NONE, inits: [], body: []
       });
     } else {
       methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
     }
-  }
+  } 
   return {
     a: location,
     name: className,
