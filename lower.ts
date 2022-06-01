@@ -152,11 +152,11 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       const [iinits, istmts, ival] = flattenExprToVal(s.index, blocks, env);
       var [ninits, nstmts, nval] = flattenExprToVal(s.value, blocks, env);
 
-      const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(iinits, istmts, ival, oval);
+      const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(blocks, iinits, istmts, ival, ostmts, oval, env);
 
       if (s.obj.a[0].tag === "list") {
         pushStmtsToLastBlock(blocks,
-          ...ostmts, ...istmts, ...nstmts, {
+          ...istmts, ...nstmts, {
             tag: "store",
             a: s.a,
             start: offsetValues[0],
@@ -458,8 +458,8 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
       // }
       if (e.obj.a[0].tag === "list") { 
-        const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(iinits, istmts, ival, oval);
-        return [[...oinits, ...iinits], [...ostmts, ...istmts], {
+        const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(blocks, iinits, istmts, ival, ostmts, oval, env);
+        return [[...oinits, ...iinits], [...istmts], {
           a: e.a,
           tag: "load",
           start: offsetValues[0],
@@ -746,8 +746,14 @@ function flattenExprToVal(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<IR
 }
 
 
-function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], istmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[], ival: IR.Value<[AST.Type, AST.SourceLocation]>, oval: IR.Value<[AST.Type, AST.SourceLocation]>) : IR.Value<[AST.Type, AST.SourceLocation]>[] {
-  // Check index is in bounds
+function listIndexOffsets(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, 
+  iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
+  istmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[], 
+  ival: IR.Value<[AST.Type, AST.SourceLocation]>, 
+  ostmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[],
+  oval: IR.Value<[AST.Type, AST.SourceLocation]>, 
+  env: GlobalEnv) : IR.Value<[AST.Type, AST.SourceLocation]>[] {
+  // Save index and length in temp variables
   var listLength = generateName("listlength");
   var setLength : IR.Stmt<[Type, SourceLocation]> = {
     tag: "assign",
@@ -759,8 +765,59 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
       start: oval,
       offset: { tag: "wasmint", value: 0 }} 
   };
-  iinits.push({ a: ival.a, name: listLength, type: {tag: "number"}, value: { tag: "none" } })
-  istmts.push(setLength);
+  iinits.push({ a: ival.a, name: listLength, type: { tag: "number" }, value: { tag: "none" } })
+  var listIndex = generateName("listIndex");
+  var setIndex : IR.Stmt<[Type, SourceLocation]> = {
+    tag: "assign",
+    a: ival.a,
+    name: listIndex,
+    value: { a: ival.a, tag: "value", value: ival }
+  };
+  iinits.push({ a: ival.a, name: listIndex, type: { tag: "number" }, value: { tag: "none" } })
+
+  // Check if index is negative, if so, convert to positive
+  var thenLbl = generateName("$then")
+  var elseLbl = generateName("$else")
+  var endLbl = generateName("$end")
+  var endjmp : IR.Stmt<[Type, SourceLocation]> = { a:ival.a, tag: "jmp", lbl: endLbl };
+  var negativeCheck = generateName("negativeCheck");
+  var isNegative : IR.Stmt<[Type, SourceLocation]> = {
+    tag: "assign",
+    a: ival.a,
+    name: negativeCheck,
+    value: {
+      a: ival.a,
+      tag: "binop",
+      op: AST.BinOp.Lt,
+      left: ival,
+      right: { tag: "wasmint", value: 0 }
+    } 
+  };
+  iinits.push({ a: ival.a, name: negativeCheck, type: { tag: "bool" }, value: { tag: "none" } });
+  var cstmts = [...ostmts, ...istmts, setLength, setIndex, isNegative];
+  istmts.length = 0;
+  var condjmp : IR.Stmt<[Type, SourceLocation]> = { a:ival.a, tag: "ifjmp", cond: { tag: "id", name: negativeCheck, a: ival.a }, thn: thenLbl, els: elseLbl };
+  pushStmtsToLastBlock(blocks, ...cstmts, condjmp);
+  blocks.push({ a: ival.a, label: thenLbl, stmts: [] });
+  var flipIndex : AST.Stmt<[Type, SourceLocation]> = {
+    tag: "assign",
+    a: ival.a,
+    name: listIndex,
+    value: {
+      a: ival.a,
+      tag: "binop",
+      op: AST.BinOp.Plus,
+      left: { tag: "id", name: listLength, a: ival.a },
+      right: { tag: "id", name: listIndex, a: ival.a }
+    } 
+  };
+  flattenStmts([flipIndex], blocks, env);
+  pushStmtsToLastBlock(blocks, endjmp);
+  blocks.push({ a: ival.a, label: elseLbl, stmts: [] });
+  pushStmtsToLastBlock(blocks, endjmp);
+  blocks.push({ a: ival.a, label: endLbl, stmts: [] });
+
+  // Check index is in bounds
   const checkIndex: IR.Stmt<[Type, SourceLocation]> = { 
     a: ival.a, 
     tag: "expr", 
@@ -770,7 +827,7 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
       name: `index_out_of_bounds`, 
       arguments: [
         { tag: "id", name: listLength, a: ival.a }, 
-        ival, 
+        ival,
         { tag: "wasmint", value: ival.a[1].line }, 
         { tag: "wasmint", value: ival.a[1].column }
       ]
@@ -794,7 +851,7 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
   };
   istmts.push(getAddr);
   const elAddrVal: IR.Value<[Type, SourceLocation]> = { a: ival.a, tag: "id", name: elAddrName };
-  return [elAddrVal, ival];
+  return [elAddrVal, { tag: "id", name: listIndex, a: ival.a }];
 }
 
 function pushStmtsToLastBlock(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, ...stmts: Array<IR.Stmt<[Type, SourceLocation]>>) {

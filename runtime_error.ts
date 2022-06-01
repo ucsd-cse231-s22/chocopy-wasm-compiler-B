@@ -20,7 +20,12 @@ export function division_by_zero(arg: number, line: number, col: number) : any {
 }
 
 export function index_out_of_bounds(length: any, index: any, line: number, col: number): any {
-  if (index < 0 || index >= length)
+  if (index < 0) {
+    if (index + length < 0) 
+      throw new RunTimeError(`RUNTIME ERROR: Index ${index} out of bounds in line ${line} at column ${col}\n${splitString()[line-1].trim()}`);
+    return index + length;
+  }
+  if (index >= length)
     throw new RunTimeError(`RUNTIME ERROR: Index ${index} out of bounds in line ${line} at column ${col}\n${splitString()[line-1].trim()}`);
   return index;
 }
