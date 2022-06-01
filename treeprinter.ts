@@ -1,4 +1,4 @@
-import { TreeCursor } from "@lezer/common";
+import { TreeCursor } from "lezer-tree";
 
 export function stringifyTree(t: TreeCursor, source: string, d: number): string {
     var str = "";

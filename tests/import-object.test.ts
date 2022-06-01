@@ -25,10 +25,13 @@ export async function addLibs() {
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
   const bytes = readFileSync("build/memory.wasm");
   const setBytes = readFileSync("build/sets.wasm");
+  const listBytes = readFileSync("build/list.wasm");
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports;
   const setModule = await WebAssembly.instantiate(setBytes, {...importObject, js: { mem: memory } })
   importObject.libset = setModule.instance.exports;
+  const listModule = await WebAssembly.instantiate(listBytes, {...importObject, js: {mem: memory}});
+  importObject.liblist = listModule.instance.exports;
   importObject.memory_values = memory;
   importObject.js = {memory};
   return importObject;

@@ -13,7 +13,12 @@ import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
 import { BOOL, NONE, NUM } from './utils';
 
-
+function index_out_of_bounds(length: any, index: any): any {
+  if (index < 0 || index >= length)
+    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
+  
+  return index;
+}
 function webStart() {
   var filecontent: string | ArrayBuffer;
   document.addEventListener("DOMContentLoaded", async function() {
@@ -25,7 +30,8 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-
+    
+    var load = memoryModule.instance.exports.load;
     var importObject:any = {
       imports: {
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
@@ -54,6 +60,14 @@ function webStart() {
     );
 
     importObject.libset = setModule.instance.exports;
+
+    const listModule = await fetch('list.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
+    );
+
+    importObject.liblist = listModule.instance.exports;
     
     var repl = new BasicREPL(importObject);
 

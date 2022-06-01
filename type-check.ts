@@ -163,6 +163,15 @@ export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
   return true;
 }
 
+export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
+  var listFields: Map<string, Type> = new Map();
+  var listMethods: Map<string, [Array<Type>, Type]> = new Map();
+  listMethods.set("length", [[{ tag: "class", name: "list" }], NUM])
+  //TODO add all list methods here
+  env.classes.set("list", [listFields, listMethods]);
+  return env;
+}
+
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
   const newGlobs = new Map(env.globals);
   const newFuns = new Map(env.functions);
@@ -176,6 +185,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
+  env = builtinListClass(env);
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
 }
 
@@ -643,6 +653,19 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         var initial_value = tcExpr(env, locals, expr.arguments[0]);
         console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
         return {...expr, a: initial_value.a, arguments: [initial_value]};
+      } else if (expr.name === "len") {
+        const targs = expr.arguments.map(arg => tcExpr(env, locals, arg))
+        if (targs.length !== 1) {
+          throw new TypeCheckError("len() didn't receive the correct number of arguments");
+        }
+        /// tricky here, since we don't have to do type check inside list for len function just switch the order of arguments to pass it
+        // if (!equalType({ tag: "list", type: { tag: "none" } }, targs[0].a[0])) {
+        //   throw new TypeCheckError("len() incorrect arugment type");
+        // }
+        if (targs[0].a[0].tag !== "list") {
+          throw new TypeCheckError("len() incorrect argument type");
+        }
+        return { a: [{ tag: "number" }, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }

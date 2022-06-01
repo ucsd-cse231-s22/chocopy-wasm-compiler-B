@@ -427,6 +427,14 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           ];
         }
       }
+      if (objTyp.tag === "list") {
+        const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `list$${e.method}`, arguments: [objval, ...argvals] };
+        return [
+          [...objinits, ...arginits],
+          [...objstmts, ...argstmts],
+          callMethod
+        ];
+      }
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
@@ -834,6 +842,7 @@ function listIndexOffsets(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>,
     }
   }
   istmts.push(checkIndex);
+
 
   //get address of list elements
   const elAddrName = generateName("elementsaddr");
