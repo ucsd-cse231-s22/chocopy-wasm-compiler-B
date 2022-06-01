@@ -48,7 +48,8 @@ function splitString() : Array<string> {
   return sourceCode.split("\n");
 }
 
-export function StopIteration(hasnext:any) {
-  if(hasnext == false)
-    throw new Error(`StopIteration: End of iterator`);
+export function StopIteration(arg:any) {
+  if(arg.hasnext() == false)
+    throw new Error(`RUNTIME ERROR: StopIteration`);
+  return arg;
 }

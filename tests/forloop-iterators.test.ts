@@ -40,7 +40,6 @@ class __range__(object):
 def range(start: int, stop: int, step: int) -> __range__:
     return __range__().new(start, stop, step)
 
-
 def enumerate(initVal: [int]) -> EnumerateIteratorListInt :
     return EnumerateIteratorListInt().new(initVal)
 
@@ -538,6 +537,17 @@ for i in l:
 
 ` ,["1","2","3"]);
 
+assertPrint('enumerate() on list of integers' , rangeStr + `
+
+l : [int] = None
+i: int = 0
+j:int = 0
+l = [1,2,3,4,5]
+for i, j in enumerate(l):
+    print(i)
+    print(j)
+
+` ,["0","1","1","2","2","3","3","4","4","5"]);
 
 assertTCFail('range: type checking for loop variable ', rangeStr + `
 
@@ -651,7 +661,7 @@ i = [1,2,3,4]
 print(next(i))
 `);
 
-assertTCFail('next() only takes an iterable 2', rangeStr + `
+assertTCFail('next() only takes an iterable object 2', rangeStr + `
 
 i: [int] = None
 _iter: ListIteratorInt = None
@@ -669,6 +679,14 @@ i = [1,2,3,4]
 
 print(iter(j))
 `);
+
+assertTCFail('next() only takes an iterable object 3', rangeStr + `
+
+s:str = "abc
+
+print(next(s))
+`);
+
 
 
 assertFail('Stop iteration in range', rangeStr + `

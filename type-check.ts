@@ -533,7 +533,7 @@ function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean
 
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
-
+ 
   let lhs_index = 0
   let rhs_index = 0
 
@@ -555,6 +555,10 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
         var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
         //checking type of lhs with type of return of iterator
         //Length mismatch from iterables will be RUNTIME ERRORS
+
+        console.log(tDestr[lhs_index].lhs.a[0])
+        console.log(expectedRhsType)
+        
         if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
         } else {
@@ -570,7 +574,6 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
     }
 
   }
-
 
   let rev_lhs_index = tDestr.length - 1;
   let rev_rhs_index = tRhs.length - 1;  
@@ -833,6 +836,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
             //@ts-ignore
             const [_, methods] = env.classes.get(tArgs[0].a[0].name);
             const [methodArgs, methodRet] = methods.get(expr.name);
+            // const callStopIteration: Expr<[Type, SourceLocation]> = { a:tArgs[0].a, tag: "call",  name: "StopIteration", arguments: tArgs }
+            // return { a: [ methodRet, expr.a], tag: "method-call", obj: callStopIteration, method: "next", arguments: []}
           return { a: [ methodRet, expr.a], tag: "method-call", obj: tArgs[0], method: "next", arguments: []}
           
       } else if (expr.name == "len") {
