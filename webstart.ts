@@ -258,7 +258,6 @@ function webStart() {
     CodeMirror.on(editor, 'vim-mode-change', function(e : string) {
       vimMode.innerText = JSON.stringify(e);
     });
-    console.log('thy this is not run textarea', textarea)
     console.log(editor)
     
     editor.on('gutterClick', function(cm, lineNum) {

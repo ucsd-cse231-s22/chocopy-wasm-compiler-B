@@ -252,8 +252,9 @@ html{
     border: none;
     overflow: scroll;
     font-family: monospace;
-    line-height: 1.2em;
-    font-size: 1.2em;
+    // line-height: 1.2em;
+    line-height: 75%;
+    font-size: 1.1em;
     min-height: 100%;
     position: relative;
 }
@@ -314,9 +315,9 @@ html{
     line-break: anywhere;
     word-wrap: break-word;
     white-space: break-spaces;
-    margin: 10px 0px;
-    padding:12px;
-    color: #D8000C;
+    margin: 10px 10px;
+    padding:6px;
+    color: #041b22;
     background-color: #FFD2D2;
     border-radius: 3px; 
     -moz-border-radius: 3px; 

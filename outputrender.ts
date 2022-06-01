@@ -46,7 +46,8 @@ function renderConstField(key: string, value: Value, elt: HTMLElement){
       elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + String(value.value) + "</p>";
       break;
     case "bool":
-      elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + (value.value) ? "True" : "False" + "</p>";
+      const boolString = (value.value) ? "True" : "False";
+      elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + boolString + "</p>";
       break;
     default:
       throw new Error(`This is not a const field: ${value}`);
