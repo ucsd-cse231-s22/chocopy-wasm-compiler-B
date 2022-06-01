@@ -489,7 +489,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         set_type.add(t)
       });
       if (set_type.size > 1){
-        throw new TypeCheckError("Bracket attribute error")
+        throw new TypeCheckError("Bracket attribute error", expr.a);
       }
       var t: Type ={tag: "set", valueType: tc_type[0]};
       var a: SourceLocation = expr.a;
@@ -589,7 +589,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``);
+        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, expr.a);
       }
       // if (equalType(tObj.a[0], CLASS("str"))) {
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
@@ -600,11 +600,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // if (tObj.a[0].tag === "tuple") {
       //   ...
       // }
-      throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``); // Can only index into strings, list, dicts, and tuples
+      throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``, expr.a); // Can only index into strings, list, dicts, and tuples
     case "call":
       if (expr.name === "print") {
-        if (expr.arguments.length===0)
-          throw new TypeCheckError("print needs at least 1 argument");
+        if (expr.arguments.length === 0)
+          throw new TypeCheckError("print needs at least 1 argument", expr.a);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         return {...expr, a: [NONE, expr.a], arguments: tArgs};
       } 
@@ -681,7 +681,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
                 return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};
               } else {
-               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a );
+               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a);
               }
           } else {
             throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
@@ -695,14 +695,14 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           tArgs.forEach(t => {
             if (t.tag === "literal"&&tObj.a[0].tag === 'set'){
               if (t.value.a[0] !== tObj.a[0].valueType){
-                throw new TypeCheckError("Mismatched Type when calling method")
+                throw new TypeCheckError("Mismatched Type when calling method", expr.a);
               }
             }else{
-              throw new TypeCheckError("Unknown Type when calling method")
+              throw new TypeCheckError("Unknown Type when calling method", expr.a);
             }
           })
         }else{
-          throw new TypeCheckError("Unknown Set Method Error");
+          throw new TypeCheckError("Unknown Set Method Error", expr.a);
         }
         if (expr.method === "contains"){
           return {...expr, a: [BOOL, expr.a], obj: tObj, arguments: tArgs};
@@ -722,7 +722,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       const tIfCond = tcExpr(env, locals, expr.ifcond);
       const tExprIfFalse = tcExpr(env, locals, expr.exprIfFalse);
       if (!equalType(tIfCond.a[0], BOOL)) {
-        throw new TypeCheckError("if condition must be a bool");
+        throw new TypeCheckError("if condition must be a bool", expr.a);
       }
       const exprIfTrueTyp = tExprIfTrue.a[0];
       const exprIfFalseTyp = tExprIfFalse.a[0];
@@ -735,7 +735,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       const tIterable = tcExpr(env, locals, expr.iterable);
       const [iterable, itemTyp] = isIterable(env, tIterable.a[0])
       if (!iterable) {
-        throw new TypeCheckError(`Type ${tIterable.a[0]} is not iterable`);
+        throw new TypeCheckError(`Type ${tIterable.a[0]} is not iterable`, expr.a);
       }
       // shadow item name always globally
       const newItemName = generateCompvar(expr.item);
@@ -744,7 +744,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if (expr.ifcond) {
         tCompIfCond = tcExpr(env, locals, expr.ifcond);
         if (!equalType(tCompIfCond.a[0], BOOL)) {
-          throw new TypeCheckError("if condition must be a bool");
+          throw new TypeCheckError("if condition must be a bool", expr.a);
         }
       }
       const tLhs = tcExpr(env, locals, expr.lhs);

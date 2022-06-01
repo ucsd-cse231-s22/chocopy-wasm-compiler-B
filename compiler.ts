@@ -181,9 +181,6 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);
       valStmts.push(`(call $stack_push)`);
-      if(expr.name === 'assert_not_none'){
-        valStmts.push(`(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) `);
-      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
@@ -196,7 +193,6 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       return [
         ...codeGenValue(expr.start, env),
         `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) (call $assert_not_none)`,
-        // `call $assert_not_none`,
         ...codeGenValue(expr.offset, env),
         `call $load`
       ]

@@ -122,7 +122,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           if(firstIteration) { break; } //empty list
           else {
             c.parent();
-            throw new Error("Parse error at " + s.substring(c.from, c.to));
+            throw new ParseError("No ending bracket found at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
           }
         }
         elements.push(traverseExpr(c, s));
@@ -132,7 +132,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
 
       if(s.substring(c.from, c.to) !== "]") { //list doesn't have a closing bracket
         c.parent();
-        throw new Error("Parse error after " + s.substring(c.from, c.to));
+        throw new ParseError("List literal does not have a closing bracket at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
       }
 
       console.log(elements)
@@ -275,12 +275,12 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
         c.nextSibling(); // start index
 
         if(indexItems.length === 0) {
-          throw new Error("Error: there should have at least one value inside the brackets");
+          throw new ParseError("Brackets empty at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
         }
 
         var sliced_indices = indexItems.split(":");
         if(sliced_indices.length > 3){
-          throw new Error("Too much indices, maximum is three");
+          throw new ParseError("More than three indices given at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
         }
 
         start_index = traverseExpr(c, s)
@@ -707,6 +707,7 @@ function traverseAssignTarget(c: TreeCursor, s: string):AssignTarget<SourceLocat
 }
 
 export function traverseType(c : TreeCursor, s : string) : Type {
+  var location = getSourceLocation(c, s);
   // For now, always a VariableName
   if (c.firstChild()) {
     if (s.substring(c.from, c.to) === "set") {
@@ -732,7 +733,7 @@ export function traverseType(c : TreeCursor, s : string) : Type {
         c.nextSibling(); 
         if(s.substring(c.from, c.to) !== "]") { //missing closing square bracket
           c.parent();
-          throw new Error("Parse error at " + s.substring(c.from, c.to));
+          throw new ParseError("Error " + s.substring(c.from, c.to), location);
         }
         c.parent(); //up from ArrayExpression
 
@@ -842,6 +843,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
 }
 
 function traverseGenerics(c: TreeCursor, s: string): Array<string> {
+  var location = getSourceLocation(c, s);
   let typeVars: Array<string> = [];
 
   c.firstChild(); // focus on (
@@ -853,7 +855,7 @@ function traverseGenerics(c: TreeCursor, s: string): Array<string> {
         if(ga.tag=="class") {
           typeVars.push(ga.name);
         } else {
-          throw new Error("Expected TypeVar in Generic[] args");
+          throw new ParseError("Expected TypeVar in Generic[] args at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
         }
       });
     }

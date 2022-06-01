@@ -410,7 +410,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
       const className = objTyp.name;
-      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}}
+      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval, { tag: "wasmint", value: e.a[1].line }, { tag: "wasmint", value: e.a[1].column }] } };
       const callMethod : IR.Expr<[Type, SourceLocation]> = { a:e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
       return [
         [...objinits, ...arginits],
@@ -591,7 +591,7 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
       const objClassName = objTyp.name;
-      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}};
+      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval, { tag: "wasmint", value: e.a[1].line }, { tag: "wasmint", value: e.a[1].column }]}};
       // method calls
       const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$hasnext`, arguments: [objval] };
       const callNext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$next`, arguments: [objval] }
@@ -738,7 +738,21 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
   };
   iinits.push({ a: ival.a, name: listLength, type: {tag: "number"}, value: { tag: "none" } })
   istmts.push(setLength);
-  const checkIndex: IR.Stmt<[Type, SourceLocation]> = { a: ival.a, tag: "expr", expr: { a: ival.a, tag: "call", name: `index_out_of_bounds`, arguments: [{tag: "id", name: listLength, a: ival.a}, ival]}}
+  const checkIndex: IR.Stmt<[Type, SourceLocation]> = { 
+    a: ival.a, 
+    tag: "expr", 
+    expr: { 
+      a: ival.a, 
+      tag: "call", 
+      name: `index_out_of_bounds`, 
+      arguments: [
+        { tag: "id", name: listLength, a: ival.a }, 
+        ival, 
+        { tag: "wasmint", value: ival.a[1].line }, 
+        { tag: "wasmint", value: ival.a[1].column }
+      ]
+    }
+  }
   istmts.push(checkIndex);
 
   //get address of list elements
