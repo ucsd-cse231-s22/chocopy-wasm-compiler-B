@@ -646,8 +646,8 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         return { a: [CLASS("str"), expr.a], tag: "index", obj: tObj, index: tIndex };
       }
       if (tObj.a[0].tag === "list") {
-        return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
-        // return { tag: "index", a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
+        // return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
+        return { tag: "index", a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
       }
       // if (tObj.a[0].tag === "tuple") {
       //   ...
