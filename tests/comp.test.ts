@@ -42,6 +42,21 @@ class generator(object):
   def hasnext(self : generator)->bool:
     return self.size < 1
 
+class ListIterable(object):
+  lst : [int] = None
+  cur : int = 0
+  max : int = 0
+  def new(self : ListIterable, lst : [int], lstlen : int)->ListIterable:
+    self.lst = lst
+    self.max = lstlen
+    return self
+  def next(self: ListIterable)->int:
+    c : int = 0
+    c = self.lst[self.cur]
+    self.cur = self.cur + 1
+    return c
+  def hasnext(self : ListIterable)->bool:
+    return self.cur < self.max
 `
 
 describe("Comprehension Tests", () => {
@@ -109,5 +124,19 @@ assertPrint("comprehension lhs ternary test", builtinClasses + `
 assertPrint("comprehension comprehensive test", builtinClasses + `
 (print(num if num % 4 == 0 else num + 100) for num in Range().new(0, 20, 1) if num % 2 == 0)`,
 ['0','102','4','106','8','110','12','114','16','118']);
+
+assertPrint("comprehension list iterable test 1", builtinClasses + `
+lst:[int] = None
+lst = [1, 2, 3, 4, 5]
+(print(num) for num in lst)`,
+['1','2','3','4','5']);
+
+assertPrint("comprehension list iterable test 2", builtinClasses + `
+(print(num) for num in [1, 2, 3, 4, 5])`,
+['1','2','3','4','5']);
+
+assertPrint("comprehension list iterable test 3", builtinClasses + `
+(print(num if num % 3 == 0 else -1) for num in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] if num % 2 == 0)`,
+['-1','-1','6','-1','-1']);
 
 });

@@ -597,13 +597,74 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       ];
     case "comprehension":
       // obtain the iterable obj
-      const [objinits, objstmts, objval] = flattenExprToVal(e.iterable, blocks, env);
+      var [objinits, objstmts, objval] = flattenExprToVal(e.iterable, blocks, env);
       var objTyp = e.iterable.a[0];
-      if(objTyp.tag !== "class") { // I don't think this error can happen
-        throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
+      var objClassName;
+      var listLengthVarInit : IR.VarInit<[Type, SourceLocation]> = undefined;
+      var listIterableVarInit : IR.VarInit<[Type, SourceLocation]> = undefined;
+      var liinits : IR.VarInit<[Type, SourceLocation]>[] = [];
+      var isListIterable = false;
+      if (objTyp.tag !== "class") {
+        switch (objTyp.tag) {
+          case "list":
+            isListIterable = true;
+            const callConstructListIterable : AST.Expr<[Type, SourceLocation]> = {
+              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+              tag: "construct",
+              name: "ListIterable"
+            };
+            var listmts;
+            var lival;
+            [liinits, listmts, lival] = flattenExprToVal(callConstructListIterable, blocks, env);
+            const loadListLength : IR.Expr<[Type, SourceLocation]> = {
+              a: [{ tag: "number" }, e.a[1]],
+              tag: "load",
+              start: objval,
+              offset: { tag: "wasmint", value: 0 }
+            };
+            const listLength = generateName("listLength");
+            listLengthVarInit = {
+              name: listLength,
+              type: { tag: "number" },
+              value: { tag: "num", value: BigInt(0) }
+            };
+            const listLengthAssign : IR.Stmt<[Type, SourceLocation]> = {
+              a: [{ tag: "number" }, e.a[1]],
+              tag: "assign",
+              name: listLength,
+              value: loadListLength
+            };
+            const callListIterableNew : IR.Expr<[Type, SourceLocation]> = {
+              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+              tag: "call",
+              name: `ListIterable$new`,
+              arguments: [lival, objval, { tag: "id", name: listLength }]
+            };
+            const listIterable = generateName("listIterable");
+            listIterableVarInit = {
+              name: listIterable,
+              type: { tag: "class", name: "ListIterable" },
+              value: { tag: "none" }
+            };
+            const listIterableAssign : IR.Stmt<[Type, SourceLocation]> = {
+              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+              tag: "assign",
+              name: listIterable,
+              value: callListIterableNew
+            };
+            pushStmtsToLastBlock(blocks, ...objstmts, ...listmts, listLengthAssign, listIterableAssign);
+            objClassName = "ListIterable";
+            objval = { a: [{ tag: "class", name: "ListIterable" }, e.a[1]], tag: "id", name: listIterable }; // update iterable to this newly created ListIterable
+            break;
+          default:
+            throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
+        }
+      } else {
+        objClassName = objTyp.name;
+        pushStmtsToLastBlock(blocks, ...objstmts);
       }
-      const objClassName = objTyp.name;
       const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}};
+      
       // method calls
       const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$hasnext`, arguments: [objval] };
       const callNext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$next`, arguments: [objval] }
@@ -613,7 +674,7 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const whileEndLbl = generateName("$whileend");
 
       // jump to start
-      pushStmtsToLastBlock(blocks, ...objstmts, checkObj, { tag: "jmp", lbl: whileStartLbl });
+      pushStmtsToLastBlock(blocks, checkObj, { tag: "jmp", lbl: whileStartLbl });
       blocks.push({  a: e.a, label: whileStartLbl, stmts: [] });
       // call hasnext
       const hasnextValName = generateName("condVal");
@@ -703,11 +764,19 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
 
       blocks.push({  a: e.a, label: whileEndLbl, stmts: [] });
 
-      return [
-        [...objinits, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
-        [],
-        { tag: "value", value: {tag: "bool", value: false} } // what should I return here?
-      ]
+      if (isListIterable) {
+        return [
+          [...objinits, ...liinits, listLengthVarInit, listIterableVarInit, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
+          [],
+          { tag: "value", value: {tag: "bool", value: false} }
+        ];
+      } else {
+        return [
+          [...objinits, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
+          [],
+          { tag: "value", value: {tag: "bool", value: false} } // what should I return here?
+        ];
+      }
   }
 }
 
