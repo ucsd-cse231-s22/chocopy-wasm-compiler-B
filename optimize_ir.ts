@@ -392,7 +392,7 @@ export function findReachingDef(cfa: CFA, id: string, line: Line, inits: Array<I
 }
 
 function getDefFromLine(id: string, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
-    if(line.block === 'varInit'){
+    if(line.block === '$varInit'){
         for(let varini of inits){
             if(varini.name === id){
                 return varini.value;
