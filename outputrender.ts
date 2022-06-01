@@ -1,6 +1,7 @@
 import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
-import {reconstructBigint } from "./webstart"
+import { reconstructBigint } from "./webstart"
+
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -137,7 +138,7 @@ export function renderPrint(typ: Type, arg : number, load : any) : any {
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
   elt.innerText = stringify(typ, arg);
-
+  
   if (typ.tag === "number") {
     elt.innerText = reconstructBigint(arg, load).toString();
   }

@@ -1,4 +1,3 @@
-import bigInt from 'big-integer';
 import { Type } from './ast';
 import { RunTimeError } from './error_reporting';
 import { BOOL, NONE, NUM } from './utils';
@@ -9,6 +8,7 @@ type BuiltinFunc = {
   body: Function
   typeSig: [Type[], Type]
 }
+
 // here to register builtinFunctions
 export const BuiltinLib:BuiltinFunc[] = [
   {

@@ -1,8 +1,8 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
-import { EnvironmentPlugin } from "webpack";
 import { RunTimeError } from "./error_reporting";
+import { EnvironmentPlugin } from "webpack";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -141,16 +141,15 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       const rhsStmts = codeGenValue(expr.right, env);
       var divbyzero = ``;
 
-      if (expr.left.tag === "wasmint" || expr.right.tag === "wasmint") {
-        if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
-          // line number and column number
-  
-          divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
-        }
+      if(expr.op === BinOp.IDiv || expr.op === BinOp.Mod) {
+        // line number and column number
 
+        divbyzero = `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column})(call $division_by_zero)`;
+      }
+
+      if (expr.left.tag === "wasmint" || expr.right.tag === "wasmint") {
         return[...lhsStmts, ...rhsStmts, divbyzero, codeGenWasmBinOp(expr.op)]
       }
-      
       return [...lhsStmts, ...rhsStmts, divbyzero, codeGenBinOp(expr.op)]
 
     case "uniop":
