@@ -6,7 +6,7 @@
   "scripts": {
     "build-web": "webpack && cp \"index.html\" \"build/\"",
     "build-parse": "tsc parsestart.ts --esModuleInterop --moduleResolution node --outDir cli/",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' && mocha -r ts-node/register --reporter mochawesome 'tests/**/*.test.ts'",
+    "test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && for FILE in tests/*.test.ts; do mocha -r ts-node/register $FILE; done",
     "test-browser": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha --timeout 10000 -r ts-node/register 'browsertests/**/*.test.ts'",
     "test-set-only": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/set.test.ts",
     "build": "tsc debuggerstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
