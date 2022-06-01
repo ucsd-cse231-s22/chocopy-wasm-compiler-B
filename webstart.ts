@@ -20,7 +20,6 @@ import "codemirror/addon/search/searchcursor"
 import "codemirror/keymap/vim";
 
 import "./style.scss";
-import { start } from 'repl';
 
 const breakpointLines = new Set<number>(); 
 var breakpointPrev: number = -1;
@@ -290,8 +289,10 @@ function webStart() {
     themeDropDown(editor);
     modeDropDown(editor, editMode);
   });
-
 }
+
+webStart();
+
 
 function dragbarFunction(){
   var bar = document.getElementById("dragbar") as HTMLElement;
@@ -333,7 +334,6 @@ function dragbarFunction(){
     isDragging = false;
   });
 }
-
 
 function promptTextArea(){
   var nextCode = document.getElementById("next-code") as HTMLTextAreaElement;
@@ -435,8 +435,6 @@ function makeMarkerErrorMarker() {
 //   marker.innerHTML = 'X';
 //   return marker;
 // }
-
-webStart();
 
 function highlightError(lineNum: number, message: any) {
   var area = document.querySelector(".CodeMirror") as any;
