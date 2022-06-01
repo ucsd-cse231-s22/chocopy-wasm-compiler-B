@@ -1,7 +1,7 @@
 import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
 import { BinOp, Type, UniOp, SourceLocation } from "./ast"
 import { BOOL, NONE, NUM } from "./utils";
-import { typeIsPointer, valueIsPointer } from "./memory_management";
+import { isBaseName, typeIsPointer, valueIsPointer } from "./memory_management";
 import { RunTimeError } from "./error_reporting";
 
 export type GlobalEnv = {
@@ -12,6 +12,7 @@ export type GlobalEnv = {
   local_type: Map<string, Type>;
   labels: Array<string>;
   offset: number;
+  base_names: Set<string>;
 }
 
 export const emptyEnv : GlobalEnv = { 
@@ -21,7 +22,8 @@ export const emptyEnv : GlobalEnv = {
   locals: new Set(),
   local_type: new Map(),
   labels: [],
-  offset: 0 
+  offset: 0,
+  base_names: new Set()
 };
 
 type CompileResult = {
@@ -404,7 +406,7 @@ function allocClass(cls: Class<[Type, SourceLocation]>) : Array<string> {
  * the end of a function
  */
 function decRefcount(name: string, env: GlobalEnv): Array<string> {
-  if(name.includes("newObj") || name.includes("valname")){
+  if(isBaseName(name, env)){
     return [];
   }
   const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
@@ -423,7 +425,7 @@ function decRefcount(name: string, env: GlobalEnv): Array<string> {
  * This will get called when values are loaded from fields or variables
  */
 function incRefcount(name: string, env: GlobalEnv): Array<string> {
-  if(name.includes("newObj") || name.includes("valname")){
+  if(isBaseName(name, env)){
     return [];
   }
   const type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);

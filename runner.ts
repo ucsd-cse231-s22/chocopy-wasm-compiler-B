@@ -53,9 +53,6 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
   const newGlobals = new Map(env.globals);
   const global_type = new Map();
-  // console.log("----------------");
-  // console.log(newGlobals);
-  // console.log("----------------");
   const newClasses = new Map(env.classes);
 
   var newOffset = env.offset;
@@ -75,7 +72,8 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
     locals: env.locals,
     local_type: new Map(),
     labels: env.labels,
-    offset: newOffset
+    offset: newOffset,
+    base_names: new Set()
   }
 }
 

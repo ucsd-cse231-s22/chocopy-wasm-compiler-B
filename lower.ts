@@ -28,13 +28,20 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: p.a, label: generateName("$startProg"), stmts: [] }
     blocks.push(firstBlock);
     var inits = flattenStmts(p.stmts, blocks, env);
-    return {
-        a: p.a,
-        funs: lowerFunDefs(p.funs, env),
-        inits: [...inits, ...lowerVarInits(p.inits, env)],
-        classes: lowerClasses(p.classes, env),
-        body: blocks
+    const ret = {
+      a: p.a,
+      funs: lowerFunDefs(p.funs, env),
+      inits: [...inits, ...lowerVarInits(p.inits, env)],
+      classes: lowerClasses(p.classes, env),
+      body: blocks
+    };
+    // collect all basenames
+    for (let base of nameCounters.keys()) {
+      env.base_names.add(base);
+      console.log(base);
     }
+    env.base_names.add("compvar$");
+    return ret
 }
 
 function lowerFunDefs(fs : Array<AST.FunDef<[Type, SourceLocation]>>, env : GlobalEnv) : Array<IR.FunDef<[Type, SourceLocation]>> {

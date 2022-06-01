@@ -1,8 +1,8 @@
 (module
     (memory (import "js" "mem") 1)
-    (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
+    (func $alloc (import "libmemory" "alloc") (param i32) (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
-    (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $store (import "libmemory" "store") (param i32) (param i32) (param i32) (param i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
 
     (func $set$add (param $baseAddr i32) (param $key i32) (result i32)
@@ -23,6 +23,7 @@
         (if
             (then
                 (i32.const 2)   ;; size in bytes
+                (i32.const 0)   ;; type information
                 (call $alloc)
                 (local.tee $$allocPointer)
                 (local.get $key)
@@ -109,6 +110,7 @@
                 (if
                     (then
                         (i32.const 2)   ;; size in bytes
+                        (i32.const 0)   ;; type info
                         (call $alloc)
                         (local.tee $$allocPointer)
                         (local.get $key)
@@ -425,6 +427,7 @@
             (local.get $i)
             (i32.mul (i32.const 4))
             (i32.const 0)
+            (i32.const 0)   ;; is_pointer false
             (call $store)
             ;; i++
             (local.get $i)

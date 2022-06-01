@@ -38,7 +38,8 @@ export class BasicREPL {
       locals: new Set(),
       local_type: new Map(),
       labels: [],
-      offset: 1
+      offset: 1,
+      base_names: new Set()
     };
     this.currentTypeEnv = defaultTypeEnv;
     this.functions = "";
