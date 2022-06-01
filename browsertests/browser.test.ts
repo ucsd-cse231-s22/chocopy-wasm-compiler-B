@@ -14,7 +14,7 @@ var debug = 0;
 
 before(async function () {
     const opts = new Options();
-    if (debug===0) opts.addArguments('--headless', '--no-sandbox')
+    //if (debug===0) opts.addArguments('--headless', '--no-sandbox')
     
     driver = await new webdriver.Builder().forBrowser("chrome").setChromeOptions(opts).build();
     await driver.get("http://127.0.0.1:8000");
@@ -79,20 +79,6 @@ function reverseAutoComplete(source: string){
     return reversedString;
 }
 
-export async function assertFileUpload(name:string, source: string, expected: Array<string>) {
-    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-    await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-    await driver.findElement(webdriver.By.id("load")).click(); 
-}
-
-export async function debug(name:string, source: string, expected: Array<string>) {
-    it(name, async function () {
-        //Send and run source
-        await driver.wait(webdriver.until.elementLocated(webdriver.By.id("user-code")));
-        await driver.findElement(webdriver.By.id("load")).click(); 
-    });
-}
-
 
 export async function assertPrint(name:string, source: string, expected: Array<string>) {
     it(name, async function () {
@@ -152,7 +138,7 @@ export async function assertRunTimeFail(name: string, source: string){
 
 
 // Currently repr do not support multiple lines. In the current implementation, it will directly be directly executed when the switch-line get pressed.
-export async function assertRepr(name: string, source: string, repls: Array<string>, expected: Array<Array<string>>){
+export async function assertRepl(name: string, source: string, repls: Array<string>, expected: Array<Array<string>>){
     it(name, async function () {
         expect(expected.length).to.deep.above(0);
         expect(repls.length+1).to.deep.eq(expected.length);

@@ -1,4 +1,4 @@
-import { assertPrint, assertRunTimeFail, assertTCFail, assertRepr, debug } from './browser.test';
+import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './browser.test';
 
 
 describe("Simple browser tests", () => {
@@ -14,6 +14,6 @@ c.x`);
 
     assertTCFail('Simple typecheck fail test', `
 a: int = True`);
-    assertRepr("Simple repr", `print(123)`, [`print(456)`, `print(789)`], [["123"], ["456"], ["789"]])
+    assertRepl("Simple repr", `print(123)`, [`print(456)`, `print(789)`], [["123"], ["456"], ["789"]])
 
 });
