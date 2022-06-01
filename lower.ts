@@ -25,6 +25,10 @@ function generateName(base : string) : string {
 
 type funMeta = Map<string, (string | AST.Expr<[Type,SourceLocation]>)[][]>;
 let funEnv:funMeta = new Map();
+BuiltinLib.forEach(x=>{
+  funEnv.set(x.name, Array.from(x.typeSig[0].keys()).reduce((obj,val,i)=>{obj.push([val,undefined]); return obj},[]));
+})
+funEnv.set("print", [["x",undefined]]);
 
 type classMeta = Map<string, Map<string, (string | AST.Expr<[Type,SourceLocation]>)[][]>>;
 let classEnv:classMeta = new Map();
@@ -384,25 +388,24 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       }
 
 
-      var out = BuiltinLib.find(f=>f.name===e.name);
-      var isBuiltIn:boolean = out!==undefined || e.name==='print';
+      var arglen = e.arguments.length;
+
+      // dont need to check .has name as that should be handled in the type checker
+      var funcVals = funEnv.get(e.name);
+
       var newArgs = e.arguments;
-      if(!isBuiltIn) {
-        var arglen = e.arguments.length;
-        // dont need to check .has name as that should be handled in the type checker
-        var funcVals = funEnv.get(e.name);
-        // don't need to check if this call is not reaching default vals
-        // because it is checked in the type checker
-        funcVals.forEach((v : [string, AST.Expr<[Type,SourceLocation]>],i : Number) => {
-          if(i >= arglen) {
-            if(e.namedArgs !== undefined && e.namedArgs.has(v[0])) {
-              newArgs.push(e.namedArgs.get(v[0]));
-            } else {
-              newArgs.push(v[1]);
-            }
+
+      // don't need to check if this call is not reaching default vals
+      // because it is checked in the type checker
+      funcVals.forEach((v : [string, AST.Expr<[Type,SourceLocation]>],i : Number) => {
+        if(i >= arglen) {
+          if(e.namedArgs !== undefined && e.namedArgs.has(v[0])) {
+            newArgs.push(e.namedArgs.get(v[0]));
+          } else {
+            newArgs.push(v[1]);
           }
-        });
-      }
+        }
+      });
 
       const callpairs = newArgs.map(a => flattenExprToVal(a, blocks, env));
       const callinits = callpairs.map(cp => cp[0]).flat();

@@ -623,7 +623,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if (expr.arguments.length===0)
           throw new TypeCheckError("print needs at least 1 argument");
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        if(expr.namedArgs.size != 0){
+        if(expr.namedArgs && expr.namedArgs.size != 0){
           throw new TypeCheckError("print() doesn't support keyword arguments",expr.a)
         }
         
@@ -654,7 +654,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
         // check if length is at least non-default (here 2-4)
         const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
-        expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+        if (expr.namedArgs) {
+          expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val))); 
+        }
         const passedArgLength = tArgs.length + tNamedArgs.size;
         if (passedArgLength > argTypes.size) {
           throw new TypeCheckError(`${expr.name}() takes from ${nonDefault} to ${argTypes.size} positional arguments but ${passedArgLength} were given`, expr.a);
@@ -700,7 +702,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           throw new TypeCheckError("Set constructor's argument must be an iterable", expr.a);
         }
         var initial_value = tcExpr(env, locals, expr.arguments[0]);
-        if(expr.namedArgs.size != 0){
+        if(expr.namedArgs && expr.namedArgs.size != 0){
           throw new TypeCheckError("set() doesn't support keyword arguments",expr.a)
         }
         return {...expr, a: initial_value.a, arguments: [initial_value], namedArgs:undefined};
@@ -727,7 +729,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
       const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
-      expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+      if (expr.namedArgs) {
+        expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+      }
       
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
@@ -781,7 +785,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else if (tObj.a[0].tag === 'set'){
         const set_method = ["add", "remove", "get", "contains", "length", "update", "clear", "firstItem", "hasnext", "next"]
         if (set_method.includes(expr.method)){
-          if(expr.namedArgs.size != 0){
+          if(expr.namedArgs && expr.namedArgs.size != 0){
             throw new TypeCheckError("set methods do not support keyword arguments",expr.a)
           }
           if (expr.method === "update") {

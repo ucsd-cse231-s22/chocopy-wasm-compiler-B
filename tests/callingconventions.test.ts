@@ -4,6 +4,7 @@ import { assertPrint, assertTC } from "./asserts.test";
 import { NUM, BOOL, NONE, typeCheck } from "./helpers.test";
 import { TypeCheckError } from "../error_reporting";
 
+describe("Calling Conventions tests", () => {
 describe("Parses default arguments", () => {
   assertParse(
     "Parses one default argument",
@@ -616,7 +617,7 @@ obj : C = None
 obj = C()
 obj.test(a = 7)`, ["7"])
 });
-
+});
 // Helpers
 
 /**
