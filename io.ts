@@ -29,7 +29,6 @@ class File(object):
         n = jswrite(self.fd, s.s, self.pointer)
         self.pointer = self.pointer + n
         self.filelength = max(self.filelength, self.pointer)
-        return n
 
     def tell(self : File) -> int:
         return self.pointer
@@ -43,15 +42,15 @@ class File(object):
             return
         self.pointer = pos
         
-    def close(self : File) -> int:
-        return jsclose(self.fd)
+    def close(self : File):
+        jsclose(self.fd)
 
-def open(mode : str) -> File:
+def open(filename: str, mode : str) -> File:
     newFile : File = None
     newFile = File()
     newFile.mode = mode
-    newFile.fd = jsopen(mode.s)
-    newFile.filelength = -get length of newly opened file through js call?-
+    newFile.fd = jsopen(filename, mode.s)
+    newFile.filelength = jslength(filename)
     return newFile
 
 f : File = None
@@ -75,20 +74,25 @@ export function jsopen(filename : string, flag : string) : number {
     return window.fs.openSync(filename, flag);
 }
 
-export function jsclose(fd : number) : number {
+export function jslength(filename : string) : number {
+    var contents : string = window.fs.readFileSync(filename, "utf8", "r");
+    return contents.length;
+}
+
+export function jsclose(fd : number) {
     window.fs.closeSync(fd);
-    return 0;
+    // return 0;
 }
 
 export function jswrite(fd : number, data: string, ptr : number) : number {
     // which arg of writeSync does ptr go into
-    return window.fs.writeSync(fd, data); // returns the file length (assume clean file)
+    return window.fs.writeSync(fd, data, ptr); // returns the file length (assume clean file)
 }
 
 export function jsread(fd : number, ptr : number) : string {
     // the second argument is the number of characters to read at a time
     // return Number(window.fs.readSync(fd, 1)[0]);
     // which arg of readSync does ptr go into
-    return window.fs.readSync(fd,1)[0];
+    return window.fs.readSync(fd, 1, ptr)[0];
 }
 
