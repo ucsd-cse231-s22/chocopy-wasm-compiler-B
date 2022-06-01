@@ -11,3 +11,4 @@ mochawesome-report
 !/designs/example.svg
 **/.DS_Store
 .vscode
+debug_ir.ts
