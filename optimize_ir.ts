@@ -191,11 +191,11 @@ export function needednessAnalysis(blocks: Array<IR.BasicBlock<[Type, SourceLoca
                 const succ_line_label = label_prefix + (i+1).toString();
                 const cur_stmt = block.stmts[i];
                 const nextLineNeeded: Set<string> = (np.has(succ_line_label) ? np.get(succ_line_label) : new Set());
-                const cur_this_live = getNeededStmt(cur_stmt, nextLineNeeded, np);
+                const cur_this_need = getNeededStmt(cur_stmt, nextLineNeeded, np);
                 // If the predicate at current line is changed
                 if (!np.has(cur_line_label) || 
-                    !eqSet(cur_this_live, np.get(cur_line_label))) {
-                    np.set(cur_line_label, cur_this_live);
+                    !eqSet(cur_this_need, np.get(cur_line_label))) {
+                    np.set(cur_line_label, cur_this_need);
                     changed = true;
                 }  
             }
@@ -220,7 +220,7 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
         blockStmts = [];
         for (const [stmtIndex, stmt] of block.stmts.entries()) {
             let stmtLabel = block.label+stmtIndex.toString();           
-            if (stmt.tag === "assign" && !np.get(stmtLabel).has(stmt.name)) {
+            if (stmt.tag === "assign" && stmt.value.tag != "call" && !np.get(stmtLabel).has(stmt.name)) {
                 let isFound = false;
                 for (let valueSet of np.values()) {
                     if (valueSet.has(stmt.name)) {

@@ -156,12 +156,9 @@ print(r.next())`
   // 13
  assertOptimizeCorrect("Optimization Sanity Check (Builtin 1)",
 `
-st:int = 0
-ed:int = 0
-st = time()
-sleep(10)
-ed = time()
-print(ed-st)
+print(gcd(4,6))
+print(gcd(3,5))
+print(gcd(2,8))
 `
 ),
   // 14
@@ -449,7 +446,7 @@ assertOptimizeCorrect("Optimization Sanity Check (Set 1)",
 `
 set_1 : set[int] = None
 set_1 = {1,2}
-print(len(set_1))`
+print(set_1.length())`
 ),
 // 37
 assertOptimizeCorrect("Optimization Sanity Check (Set 2)",
@@ -457,7 +454,7 @@ assertOptimizeCorrect("Optimization Sanity Check (Set 2)",
 set_1 : set[int] = None
 set_1 = {1,2}
 set_1.add(3)
-print(len(set_1))`
+print(set_1.length())`
 ),
 // 38
 assertOptimizeCorrect("Optimization Sanity Check (Set 3)",
@@ -473,7 +470,7 @@ assertOptimizeCorrect("Optimization Sanity Check (Set 4)",
 set_1 : set[int] = None
 set_1 = {1,2}
 set_1.remove(1)
-print(len(set_1))`
+print(set_1.length())`
 ),
 // 40
 assertOptimizeCorrect("Optimization Sanity Check (Set 5)",
@@ -481,6 +478,6 @@ assertOptimizeCorrect("Optimization Sanity Check (Set 5)",
 set_1 : set[int] = None
 set_1 = {1,2}
 set_1.add(1)
-print(len(set_1))`
+print(set_1.length())`
 )
 });
