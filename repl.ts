@@ -74,6 +74,7 @@ export class BasicREPL {
     else if(result.tag === "object"){
       const fields = this.currentTypeEnv.classes.get(result.name)[0];
       let index = result.address / 4;
+      // console.log(fields);
       fields.forEach((value: Type, key: string) => {
         switch(value.tag){
           case "number":
@@ -86,37 +87,42 @@ export class BasicREPL {
             list.push({tag:"none", fieldName: key, value: {tag: "none", value: heapView.at(index)}});
             break;
           case "class":
-            const objectResult : Value = {tag: "object", name: value.name, address: heapView.at(index)};
-            const fieldList = this.trackObject(objectResult, heapView);
+            var objectResult : Value = {tag: "none"};
+            var fieldList: ObjectField[] = []
+            //The start of heap
+            if(heapView.at(index) >= 4){
+              objectResult = {tag: "object", name: value.name, address: heapView.at(index)};
+              fieldList = this.trackObject(objectResult, heapView);
+            }
             list.push({tag: "object", fieldName: key, value: objectResult, objectTrackList: fieldList});
             break;
         }
         index += 1
       });
     }
-    else if(result.tag === "list"){
-      const fields = this.currentTypeEnv.classes.get(result.name)[0]; // how to track elements in list?
-      let index = result.address / 4;
-      fields.forEach((value: Type, key: string) => {
-        switch(value.tag){
-          case "number":
-            list.push({tag:"num", fieldName: key, value: {tag: "num", value: heapView.at(index)}});
-            break;
-          case "bool":
-            list.push({tag:"bool", fieldName: key, value: {tag: "bool", value: Boolean(heapView.at(index))}});
-            break;
-          case "none":
-            list.push({tag:"none", fieldName: key, value: {tag: "none", value: heapView.at(index)}});
-            break;
-          case "class":
-            const objectResult : Value = {tag: "object", name: value.name, address: heapView.at(index)};
-            const fieldList = this.trackObject(objectResult, heapView);
-            list.push({tag: "object", fieldName: key, value: objectResult, objectTrackList: fieldList});
-            break;
-        }
-        index += 1
-      });
-    }
+    // else if(result.tag === "list"){
+    //   const fields = this.currentTypeEnv.classes.get(result.name)[0]; // how to track elements in list?
+    //   let index = result.address / 4;
+    //   fields.forEach((value: Type, key: string) => {
+    //     switch(value.tag){
+    //       case "number":
+    //         list.push({tag:"num", fieldName: key, value: {tag: "num", value: heapView.at(index)}});
+    //         break;
+    //       case "bool":
+    //         list.push({tag:"bool", fieldName: key, value: {tag: "bool", value: Boolean(heapView.at(index))}});
+    //         break;
+    //       case "none":
+    //         list.push({tag:"none", fieldName: key, value: {tag: "none", value: heapView.at(index)}});
+    //         break;
+    //       case "class":
+    //         const objectResult : Value = {tag: "object", name: value.name, address: heapView.at(index)};
+    //         const fieldList = this.trackObject(objectResult, heapView);
+    //         list.push({tag: "object", fieldName: key, value: objectResult, objectTrackList: fieldList});
+    //         break;
+    //     }
+    //     index += 1
+    //   });
+    // }
     return list;
   }
 

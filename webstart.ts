@@ -147,6 +147,7 @@ function webStart() {
       resetRepl();
       repl.run(text).then((r) => {
         var objectTrackList = repl.trackObject(r, repl.trackHeap());
+        // console.log(objectTrackList);
         renderResult(r, objectTrackList);
         console.log("run finished")
 
