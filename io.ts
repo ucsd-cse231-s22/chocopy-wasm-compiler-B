@@ -16,9 +16,10 @@ class File(object):
         pass
 
     def read(self : File) -> int:
+        res : int = 0
         if self.pointer == self.filelength:
             print(111)
-        res : int = 0
+            return res
         res = jsread(self.fd, self.pointer)
         self.pointer = self.pointer + 1
         return res
