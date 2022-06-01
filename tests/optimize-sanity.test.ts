@@ -156,12 +156,9 @@ print(r.next())`
   // 13
  assertOptimizeCorrect("Optimization Sanity Check (Builtin 1)",
 `
-st:int = 0
-ed:int = 0
-st = time()
-sleep(10)
-ed = time()
-print(ed-st)
+print(gcd(4,6))
+print(gcd(3,5))
+print(gcd(2,8))
 `
 ),
   // 14

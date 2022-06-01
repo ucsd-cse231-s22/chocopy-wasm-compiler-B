@@ -220,7 +220,7 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
         blockStmts = [];
         for (const [stmtIndex, stmt] of block.stmts.entries()) {
             let stmtLabel = block.label+stmtIndex.toString();           
-            if (stmt.tag === "assign" && !np.get(stmtLabel).has(stmt.name)) {
+            if (stmt.tag === "assign" && stmt.value.tag != "call" && !np.get(stmtLabel).has(stmt.name)) {
                 let isFound = false;
                 for (let valueSet of np.values()) {
                     if (valueSet.has(stmt.name)) {
