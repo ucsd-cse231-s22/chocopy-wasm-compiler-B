@@ -156,7 +156,7 @@ to
 1. Add a new function to vtable, the name can be like this $$function{# of function index} so it won't affect the user name space
 2. assign f, which is of type {tag:"function", params: [int], ret: int}, with the function index in vtable.
 
-$$FunDef { name = $$function{index of function}, ...}
+FunDef { name = $$function{index of function}, ...}
 
 f = Value{ tag:"number", value = {index of function}}
 
@@ -182,15 +182,15 @@ f = Value{ tag:"number", value = {index of function}}
 
 ## Some examples
 
-<img src="/Users/lisu/Library/Application Support/typora-user-images/image-20220513144346745.png" alt="image-20220513144346745" style="zoom:50%;" />
+<img src="builtinImages/image-20220513144346745.png" alt="image-20220513144346745" style="zoom:50%;" />
 
 
 
-<img src="/Users/lisu/Library/Application Support/typora-user-images/image-20220513144536363.png" alt="image-20220513144536363" style="zoom:50%;" />
+<img src="builtinImages/image-20220513144536363.png" alt="image-20220513144536363" style="zoom:50%;" />
 
-<img src="/Users/lisu/Library/Application Support/typora-user-images/image-20220513144627281.png" alt="image-20220513144627281" style="zoom:50%;" />
+<img src="builtinImages/image-20220513144627281.png" alt="image-20220513144627281" style="zoom:50%;" />
 
-<img src="/Users/lisu/Library/Application Support/typora-user-images/image-20220513144730806.png" alt="image-20220513144730806" style="zoom:50%;" />
+<img src="builtinImages/image-20220513144730806.png" alt="image-20220513144730806" style="zoom:50%;" />
 
 ## What we plan to do next week
 
