@@ -3,14 +3,14 @@ import { assertPrint, assertRunTimeFail, assertTCFail, assertRepl } from './brow
 // builtin-lib tests
 describe("built-in library testes",()=>{
 
-assertPrint("sleep 2 seconds",`
-st:int = 0
-ed:int = 0
-st = time()
-sleep(2)
-ed = time()
-print(ed-st)
-`, ["2"])
+// assertPrint("sleep 2 seconds",`
+// st:int = 0
+// ed:int = 0
+// st = time()
+// sleep(2)
+// ed = time()
+// print(ed-st)
+// `, ["2"])
 
 assertPrint("factorial", `
 c : int = 4
