@@ -1,5 +1,6 @@
 import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
+import { Pass } from "codemirror";
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -90,6 +91,15 @@ function renderClassObject(result: Value, objectTrackList: Array<ObjectField>, e
   elt.appendChild(panEle); // append panel
 }
 
+function createNewPre(parentElementId: string):HTMLElement{
+  var elt = document.getElementById(parentElementId).lastElementChild as HTMLElement;
+  if(elt==null || elt.tagName != "PRE"){
+    elt = document.createElement("pre");
+    document.getElementById(parentElementId).appendChild(elt);
+  } 
+  return elt
+}
+
 function renderObject(result: Value, objectTrackList: Array<ObjectField>, elt: HTMLElement){
   switch (result.tag){
     case "object":
@@ -120,8 +130,7 @@ function renderNewLine(result: Value, elt: HTMLElement){
 
 export function renderResult(result : Value, objectTrackList: Array<ObjectField>) : void {
   if(result === undefined) { return; }
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
+  const elt = createNewPre("output");
   renderNewLine(result, elt);
   if (objectTrackList.length!=0){
     const objEle = document.createElement("pre");
@@ -133,22 +142,19 @@ export function renderResult(result : Value, objectTrackList: Array<ObjectField>
 
 export function renderDebug(result: Value, objectTrackList: Array<ObjectField>) : void{
   if(result === undefined) {return; }
-  const elt = document.createElement("pre");
-  document.getElementById("debug").appendChild(elt);
+  const elt = createNewPre("debug");
   renderNewLine(result, elt);
 }
 
 export function renderPrint(typ: Type, arg : number) : any {
   // console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
+  const elt = createNewPre("output");
   elt.innerText = stringify(typ, arg);
   return arg;
 }
 
 export function renderError(result : any) : void {
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
+  const elt = createNewPre("output");
   elt.setAttribute("style", "color: red");
   elt.innerText = String(result);
 }
