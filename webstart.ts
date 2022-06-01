@@ -143,7 +143,7 @@ function webStart() {
         //if( codeLines.length == 0 || codeLines.length == 1 && codeLines[0].trim().length == 0) return
         text = getCodeUntillBreakpoint(codeLines);
       }
-      console.log("code to be executed:",text)
+      //console.log("code to be executed:",text)
       resetRepl();
       repl.run(text).then((r) => {
         var objectTrackList = repl.trackObject(r, repl.trackHeap());
@@ -155,9 +155,10 @@ function webStart() {
         .catch((e) => { renderError(e); 
         //console.log(e);
         if (e.stack!=undefined){
-          //console.log(e.line);
+          //console.log(e.name);
           //console.log("highlight the error line")
-          //console.log(e.stack)
+          //console.log(e.stack);
+          //console.log(e.location)
           //highlightError(1,e);
           //var info = editor.lineInfo(1);
           //console.log("reading info: "+info);

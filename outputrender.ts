@@ -155,17 +155,9 @@ export function renderPrint(typ: Type, arg : number) : any {
 }
 
 export function renderError(result : any) : void {
-  const elt = createNewPreErr("output");
+  const elt = createNewPre("output");
   elt.setAttribute("style", "color: black");
   elt.setAttribute("style", "background-color: #e36d6d");
   elt.innerText = String(result);
 }
 
-function createNewPreErr(parentElementId: string):HTMLElement{
-  var elt = document.getElementById(parentElementId).lastElementChild as HTMLElement;
-  if(elt==null || elt.tagName != "PRE"){
-    elt = document.createElement("pre");
-    document.getElementById(parentElementId).appendChild(elt);
-  } 
-  return elt
-}
