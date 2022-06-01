@@ -353,8 +353,6 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
       stmtsCommands.push(codeGenStmt(stmt, env).join("\n"));
     }
     
-    // console.log("====" + stmtsCommands + "====");
-    
     blockCommands += stmtsCommands.join("\n");
   })
   bodyCommands += blockCommands;

@@ -38,7 +38,6 @@ export function lowerProgram(p : AST.Program<[Type, SourceLocation]>, env : Glob
     // collect all basenames
     for (let base of nameCounters.keys()) {
       env.base_names.add(base);
-      console.log(base);
     }
     env.base_names.add("compvar$");
     return ret
