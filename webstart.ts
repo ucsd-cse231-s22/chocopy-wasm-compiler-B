@@ -19,6 +19,7 @@ import "codemirror/addon/search/searchcursor"
 import "codemirror/keymap/vim";
 
 import "./style.scss";
+import { start } from 'repl';
 
 const breakpointLines = new Set<number>(); 
 var breakpointPrev: number = -1;
@@ -168,7 +169,7 @@ function webStart() {
             console.log("lineString:",lineString);
             console.log("startIndex:",startIndex);
             console.log("endIndex:",endIndex);
-            editor.markText({line:lineNum,ch:startIndex+1},{line:lineNum,ch:endIndex}, { className: "error_content" });
+            editor.markText({line:lineNum,ch:startIndex},{line:lineNum,ch:endIndex}, { className: "error_content" });
           }
         }
         console.log("run failed", e)});;
@@ -509,7 +510,9 @@ function colorLinesAfterBreakpoint(cm: CodeMirror.Editor, lineNum: number, break
   var startLine = getArrayMin(breakpointLines);
   breakpointPrev = startLine;
   console.log("break line:",startLine);
-  cm.addLineClass(startLine,"background","noEvalFirst")
+  if (startLine != cm.getLineNumber){
+    cm.addLineClass(startLine,"background","noEvalFirst");
+  }
   for(let i=startLine; i<cm.lineCount(); i++){
     cm.addLineClass(i,"background","noEval")
   }
@@ -539,18 +542,18 @@ function getCodeUntillBreakpoint(codeLines: string[]): string {
 }
 
 function getStartIndex(lineString: string, endIndex: number) {
-  var start = 0;
+  var start = -1;
   for (var i:number = 0; i < lineString.length; i++){
     //console.log(i);
     //console.log(endIndex);
-    if (i>=endIndex-1 ){
+    if (i==endIndex){
       //console.log("match");
-      return start;
+      return start+1;
     }
     if (lineString.charAt(i) == " "){
       //console.log("space at",i);
       start = i;
     }
   }
-  return 0;
+  return start+1;
 }
