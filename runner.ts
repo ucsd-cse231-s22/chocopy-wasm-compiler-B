@@ -123,6 +123,7 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
     (func $division_by_zero (import "imports" "division_by_zero") (param i32) (param i32) (param i32) (result i32))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (param i32) (param i32) (result i32))
+    (func $key_not_found (import "imports" "key_not_found") (param i32) (result i32))
     (func $stack_push (import "imports" "stack_push") (param i32))
     (func $stack_clear (import "imports" "stack_clear"))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))

@@ -19,6 +19,14 @@ export function division_by_zero(arg: number, line: number, col: number) : any {
     return arg;
   }
 
+  export function key_not_found(arg: number) : any {
+    if (arg === 0) {
+      var message = stackTrace() + "\nRUNTIME ERROR: key doesn't exist"// + line.toString() + " at column " + col.toString() + "\n" + splitString()[line-1].trim();
+      throw new RunTimeError(message);
+    }
+    return arg;
+  }
+
 function recursion_depth(line: number) {
   var message = stackTrace().split("\n").slice(0, 6).join("\n") + "\n[Previous line repeated 995 more times]\n\nRUNTIME ERROR: maximum recursion depth exceeded in line " + line.toString() + "\n" + splitString()[line-1].trim();
   throw new RunTimeError(message);
