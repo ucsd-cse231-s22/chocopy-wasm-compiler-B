@@ -118,8 +118,30 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
-        var expr: Expr<SourceLocation>;
-        if (callName === "len") {
+        var expr : Expr<SourceLocation>;
+        if (callName === "set") {
+          c.firstChild();
+          c.nextSibling(); // go to arglist
+          c.firstChild();
+          c.nextSibling(); // go to setexpr
+          let setValues = new Array<Expr<any>>();
+          c.firstChild();
+          while (c.nextSibling()) {
+            let v : Expr<any> = traverseExpr(c, s);
+            setValues.push(v);
+            c.nextSibling();
+          }
+          c.parent();
+          c.parent();
+          c.parent();
+          expr = {
+            a: location,
+            tag: "set",
+            values: setValues
+          }
+          return expr;
+        }
+        else if (callName === "len") {
           expr = {
             a: location,
             tag: "method-call",
@@ -128,10 +150,8 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
             arguments: [],
           }
         }
-        else {
-          expr = { a: location, tag: "call", name: callName, arguments: args };
-        }
-        return expr;
+        expr = { a: location, tag: "call", name: callName, arguments: args};
+        return expr;  
       } else {
         throw new ParseError("Unknown target while parsing assignment", location);
       }
