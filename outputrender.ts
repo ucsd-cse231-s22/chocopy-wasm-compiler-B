@@ -160,4 +160,3 @@ export function renderError(result : any) : void {
   elt.setAttribute("style", "background-color: #e36d6d");
   elt.innerText = String(result);
 }
-
