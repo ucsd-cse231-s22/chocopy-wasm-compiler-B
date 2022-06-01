@@ -59,6 +59,7 @@ export class BasicREPL {
         currentGlobals[k] = maybeGlobal;
       }
     });
+    this.importObject.env = currentGlobals; //define env to import in wasm
     return result;
   }
 
