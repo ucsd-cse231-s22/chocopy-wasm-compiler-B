@@ -18,6 +18,11 @@ async function debug() {
   b : bool = True
   set_1 = set({1,2})
 
+  // set_1 : set[int] = None
+  // a : int = 0
+  // b : bool = True
+  // l: [int] = None
+  // set_1 = set([1, 2, 3])
 
   // set_1.add(3)
   // set_1.add(3)
