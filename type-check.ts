@@ -52,6 +52,7 @@ BuiltinLib.forEach(x=>{
   defaultGlobalFunctions.set(x.name, x.typeSig);
 })
 defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("len", [[], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -611,6 +612,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
             throw new TypeCheckError("To print an object, you need to first define __str__ method", expr.a);
         })
         return {...expr, a: [NONE, expr.a], arguments: args};
+      }
+      if(expr.name==="len"){
+        let args = expr.arguments.map(arg => tcExpr(env, locals, arg));
+        if(args.length!=1 || (args[0].a[0].tag!="list" && args[0].a[0].tag!="set"))
+          throw new TypeCheckError("argument for len need to be a list or a set", expr.a)
+        return {...expr, a: [NUM, expr.a], arguments: args};
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor

@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { BuiltinLib} from "../builtinlib";
+import { RunTimeError } from "../error_reporting";
 import * as RUNTIME_ERROR from '../runtime_error'
 
 enum Type { Num, Bool, None }
@@ -28,8 +29,11 @@ function index_out_of_bounds(length: any, index: any): any {
 }
 
 
+var IntBuffer:any;
+
 export async function addLibs() {
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
+  IntBuffer = new Int32Array(memory.buffer)
   const bytes = readFileSync("build/memory.wasm");
   const setBytes = readFileSync("build/sets.wasm");
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
@@ -57,6 +61,16 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
+    len: (arg:number)=>IntBuffer[Math.floor(arg/4)],
+    print_shallow_list: (arg:number, typeIndex:number)=>{
+      const length = IntBuffer[Math.floor(arg/4)];
+      if(typeIndex>2)
+        throw new RunTimeError("print list now only supports [ int | bool | none ]")
+      const funcForPrint = [importObject.imports.print_num, importObject.imports.print_bool, importObject.imports.print_none][typeIndex]
+      for(let i=1;i<=length;i++)
+        funcForPrint(IntBuffer[Math.floor(arg/4 + i)]);
+      return 0;
+    }
   },
 
   output: "",

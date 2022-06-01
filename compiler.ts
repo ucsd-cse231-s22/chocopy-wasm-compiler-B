@@ -174,10 +174,20 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
           case "none":
             argCode.push("(call $print_none)");
             break;
+          case "list":
+            let index = ["number", "bool", "none", "list", "class", "either", "generator", "set", "type-var"].indexOf(expr.arguments[0].a[0].type.tag)
+            argCode.push(`(i32.const ${index})`)
+            argCode.push("(call $print_shallow_list)");
+            break;
           default:
             throw new RunTimeError(` ${expr.arguments[0].a[0].tag} print not implemented yet`)
         }
         return argCode;
+      }
+      if(expr.name=="len" && expr.arguments[0].a[0].tag=="set"){
+        let argCode = codeGenValue(expr.arguments[0], env);
+        argCode.push("(call $set$length)")
+        return argCode
       }
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);

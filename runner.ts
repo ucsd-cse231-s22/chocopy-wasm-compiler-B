@@ -128,6 +128,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_shallow_list (import "imports" "print_shallow_list") (param i32) (param i32) (result i32))
+    (func $len (import "imports" "len") (param i32) (result i32))
 ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
 
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
