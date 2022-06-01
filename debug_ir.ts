@@ -1,3 +1,4 @@
+//@ts-nocheck
 import {parse} from './parser';
 import { run, Config, augmentEnv } from "./runner";
 import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';

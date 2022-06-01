@@ -182,13 +182,15 @@ function webStart() {
 
         textarea.value = editor.getValue();
     })
-    editor.on('inputRead', function onChange(editor, input) {
-        if (input.text[0] === ';' || input.text[0] === ' ' || input.text[0] === ":") {
-            return;
-        }
-        (editor as any).showHint({
-        });
-    });
+    // Comment out because this will cause autocomplete directly. 
+    //For example, type "pr" and it will directly be forced to changed to "property".
+    // editor.on('inputRead', function onChange(editor, input) {
+    //     if (input.text[0] === ';' || input.text[0] === ' ' || input.text[0] === ":") {
+    //         return;
+    //     }
+    //     (editor as any).showHint({
+    //     });
+    // });
 
     dragbarFunction();
     promptTextArea();

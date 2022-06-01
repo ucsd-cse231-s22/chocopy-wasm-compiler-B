@@ -120,7 +120,8 @@ function renderNewLine(result: Value, elt: HTMLElement){
 
 export function renderResult(result : Value, objectTrackList: Array<ObjectField>) : void {
   if(result === undefined) { return; }
-  const elt = document.createElement("pre");
+  //Modify this to make web testing easier, just name the tag with different name
+  const elt = document.createElement("dummy");
   document.getElementById("output").appendChild(elt);
   renderNewLine(result, elt);
   if (objectTrackList.length!=0){
