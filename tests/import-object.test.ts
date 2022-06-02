@@ -57,6 +57,7 @@ export const importObject: any = {
     //  console.
     index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
     division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+    key_not_found: (arg: number, line: number, col: number) => RUNTIME_ERROR.key_not_found(arg),
     assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
     stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
     stack_clear: () => RUNTIME_ERROR.stack_clear(),

@@ -4,6 +4,7 @@
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
+    (func $key_not_found (import "imports" "key_not_found") (param i32) (result i32))
 
     (func $set$add (param $baseAddr i32) (param $key i32) (result i32)
         (local $nodePtr i32)
@@ -280,6 +281,7 @@
     (func (export "set$remove") (param $baseAddr i32) (param $key i32) (result i32)
         (local $prevPtr i32)
         (local $currPtr i32)
+        (local $temp i32)
 
         (local.get $baseAddr)
         (local.get $key)
@@ -330,6 +332,11 @@
                         )
                     )
                 )
+            )
+            (else
+                (i32.const 0)
+                (call $key_not_found)
+                (local.set $temp)
             )
         )
         ;; if the item to be removed is NOT found => return -1

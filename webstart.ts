@@ -35,6 +35,7 @@ function webStart() {
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+        key_not_found: (arg: number, line: number, col: number) => RUNTIME_ERROR.key_not_found(arg), 
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
         StopIteration: (arg:any, arg1:any) => RUNTIME_ERROR.StopIteration(arg, arg1),
