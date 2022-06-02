@@ -34,7 +34,7 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
-  | {  a?: A, tag: "for", vars: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>>, elseBody?: Array<Stmt<A>> }
+  | {  a?: A, tag: "for", vars:  DestructureLHS<A>[], iterable: Expr<A>, body: Array<Stmt<A>>, elseBody?: Array<Stmt<A>> }
   | {  a?: A, tag: "break", loopCounter?: number }
   | {  a?: A, tag: "continue", loopCounter?: number }
 
@@ -46,9 +46,9 @@ export type Expr<A> =
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
-  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A>, end?: Expr<A>, steps?: Expr<A>}
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
-  | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "construct", name: string , strarg?:string}
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression
@@ -57,6 +57,7 @@ export type Expr<A> =
 export type Literal<A> = 
     { a?: A, tag: "num", value: number }
   | { a?: A, tag: "bool", value: boolean }
+  | { a?: A, tag: "str", value: string}
   | { a?: A, tag: "none" }
   | { a?: A, tag: "TypeVar" }
 

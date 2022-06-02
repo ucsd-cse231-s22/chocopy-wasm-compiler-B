@@ -1,7 +1,7 @@
 import { BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
+import { NUM, BOOL, NONE, CLASS } from './utils';
 import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint } from "./outputrender";
 import { log } from 'console';
@@ -35,12 +35,15 @@ function webStart() {
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
         index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+        key_not_found: (arg: number, line: number, col: number) => RUNTIME_ERROR.key_not_found(arg), 
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
+        StopIteration: (arg:any, arg1:any) => RUNTIME_ERROR.StopIteration(arg, arg1),
         assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
+        print_str: (arg: number) => renderPrint(CLASS("str"), arg, memory),
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
@@ -56,8 +59,15 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
     );
-
     importObject.libset = setModule.instance.exports;
+
+    const stringModule = await fetch('string.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(strings =>
+      WebAssembly.instantiate(strings, {...importObject, js: { mem: memory } })
+    );
+    importObject.libstring = stringModule.instance.exports;
+
     
     var repl = new BasicREPL(importObject);
 

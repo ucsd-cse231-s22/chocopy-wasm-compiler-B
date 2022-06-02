@@ -2,7 +2,10 @@ import * as AST from './ast';
 import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
+import { equalType, isIterableObject } from "./type-check";
 import { NUM, BOOL, NONE, CLASS } from "./utils";
+import { createModuleResolutionCache } from 'typescript';
+import { defaultMaxListeners } from 'events';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -83,6 +86,63 @@ function literalToVal(lit: AST.Literal<[Type, SourceLocation]>) : IR.Value<[Type
         case "none":
             return {...lit, a:[NONE, lit.a[1]]}        
     }
+}
+
+function lowerStr(lit: { tag: "str", value: string}, source:SourceLocation): [Array<IR.VarInit<[Type, SourceLocation]>>, Array<IR.Stmt<[Type, SourceLocation]>>, IR.Expr<[Type, SourceLocation]>]{
+  const strName = generateName("newObj")
+  const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1, a: [NUM, source] }, a: [CLASS("str"), source] };
+  const assigns : IR.Stmt<[Type, SourceLocation]>[] = [];
+  assigns.push({
+    a: [NONE, source],
+    tag: "store",
+    start: { tag: "id", name: strName, a: [CLASS("str"), source]},
+    offset: { tag: "wasmint", value: 0, a: [NUM, source]},
+    value: { tag: "wasmint", value: lit.value.length, a: [NUM, source] },
+  });
+
+  // var result = ( ( (bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF) ); charCodeAt(i)
+  for(let i = 0; i < Math.floor(lit.value.length / 4); i++){
+    let register_1 = ((lit.value.charCodeAt(4*i) & 0xFF));
+    let register_2 = ((lit.value.charCodeAt(4*i+1) & 0xFF) << 8);
+    let register_3 = ((lit.value.charCodeAt(4*i+2) & 0xFF) << 16);
+    let register_4 = ((lit.value.charCodeAt(4*i+3) & 0xFF) << 24);
+
+    let result = (register_1 | register_2 | register_3 | register_4);
+
+    assigns.push({
+      a: [NONE, source],
+      tag: "store",
+      start: { tag: "id", name: strName, a: [CLASS("str"), source]},
+      offset: { tag: "wasmint", value: i+1, a: [NUM, source] },
+      value: { tag: "wasmint", value: result, a: [CLASS("str"), source] }
+    });
+  }
+
+  if (lit.value.length % 4 !== 0){
+    let result = 0x0;
+    for(let i = 0; i < lit.value.length % 4; i++){
+      let offset = Math.floor(lit.value.length / 4) * 4;
+      let register_1 = ((lit.value.charCodeAt(offset + i) & 0xFF) << 8*i);
+  
+      result = (result | register_1);
+    }
+
+    let offset = Math.floor(lit.value.length / 4);
+    assigns.push({
+      a: [NONE, source],
+      tag: "store",
+      start: { tag: "id", name: strName, a: [CLASS("str"), source] },
+      offset: { tag: "wasmint", value: offset+1, a: [NUM, source] },
+      value: { tag: "wasmint", value: result, a: [CLASS("str"), source] },
+    });
+  }
+
+  return [
+    [ { name: strName, type: {tag: "class", name: "str"}, value: { tag: "none", a: [NONE, source]}, a: [CLASS("str"), source] }],
+    [ { tag: "assign", name: strName, value: alloc, a: [NONE, source] }, ...assigns 
+    ],
+    { a: [{tag:"class", name:"str"},source], tag: "value", value: { a: [{tag:"class", name:"str"}, source], tag: "id", name: strName } }
+  ];
 }
 
 function flattenStmts(s : Array<AST.Stmt<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, env : GlobalEnv) : Array<IR.VarInit<[Type, SourceLocation]>> {
@@ -226,23 +286,22 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       var forbodyLbl = generateName("$whilebody");
       var forElseLbl = generateName("$forelse")
       var forEndLbl = generateName("$whileend");
-      var iterableObject = generateName("$iterableobject")
+      var iterableObject = generateName("$iterableobject")  
       
-      var [in_inits, in_stmts, in_expr] = flattenExprToExpr(s.iterable, blocks, env);
-      pushStmtsToLastBlock(blocks, ...in_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: in_expr} );
-      pushStmtsToLastBlock(blocks, { a: s.a, tag: "jmp", lbl: forStartLbl })
+      var [iter_inits, iter_stmts, iter_expr] = flattenExprToExpr(s.iterable, blocks, env);
+      
+      pushStmtsToLastBlock(blocks, ...iter_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: iter_expr} );
+      pushStmtsToLastBlock(blocks, { a:[NONE, s.a[1]],  tag: "jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
 
-      let condExpr:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, s.a[1]],tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
+      let condExpr:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, s.a[1]], tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
       var [cinits, cstmts, cexpr] = flattenExprToVal(condExpr, blocks, env);
       pushStmtsToLastBlock(blocks, ...cstmts, { a: s.a, tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forElseLbl });
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
-
-      const iterVal: AST.Expr<[AST.Type, SourceLocation]> = {a: s.a, tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "next", arguments: []}
-      var [s_inits, s_stmts,s_expr] = flattenExprToExpr(iterVal, blocks, env);
-      //@ts-ignore
-      pushStmtsToLastBlock(blocks, ...s_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: s.vars.name, value: s_expr } );
-      
+      var allinits:Array<IR.VarInit<[Type, SourceLocation]>> = []
+      var lhs = s.vars
+      var rhs = s.iterable
+      lowerAllDestructureForAssignments(blocks, lhs, rhs, env, allinits, iterableObject, s.a[1]);
       var bodyinits = flattenStmts(s.body, blocks, env);
       pushStmtsToLastBlock(blocks, { a:s.a, tag: "jmp", lbl: forStartLbl });
       blocks.push({  a: s.a, label: forElseLbl, stmts: [] })
@@ -251,7 +310,7 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       pushStmtsToLastBlock(blocks, { a:s.a, tag: "jmp", lbl: forEndLbl });
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
 
-      return [...in_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { a:s.a, tag: "none" } }]
+      return [...iter_inits, ...cinits, ...bodyinits, ...allinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: {a:s.a, tag: "none" } }]
     
     case "break":
       var counter = s.loopCounter;
@@ -264,51 +323,243 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
   }
 }
 
+function lowerAllDestructureForAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>,iterableObject: string ,dummyLoc:SourceLocation) {
+  let lhs_index = 0
+  let rhs_index = 0
+  let rhs_vals = [rhs]
+  while (lhs_index < lhs.length && rhs_index < rhs_vals.length) {
+    let l = lhs[lhs_index].lhs
+    let r = rhs_vals[rhs_index]
+    if(r.a[0].tag==="class"){ //for all iterable classes
+      var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
+      if(va.tag==="id"){
+        var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] ,a: [NONE, dummyLoc] };
+        //@ts-ignore
+        if(lhs.length > 1) {
+          dummyNext = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] , a:[{tag: "list", type: {tag: "list", type: NUM}}, rhs.a[1]] };
+          
+          lowerAllDestructureAssignments_SpecialFor(blocks, lhs, dummyNext, env, allinits,iterableObject, lhs[0].a[1]);
+          return;
+        }
+        while(lhs_index < lhs.length){
+          l = lhs[lhs_index].lhs
+          lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
+          lhs_index++;
+          
+        }
+        rhs_index++;
+      }
+    }
+    if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
+      l = lhs[lhs_index].lhs
+      r = rhs_vals[rhs_index]
+      if(lhs[lhs_index].isStarred){
+        var rev_lhs_index = lhs.length-1
+        var rev_rhs_index = rhs_vals.length - 1
+        while(rev_lhs_index > lhs_index){
+          l = lhs[rev_lhs_index].lhs
+          r = rhs_vals[rev_rhs_index]
+          lowerDestructAssignment(blocks, l, r, env, allinits);
+          rev_rhs_index--;
+          rev_lhs_index--;
+        }
+        const rhs_exprs = rhs_vals.slice(lhs_index, rev_rhs_index+1);
+        l = lhs[lhs_index].lhs
+        if(rhs_exprs.length!==0){
+          lowerStarredAssignments(l, rhs_exprs, blocks, env, allinits);
+          console.log(lhs_index, rhs_index)
+          break;
+        }
+      } else {
+        lowerDestructAssignment(blocks, l, r, env, allinits);
+        rhs_index++;
+        lhs_index++;
+      }
+    }else break;
+  }
+
+}
+function lowerAllDestructureAssignments_SpecialFor(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>,iterableObject:string ,dummyLoc:SourceLocation) {
+  if(rhs.a[0].tag==="list"){
+    let lhs_index = 0
+    var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+    var [valinits, valstmts, vale] = flattenExprToExpr(rhs,blocks, env);
+    var tempName = generateName("DummyVariable")
+    allinits.push(...valinits, { a: rhs.a, name: tempName, type: rhs.a[0], value: {a: rhs.a, tag: "none" } });
+
+    blocks[blocks.length - 1].stmts.push(...valstmts, { a: rhs.a, tag: "assign", name: tempName, value: vale});
+
+    while(lhs_index < lhs.length){
+      
+      rhs_vals.push({a:[{tag: "list", type: {tag: "list", type: NUM}}, rhs.a[1]], tag:"index", 
+      obj:{a: rhs.a, tag: "id", name: tempName}, 
+      index:{a:[NUM, rhs.a[1]],tag:"literal", value:{a:[NUM ,rhs.a[1]], tag:"num", value:lhs_index}}})
+      lhs_index++;
+    }
+
+     
+    while(lhs_index < lhs.length){
+      let l = lhs[lhs_index].lhs
+      //@ts-ignore
+      blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
+      lhs_index++;
+    }
+    destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+  } 
+}
 function lowerAllDestructureAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
   switch(rhs.tag){
     case "non-paren-vals":
-      let lhs_index = 0
-      let rhs_index = 0
-      while (lhs_index < lhs.length && rhs_index < rhs.values.length) {
-        let l = lhs[lhs_index].lhs
-        let r = rhs.values[rhs_index]
-        if(r.a[0].tag==="class"){ //for all iterable classes
-          var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
-          allinits.push(...valinits);
-          pushStmtsToLastBlock(blocks, ...valstmts);
-          const iterClassName = r.a[0].name;
-          if(va.tag==="id"){
-            var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-            var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasNext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-          
-            //will probably fail for cases like 'a,b,c = range(1,3),5
-            while(lhs_index < lhs.length){
-              l = lhs[lhs_index].lhs
-              var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
-              pushStmtsToLastBlock(blocks, ...stmts);
-              allinits.push(...inits);
-              lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
-              lhs_index++;
-            }
-            rhs_index++;
-          }
-
-        }
-        if(lhs_index < lhs.length && rhs_index < rhs.values.length){
-          l = lhs[lhs_index].lhs
-          r = rhs.values[rhs_index]
-          lowerDestructAssignment(blocks, l, r, env, allinits);
-          rhs_index++;
+    case "set":
+      var rhs_vals = rhs.values
+      destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      break;
+    case "listliteral":
+      var rhs_vals = rhs.elements
+      destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      break;
+    case "id": 
+      if(rhs.a[0].tag==="list"){ //TODO set on rhs, for starred exprs? how to check length..can add a length check in tc
+        //1. open rhs as index asign==> a,b = c ==> a,b = c[0], c[1]
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"id", name:rhs.name}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
           lhs_index++;
-        }else break;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
       }
       break;
-      default:
-        throw new Error("Not supported rhs for destructuring!")
+    case "call":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"call", name:rhs.name, arguments:rhs.arguments}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
+      }
+      break;
+    case "lookup":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"lookup", obj:rhs.obj, field:rhs.field}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } 
+      break;
+    default:
+      throw new Error("Not supported rhs for destructuring!")
+    }
+}
 
+function destructAllAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
+  let lhs_index = 0
+  let rhs_index = 0
+  while (lhs_index < lhs.length && rhs_index < rhs_vals.length) {
+    let l = lhs[lhs_index].lhs
+    let r = rhs_vals[rhs_index]
+    if(r.a[0].tag==="class"){ //for all iterable classes
+      var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
+      allinits.push(...valinits);
+      pushStmtsToLastBlock(blocks, ...valstmts);
+      const iterClassName = r.a[0].name;
+      if(va.tag==="id"){
+        var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasnext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
+      
+        //will probably fail for cases like 'a,b,c = range(1,3),5
+        while(lhs_index < lhs.length){
+          l = lhs[lhs_index].lhs
+          var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
+          pushStmtsToLastBlock(blocks, ...stmts);
+          allinits.push(...inits);
+          lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
+          lhs_index++;
+        }
+        rhs_index++;
+      }
+
+    }
+    if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
+      l = lhs[lhs_index].lhs
+      r = rhs_vals[rhs_index]
+      if(lhs[lhs_index].isStarred){
+        var rev_lhs_index = lhs.length-1
+        var rev_rhs_index = rhs_vals.length - 1
+        while(rev_lhs_index > lhs_index){
+          l = lhs[rev_lhs_index].lhs
+          r = rhs_vals[rev_rhs_index]
+          lowerDestructAssignment(blocks, l, r, env, allinits);
+          rev_rhs_index--;
+          rev_lhs_index--;
+        }
+        const rhs_exprs = rhs_vals.slice(lhs_index, rev_rhs_index+1);
+        l = lhs[lhs_index].lhs
+        if(rhs_exprs.length!==0){
+          lowerStarredAssignments(l, rhs_exprs, blocks, env, allinits);
+          console.log(lhs_index, rhs_index)
+          break;
+        }
+      } else {
+        lowerDestructAssignment(blocks, l, r, env, allinits);
+        rhs_index++;
+        lhs_index++;
+      }
+    }else break;
   }
 }
 
+function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rhs_exprs: AST.Expr<[Type, SourceLocation]>[], blocks: { a: [Type, SourceLocation]; label: string; stmts: IR.Stmt<[Type, SourceLocation]>[]; }[], 
+  env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[]) {
+  const newListName = generateName("newList");
+  const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: rhs_exprs.length + 1 ,a:rhs_exprs[0].a}, a:rhs_exprs[0].a };
+  var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
+  var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
+  var storeLength : IR.Stmt<[Type, SourceLocation]> = {
+    a:rhs_exprs[0].a,
+    tag: "store",
+    start: { a:rhs_exprs[0].a, tag: "id", name: newListName },
+    offset: { a:rhs_exprs[0].a, tag: "wasmint", value: 0 },
+    value: { a: [{tag: "number"}, rhs_exprs[0].a[1]], tag: "num", value: BigInt(rhs_exprs.length) }
+  }
+  const assignsList : IR.Stmt<[Type, SourceLocation]>[] = rhs_exprs.map((e, i) => {
+    const [init, stmt, val] = flattenExprToVal(e, blocks, env);
+    inits = [...inits, ...init];
+    stmts = [...stmts, ...stmt];
+    return {
+      a:e.a,
+      tag: "store",
+      start: { a:e.a, tag: "id", name: newListName },
+      offset: { a:e.a, tag: "wasmint", value: i+1 },
+      value: val
+    }
+  })
+  allinits.push({ name: newListName, type: l.a[0], value: { a:rhs_exprs[0].a, tag: "none" } , a:rhs_exprs[0].a}, ...inits);
+  // var [valstmts, vale] = [
+  //   [ { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
+  //   { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName } }
+  // ];
+  //blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
+  //console.log({ a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+  //@ts-ignore
+  pushStmtsToLastBlock(blocks, { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+
+}
 
 function lowerDestructAssignment(blocks: {
   a: [AST.Type, AST.SourceLocation]; label: string;
@@ -339,6 +590,31 @@ function lowerDestructAssignment(blocks: {
     //name always in id cases
     blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
     allinits.push(...valinits);
+  } 
+  else if (l.tag === "index"){
+    var [oinits, ostmts, oval] = flattenExprToVal(l.obj, blocks, env);
+    const [iinits, istmts, ival] = flattenExprToVal(l.index, blocks, env);
+    var [ninits, nstmts, nval] = flattenExprToVal(r, blocks, env);
+
+    const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
+
+    if (l.obj.a[0].tag === "list") {
+      pushStmtsToLastBlock(blocks,
+        ...ostmts, ...istmts, ...nstmts, {
+          tag: "store",
+          a: l.a,
+          start: oval,
+          offset: offsetValue,
+          value: nval
+        });
+      allinits.push(...oinits, ...iinits, ...ninits);
+    }
+    // if (s.obj.a[0].tag === "dict") {
+    //   ...
+    // }
+
+    else { throw new Error("Compiler's cursed, go home."); }
+
   }
 }
 
@@ -403,36 +679,16 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
-
       var objTyp = e.obj.a[0];
       if(objTyp.tag === "set") {
-        // set_a.update([...]) ==> set_a.update({...})
-        if (e.method === "update" && e.arguments[0].tag == "listliteral") {
-          e.arguments[0] = {
-            a: e.arguments[0].a,
-            tag: "set",
-            values: e.arguments[0].elements
-          }
-          const newargpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
-          const newarginits = newargpairs.map(cp => cp[0]).flat();
-          const newargstmts = newargpairs.map(cp => cp[1]).flat();
-          const newargvals = newargpairs.map(cp => cp[2]).flat();
-
-          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...newargvals] } 
-          return [
-            [...objinits, ...newarginits],
-            [...objstmts, ...newargstmts],
-            callMethod
-          ];
-        } else {
-          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
-          return [
-            [...objinits, ...arginits],
-            [...objstmts, ...argstmts],
-            callMethod
-          ];
-        }
+        const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
+        return [
+          [...objinits, ...arginits],
+          [...objstmts, ...argstmts],
+          callMethod
+        ];
       }
+
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
@@ -460,9 +716,14 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, blocks, env);
       const [iinits, istmts, ival] = flattenExprToVal(e.index, blocks, env);
 
-      // if(equalType(e.a[0], CLASS("str"))){
-      //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
-      // }
+      if(equalType(e.a[0], CLASS("str"))){
+        if("end" in e){
+          const [end_inits, end_stmts, end_val] = flattenExprToVal(e.end, blocks, env);
+          const [step_inits, step_stmts, step_val] = flattenExprToVal(e.steps, blocks, env);
+          return [[...oinits, ...iinits, ...end_inits, ...step_inits], [...ostmts, ...istmts, ...end_stmts, ...step_stmts], {a: e.a,tag: "call", name: "str$slicing", arguments: [oval, ival, end_val, step_val]} ]
+        }
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {a: e.a,tag: "call", name: "str$access", arguments: [oval, ival, {a: ival.a, tag: "wasmint", value: ival.a[1].line}, {a: ival.a, tag: "wasmint", value: ival.a[1].column}]} ]
+      }
       if (e.obj.a[0].tag === "list") { 
         const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
         return [[...oinits, ...iinits], [...ostmts, ...istmts], {
@@ -480,6 +741,9 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       // }
       throw new Error("Compiler's cursed, go home");
     case "construct":
+      if(e.name == "str"){
+        return lowerStr({tag:"str", value:e.strarg}, e.a[1]);
+      }
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
@@ -535,7 +799,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       return [[], [], {a: e.a, tag: "value", value: { ...e, a: e.a }} ];
     case "literal":
       return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
-
     case "set":
       const newSetName = generateName("newSet");
       // 10 buckets for now
@@ -547,7 +810,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         const [init, stmt, value] = flattenExprToVal(e, blocks, env);
         inits = [...inits, ...init];
         stmts = [...stmts, ...stmt];
-        // return an IR.Stmt
         return {
           a: e.a,
           tag: "expr",
@@ -560,7 +822,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         [ { a: e.a, tag: "assign", name: newSetName, value: allocSet }, ...stmts, ...assignsSet ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newSetName } }
       ];
-
     case "ternary":
     case "comprehension":
       return flattenExprToExprWithBlocks(e, blocks, env);

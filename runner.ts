@@ -5,8 +5,8 @@
 
 import wabt from 'wabt';
 import { compile, GlobalEnv } from './compiler';
-import {parse} from './parser';
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
+import { parse } from './parser';
+import { emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt } from './type-check';
 import { Program, Type, Value, SourceLocation } from './ast';
 import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
@@ -32,15 +32,15 @@ export var sourceCode = "";
 // is given for this in the docs page, and I haven't spent time on the domain
 // module to figure out what's going on here. It doesn't seem critical for WABT
 // to have this support, so we patch it away.
-if(typeof process !== "undefined") {
+if (typeof process !== "undefined") {
   const oldProcessOn = process.on;
-  process.on = (...args : any) : any => {
-    if(args[0] === "uncaughtException") { return; }
+  process.on = (...args: any): any => {
+    if (args[0] === "uncaughtException") { return; }
     else { return oldProcessOn.apply(process, args); }
   };
 }
 
-export async function runWat(source : string, importObject : any) : Promise<any> {
+export async function runWat(source: string, importObject: any): Promise<any> {
   const wabtInterface = await wabt();
   const myModule = wabtInterface.parseWat("test.wat", source);
   var asBinary = myModule.toBinary({});
@@ -50,7 +50,7 @@ export async function runWat(source : string, importObject : any) : Promise<any>
 }
 
 
-export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>) : GlobalEnv {
+export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>): GlobalEnv {
   const newGlobals = new Map(env.globals);
   const newClasses = new Map(env.classes);
 
@@ -75,18 +75,18 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
 
 // export async function run(source : string, config: Config) : Promise<[Value, compiler.GlobalEnv, GlobalTypeEnv, string]> {
 
-export async function run(source : string, config: Config, astOpt: boolean = false, irOpt: boolean = false) : Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource, string]> {
+export async function run(source: string, config: Config, astOpt: boolean = false, irOpt: boolean = false): Promise<[Value, GlobalEnv, GlobalTypeEnv, string, WebAssembly.WebAssemblyInstantiatedSource, string]> {
   const parsed = parse(source);
   sourceCode = source;
   const specialized = removeGenerics(parsed);
   var [tprogram, tenv] = tc(config.typeEnv, specialized);
-  if(astOpt){
+  if (astOpt) {
     tprogram = optimizeAst(tprogram);
   }
   const globalEnv = augmentEnv(config.env, tprogram);
   var irprogram = lowerProgram(tprogram, globalEnv);
 
-  if(irOpt){
+  if (irOpt) {
     irprogram = optimizeIr(irprogram);
   }
   // printProgIR(irprogram);
@@ -97,10 +97,10 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
   // const lastExpr = parsed.stmts[parsed.stmts.length - 1]
   // const lastExprTyp = lastExpr.a;
   // console.log("LASTEXPR", lastExpr);
-  if(progTyp !== NONE) {
+  if (progTyp !== NONE) {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
-  } 
+  }
   let globalsBefore = config.env.globals;
   // const compiled = compiler.compile(tprogram, config.env);
   const compiled = compile(irprogram, globalEnv);
@@ -113,8 +113,8 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
   ).join("\n");
 
   const importObject = config.importObject;
-  if(!importObject.js) {
-    const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
+  if (!importObject.js) {
+    const memory = new WebAssembly.Memory({ initial: 2000, maximum: 2000 });
     importObject.js = { memory: memory };
   }
 
@@ -122,17 +122,30 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (import "js" "memory" (memory 1))
     (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (param i32) (param i32) (result i32))
     (func $division_by_zero (import "imports" "division_by_zero") (param i32) (param i32) (param i32) (result i32))
+    (func $StopIteration (import "imports" "StopIteration") (param i32) (param i32) (result i32))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (param i32) (param i32) (result i32))
+    (func $key_not_found (import "imports" "key_not_found") (param i32) (result i32))
     (func $stack_push (import "imports" "stack_push") (param i32))
     (func $stack_clear (import "imports" "stack_clear"))
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
-${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
+    (func $print_str (import "imports" "print_str") (param i32) (result i32))
+${BuiltinLib.map(x => `    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
 
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $str$access (import "libstring" "str$access") (param $self i32) (param $index i32) (param $line i32) (param $col i32) (result i32))
+    (func $str$length (import "libstring" "str$length") (param $self i32) (result i32))
+    (func $str$lessthan (import "libstring" "str$lessthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$greaterthan (import "libstring" "str$greaterthan") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$equalsto (import "libstring" "str$equalsto") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$concat (import "libstring" "str$concat") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$copyconstructor (import "libstring" "str$copyconstructor") (param $self i32) (param $rhs i32) (result i32))
+    (func $str$slicing (import "libstring" "str$slicing") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32))
+    (func $str$upper (import "libstring" "str$upper") (param $self i32) (result i32))
+    (func $str$lower (import "libstring" "str$lower") (param $self i32) (result i32))
     (func $set$add (import "libset" "set$add") (param i32) (param i32) (result i32))
     (func $set$contains (import "libset" "set$contains") (param i32) (param i32) (result i32))
     (func $set$length (import "libset" "set$length") (param i32) (result i32))
@@ -152,7 +165,7 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
       ${returnExpr}
     )
   )`;
-  console.log(wasmSource);
+  // console.log(wasmSource);
   const [result, instance] = await runWat(wasmSource, importObject);
 
   return [PyValue(progTyp, result), compiled.newEnv, tenv, compiled.functions, instance, wasmSource];
