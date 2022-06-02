@@ -73,9 +73,9 @@ export function emptyLocalTypeEnv() : LocalTypeEnv {
   };
 }
 
-export type TypeError = {
+/*export type TypeError = {
   message: string
-}
+}*/
 
 export function equalType(t1: Type, t2: Type): boolean {
   return (
@@ -227,7 +227,7 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<SourceLocation>) : Var
   if (isAssignable(env, tcVal.a[0], init.type)) {
     return {...init, a: [NONE, init.a], value: tcVal};
   } else {
-    throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + tcVal.a[0] + "`", init.a);
+    throw new TypeCheckError("Expected type `" + init.type.tag + "`; got type `" + tcVal.a[0].tag + "`", init.a);
   }
 }
 
@@ -245,7 +245,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
 
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`, fun.a);
+    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet.tag)} does not match actual return type: ${JSON.stringify(locals.actualRet.tag)}`, fun.a);
   return {...fun, a:[NONE, fun.a], body: tBody, inits: tcinits};
 }
 
@@ -671,14 +671,14 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else if (expr.name === "len") {
         const targs = expr.arguments.map(arg => tcExpr(env, locals, arg))
         if (targs.length !== 1) {
-          throw new TypeCheckError("len() didn't receive the correct number of arguments");
+          throw new TypeCheckError("len() didn't receive the correct number of arguments", expr.a);
         }
         /// tricky here, since we don't have to do type check inside list for len function just switch the order of arguments to pass it
         // if (!equalType({ tag: "list", type: { tag: "none" } }, targs[0].a[0])) {
         //   throw new TypeCheckError("len() incorrect arugment type");
         // }
         if (!(targs[0].a[0].tag === "class" && targs[0].a[0].name === "list")) {
-          throw new TypeCheckError("len() incorrect argument type");
+          throw new TypeCheckError("len() incorrect argument type", expr.a);
         }
         return { a: [NUM, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
       } else {
@@ -729,7 +729,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                 }
               } else if (expr.method === "pop") {
                 if (realArgs.length > 2) {
-                  throw new TypeCheckError(`pop expected at most 1 argument, got ${realArgs.length - 1}`);
+                  throw new TypeCheckError(`pop expected at most 1 argument, got ${realArgs.length - 1}`, expr.a);
                 }
                 if (realArgs.length == 1) {
                   // add -1 as pos
