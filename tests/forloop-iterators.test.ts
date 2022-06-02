@@ -3,7 +3,6 @@ import { parse } from "../parser";
 import { assert, assertPrint, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
 import { TypeCheckError } from '../error_reporting'
-import { TypeError } from "../type-check";
 import { PyInt, PyBool, PyNone, PyObj } from '../utils';
 
 var rangeStr = `
