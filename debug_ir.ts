@@ -126,7 +126,7 @@ function printStmt(stmt: ir.Stmt<[Type, SourceLocation]>) {
     console.log(exprStr(stmt.value));
     break;
   case "return":
-    console.log(" RETURN ");
+    console.log(" RETURN " + valStr(stmt.value));
     break;
   case "expr":
     console.log(stmt.expr.tag);
@@ -340,8 +340,16 @@ function valInline(val: ir.Value<[Type, SourceLocation]>): string {
 // entry point for debugging
 async function debug(optAst: boolean = false, optIR: boolean = false) {
   var source = 
-builtinClasses + `
-(print(min(num, 3)) for num in Range().new(0, 6, 1))
+`
+p: int = 1
+x: int = 2
+z: int = 3
+
+while x > 0:
+  p = p * x
+  z = z + 1
+  x = x - 1
+print(p)
 `
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2));
@@ -368,9 +376,9 @@ builtinClasses + `
   // console.log(lp);
   // console.log("Needed Analysis, fuction body");
   // console.log(np);
-  // console.log("Needed Analysis, main body");
-  // const np_main: needed_predicate = needednessAnalysis(irprogram.body);
-  // console.log(np_main);
+  console.log("Needed Analysis, main body");
+  const np_main: needed_predicate = needednessAnalysis(irprogram.body);
+  console.log(np_main);
   // console.log("After DCE");
   // const dce_ir = needednessDCE(irprogram.body);
   // console.log(dce_ir);
