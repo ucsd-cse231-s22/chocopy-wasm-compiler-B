@@ -19,6 +19,7 @@ import "codemirror/addon/edit/matchbrackets";
 import "codemirror/addon/search/searchcursor"
 import "codemirror/keymap/vim";
 import "codemirror/addon/scroll/simplescrollbars";
+import "codemirror/addon/lint/lint";
 
 import "./style.scss";
 import { autocompleteHint } from "./ac";
@@ -238,7 +239,7 @@ function webStart() {
       lint:true,
       hintOptions: {
         alignWithWord: false,
-        completeSingle: false,
+        completeSingle: true,
       },
       scrollbarStyle: "simple",
     } as any);
@@ -302,6 +303,20 @@ function webStart() {
       }
     });
 
+    editor.on("keydown", (cm, input) => {
+      switch (input.code) {
+        //reset isClassMethod variable based on enter or space or backspace
+        case "Enter":
+          isClassMethod = false;
+          return;
+        case "Space":
+          isClassMethod = false;
+          return;
+        case "Backspace":
+          isClassMethod = false;
+          return;
+      }
+    });
 
     dragbarFunction();
     promptTextArea();

@@ -1,5 +1,10 @@
 @import "codemirror/lib/codemirror.css";
 @import "themelist.scss";
+@import "node_modules/codemirror/lib/codemirror.css";
+@import "stdlib/show-hint.css";
+@import "node_modules/codemirror/addon/lint/lint.css";
+@import "node_modules/codemirror/addon/scroll/simplescrollbars.css";
+
 
 .isa_info, .isa_success, .isa_warning, .isa_error {
     margin: 10px 0px;
@@ -180,7 +185,7 @@ html{
 
 .wathon-content-border{
     border: 4px solid #bbb;
-    border-radius: 4px;
+    border-radius: 3px;
     width: 100%;
     min-width: 0;
     height: 100%;
@@ -414,7 +419,7 @@ html{
     // height: 400px;
     // padding:5px;
     // margin:10px;
-    border-radius: 2%;
+    border-radius: 1%;
   }
 
   .error_content {
