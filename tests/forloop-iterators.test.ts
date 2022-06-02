@@ -3,6 +3,7 @@ import { parse } from "../parser";
 import { assert, assertPrint, assertTC, assertFail } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
 import { TypeCheckError } from '../error_reporting'
+import { TypeError } from "../type-check";
 import { PyInt, PyBool, PyNone, PyObj } from '../utils';
 
 var rangeStr = `
@@ -141,36 +142,37 @@ class StringIterator(object):
     
 def strtoStringIterator(initVal: str) -> StringIterator :
     return StringIterator().new(initVal)
+
 `
 
-describe("Basic range and custom iteratable functionalities", () => {
+describe("For loops and iterators functionalities", () => {
     
-    assertPrint('range: three parameters', rangeStr + `
+    assertPrint('loops_iterators_test 1: range: three parameters', rangeStr + `
 i: int = 0
 for i in range(0,10,2):
     print(i)`, ["0","2","4","6", "8"]);
 
-    assertPrint('range: called inside a function with function parameters', rangeStr + `
+    assertPrint('loops_iterators_test 2: range: called inside a function with function parameters', rangeStr + `
 def f(x: int, y: int):
     i: int = 0
     for i in range(x*1,y*1,1*2*abs(1)):
         print(i)
 f(0,10)`, ["0","2","4","6", "8"]);
     
-    assertPrint('range: negative step', rangeStr + `
+    assertPrint('loops_iterators_test 3: range: negative step', rangeStr + `
 i: int = 0
 for i in range(0,-10,-2):
     print(i)`, ["0","-2","-4", "-6", "-8"]);
 
 
-    assertPrint('range: for loop with break', rangeStr + `
+    assertPrint('loops_iterators_test 4: range: for loop with break', rangeStr + `
 i: int = 0
 for i in range(0,-10,-2):
     print(i)
     break
 `, ["0"]);
 
-    assertPrint('range: for loop with break with an if and else statement', rangeStr + `
+    assertPrint('loops_iterators_test 5: range: for loop with break with an if and else statement', rangeStr + `
 i: int = 0
 for i in range(0,10,1):
     if i > 5:
@@ -179,7 +181,7 @@ for i in range(0,10,1):
         print(i)
 `, ["0", "1", "2", "3", "4","5"]);
 
-    assertPrint('range: for loop with continue inside the main body', rangeStr + `
+    assertPrint('loops_iterators_test 6: range: for loop with continue inside the main body', rangeStr + `
 i: int = 0
 for i in range(0,5,1):
     print(i*100)
@@ -187,7 +189,7 @@ for i in range(0,5,1):
     print(i)    
 `, ["0", "100", "200", "300", "400"]);    
 
-    assertPrint('range: for loop with continue inside a if statement', rangeStr + `
+    assertPrint('loops_iterators_test 7: range: for loop with continue inside a if statement', rangeStr + `
 i : int = 0
 for i in range(0, 10, 1):
     if i % 2 == 0:
@@ -196,7 +198,7 @@ for i in range(0, 10, 1):
         print(i)
 `, ["1", "3", "5", "7", "9"]);  
 
-    assertPrint('range: nested for loop with break', rangeStr + `
+    assertPrint('loops_iterators_test 8: range: nested for loop with break', rangeStr + `
 i: int = 0
 j:int = 0
 for i in range(0,5,1):
@@ -206,7 +208,7 @@ for i in range(0,5,1):
     break   
 `, ["0", "0", "1"]);   
 
-assertPrint('range: complex break, continue 1', rangeStr + `
+assertPrint('loops_iterators_test 9: range: complex break, continue 1', rangeStr + `
 i: int = 0
 j:int = 0
 for i in range(0,5,1):
@@ -220,7 +222,7 @@ for i in range(0,5,1):
     break   
 `, ["0"]);   
 
-assertPrint('range: complex break, continue 2', rangeStr + `
+assertPrint('loops_iterators_test 10: range: complex break, continue 2', rangeStr + `
 i: int = 0
 j:int = 0
 for i in range(0,5,1):
@@ -235,7 +237,7 @@ for i in range(0,5,1):
         continue
 `, ["0","1","0","2","0","1","3","0","1","2","4","0","1","2","3"]);   
 
-assertPrint('range: complex break, continue 3', rangeStr + `
+assertPrint('loops_iterators_test 11: range: complex break, continue 3', rangeStr + `
 i: int = 0
 j:int = 0
 k: int =0
@@ -259,7 +261,7 @@ for i in range(0,5,1):
         continue
 `, ["0","1","0","90","60","30","2","0","1","3","0","90","60","30","1","90","60","30","2","90","60","30","4","0","1","2","3"]); 
 
-assertPrint('range: complex break, continue 4', rangeStr + `
+assertPrint('loops_iterators_test 12: range: complex break, continue 4', rangeStr + `
 i: int = 0
 j:int = 0
 k: int =0
@@ -284,7 +286,7 @@ for i in range(0,5,1):
 `, ["0","1","0","90","2","0","1","3","0","90","1","90","2","90","4","0","1","2","3"]);
 
 
-assertPrint('range: complex break, continue 5' , rangeStr + `
+assertPrint('loops_iterators_test 13: range: complex break, continue 5' , rangeStr + `
 i: int = 0
 j:int  = 0
 k: int = 0 
@@ -309,7 +311,7 @@ for i in range(3, -3, -1):
 
 ` ,["-2", "1", "1"])
 
-    assertPrint('range: for else construct 1', rangeStr + `
+    assertPrint('loops_iterators_test 14: range: for else construct 1', rangeStr + `
 i : int = 0
 for i in range(10, 0, -1):
     if i < 5:
@@ -320,7 +322,7 @@ else:
     print(123456)
 `, ["10", "9", "8", "7", "6", "5"]);  
         
-    assertPrint('range: for else construct 2', rangeStr + `
+    assertPrint('loops_iterators_test 15: range: for else construct 2', rangeStr + `
 i : int = 0
 for i in range(10, 5, -1):
     if i < 5:
@@ -331,7 +333,7 @@ else:
     print(123456)
 `, ["10", "9", "8", "7", "6", "123456"]);  
 
-assertPrint('Custom Iterator 1' , rangeStr + `
+assertPrint('loops_iterators_test 16: Custom Iterator 1' , rangeStr + `
 class EvenNumbers(object):
     num:int = 0
     def __init__(self: EvenNumbers):
@@ -353,7 +355,7 @@ for i in EvenNumbers():
 
 ` ,["0", "2", "4", "6", "8", "10"])
 
-assertPrint('Custom Iterator called range' , rangeStr + `
+assertPrint('loops_iterators_test 17: Custom Iterator called range' , rangeStr + `
 class range(object):
     num:int = 1
     def __init__(self: range):
@@ -375,7 +377,7 @@ for i in range():
 
 ` ,["1", "2", "4", "8", "16"])
 
-assertPrint('Custom Bool Iterator' , rangeStr + `
+assertPrint('loops_iterators_test 18: Custom Bool Iterator' , rangeStr + `
 
 class BoolIterable(object):
     val:bool = True
@@ -400,7 +402,7 @@ for i in BoolIterable():
 
 ` ,["True", "False","True", "False","True", "False"]);
 
-assertPrint('List Iterator Int' , rangeStr + `
+assertPrint('loops_iterators_test 19: List Iterator Int (fixed length)' , rangeStr + `
 
 l : [int] = None
 i: int = 0
@@ -410,7 +412,7 @@ for i in l:
 
 ` ,["1","2","3","4","5"]);
 
-assertPrint('List Iterator Bool' , rangeStr + `
+assertPrint('loops_iterators_test 20: List Iterator Bool' , rangeStr + `
 
 l : [bool] = None
 i: bool = False
@@ -420,7 +422,7 @@ for i in l:
 
 ` ,["True", "False", "True", "False", "True"]);
 
-assertPrint('iter() and next() for ListIteratorInt' , rangeStr + `
+assertPrint('loops_iterators_test 21: iter() and next() for ListIteratorInt' , rangeStr + `
 
 i: [int] = None
 _iter: ListIteratorInt = None
@@ -432,7 +434,7 @@ print(next(_iter))
 print(next(_iter))
 `, ["1", "2", "3", "4"]);
 
-assertPrint('iter() and next() for ListIteratorBool' , rangeStr + `
+assertPrint('loops_iterators_test 22: iter() and next() for ListIteratorBool' , rangeStr + `
 
 i: [bool] = None
 _iter: ListIteratorBool = None
@@ -445,7 +447,7 @@ print(next(_iter))
 
 ` ,["True", "False", "True", "False"]);
 
-assertPrint('iter() and next() for Custom iterators with iter()' , rangeStr + `
+assertPrint('loops_iterators_test 23: iter() and next() for Custom iterators with iter()' , rangeStr + `
 class BoolIterable(object):
     val:bool = True
     num:int = 0
@@ -473,7 +475,7 @@ print(next(_iter))
 
 ` ,["True", "False", "True", "False"]);
 
-assertPrint('iter() and next() on string' , rangeStr + `
+assertPrint('loops_iterators_test 24: iter() and next() on string' , rangeStr + `
 
 s:str = "iterator"
 i:str = "a"
@@ -485,7 +487,7 @@ print(next(_iter))
 
 ` ,["i", "t", "e"]);
 
-assertPrint('enumerate() on list of integers' , rangeStr + `
+assertPrint('loops_iterators_test 25: enumerate() on list of integers' , rangeStr + `
 
 l : [int] = None
 i: [int] = None
@@ -496,7 +498,7 @@ for i in enumerate(l):
 
 ` ,["0","1","1","2","2","3","3","4","4","5"]);
 
-assertPrint('String Iterator' , rangeStr + `
+assertPrint('loops_iterators_test 26: String Iterator' , rangeStr + `
   
 s:str = "iterator"
 i:str = "a"
@@ -506,7 +508,7 @@ for i in s:
 
 ` ,["i", "t", "e", "r", "a", "t", "o", "r"]);
 
-assertPrint('Set Iterator Int' , rangeStr + `
+assertPrint('loops_iterators_test 27: Set Iterator Int' , rangeStr + `
 
 l : set[int] = None
 i: int = 0
@@ -516,7 +518,18 @@ for i in l:
 
 ` ,["1","2","3"]);
 
-assertPrint('iter on Sets of ints' , rangeStr + `
+assertPrint('loops_iterators_test 28: enumerate() on list of integers - destructuring' , rangeStr + `
+
+l : [int] = None
+i: int = 0
+j:int = 0
+l = [1,2,3,4,5,6,7]
+for i, j in enumerate(l):
+    print(i)
+    print(j)
+
+` ,["0","1","1","2","2","3","3","4","4","5"]);
+assertPrint('loops_iterators_test 29: iter on Sets of ints' , rangeStr + `
 
 l : set[int] = None
 _iter: SetIteratorInt = None
@@ -529,19 +542,7 @@ print(next(_iter))
 
 ` ,["1","2","3"]);
 
-assertPrint('enumerate() on list of integers - destructuring' , rangeStr + `
-
-l : [int] = None
-i: int = 0
-j:int = 0
-l = [1,2,3,4,5,6,7]
-for i, j in enumerate(l):
-    print(i)
-    print(j)
-
-` ,["0","1","1","2","2","3","3","4","4","5"]);
-
-assertPrint('Generics Iterator list of ints' , `
+assertPrint('loops_iterators_test 30: Generics Iterator list of ints' , `
 T: TypeVar = TypeVar('T')
 
 class ListIterator(Generic[T]):
@@ -567,7 +568,7 @@ for i in itr:
 
 ` ,["1","2","3","4","5"]);
 
-assertPrint('Generics Iterator list of lists' , `
+assertPrint('loops_iterators_test 31: Generics Iterator list of lists' , `
 T: TypeVar = TypeVar('T')
 
 class ListIterator(Generic[T]):
@@ -595,38 +596,7 @@ for i in itr:
 
 ` ,["1","2","3","4","1","2"]);
 
-assertPrint('Generics Iterator list of lists 1' , `
-
-T: TypeVar = TypeVar('T')
-class ListIterator(Generic[T]):
-    list: [T] = {}
-    index:int = 0
-    def new(self: ListIterator[T], initVal: [T]) -> ListIterator[T]:
-        self.list = initVal
-        return self
-    def next(self: ListIterator[T]) -> T:
-        ret: T = {}
-        ret = self.list[self.index]
-        self.index = self.index + 1
-        return ret
-    def hasnext(self: ListIterator[T]) -> bool:
-        return self.index<3
-
-list1: [[int]] = None
-itr: ListIterator[[int]] = None
-i : [int] = None
-j:int = 0
-k:int = 0
-list1 = [[1,12],[3,44],[1,2]]
-itr = ListIterator[[int]]().new(list1)
-for j, k in itr:
-    print(j)
-    print(k)
-
-` ,["1", "12", "3", "44", "1", "2"]);
-
-
-assertPrint('Generics Iterator list of lists 2' , `
+assertPrint('loops_iterators_test 32: destructuring on generic iterator' , `
 
 T: TypeVar = TypeVar('T')
 class ListIterator(Generic[T]):
@@ -643,59 +613,52 @@ class ListIterator(Generic[T]):
     def hasnext(self: ListIterator[T]) -> bool:
         return self.index<3
         
-list_list: [[int]] = None
+list1: [[int]] = None
 itr: ListIterator[[int]] = None
-list1: [int] = None
-list2: [int] = None
-list3: [int] = None
+i : [int] = None
 j:int = 0
 k:int = 0
-l:int = 0
-list1 = [4,5,6]
-list2 = [44, 55,66]
-list3 = [444, 555,666]
-list_list = [list1, list2, list3]
-itr = ListIterator[[int]]().new(list_list)
-for j, k, l in itr:
+list1 = [[1,12],[3,44],[1,2]]
+itr = ListIterator[[int]]().new(list1)
+for j, k in itr:
     print(j)
     print(k)
-    print(l)
 
-` ,["4", "5", "6", "44", "55", "66" ,"444", "555", "666"]);
+` ,["1", "12", "3", "44", "1", "2"]);
 
 
-assertTCFail('range: type checking for loop variable ', rangeStr + `
+assertTCFail('loops_iterators_test 33: range: type checking for loop variable ', rangeStr + `
 
 i : bool = False
 for i in range(0,10,1):
     print(i)
 `);   
 
-assertTCFail('range: type checking for loop variable ', rangeStr + `
+assertTCFail('loops_iterators_test 34: range: type checking for loop variable ', rangeStr + `
 
 for i in range(0,10,1):
     print(i)
 `);   
 
-    assertTCFail('range: type checking for one parameter', rangeStr + `
+    assertTCFail('loops_iterators_test 35: range: type checking for one parameter', rangeStr + `
 i: int = 0
 for i in range(5):
     print(i)
 `);
     
-    assertTCFail('range: type checking for two parameters', rangeStr + `
+    assertTCFail('loops_iterators_test 36: range: type checking for two parameters', rangeStr + `
 i: int = 0
 for i in range(5,10):
     print(i)
 `);
 
-    assertTCFail('range: type checking for range parameters', rangeStr + `
+    assertTCFail('loops_iterators_test 37: range: type checking for range parameters', rangeStr + `
 i : int = 0
 for i in range(10, 20, 1, 1):
     print(i)
 `);   
 
-assertTCFail('Type Checking: not an iterator 1', rangeStr + `
+assertTCFail('loops_iterators_test 38: Type Checking: not an iterator 1', rangeStr + `
 
 class range(object):
     num:int = 1
@@ -713,7 +676,7 @@ for i in range():
 
 `);   
 
-assertTCFail('Type Checking: not an iterator 2', rangeStr + `
+assertTCFail('loops_iterators_test 39: Type Checking: not an iterator 2', rangeStr + `
 
 class range(object):
     num:int = 1
@@ -729,7 +692,7 @@ for i in range():
     print(i)
 `);   
 
-assertTCFail('TypeError: check iterable type', rangeStr + `
+assertTCFail('loops_iterators_test 40: TypeError: check iterable type', rangeStr + `
 
 class BoolIterable(object):
   val:bool = True
@@ -753,21 +716,21 @@ for i in BoolIterable():
   print(i)
   `); 
 
-  assertTCFail('range: type checking for break outside loop', rangeStr + `
+  assertTCFail('loops_iterators_test 41: range: type checking for break outside loop', rangeStr + `
 i: int = 0
 for i in range(0,5,10):
     print(i)
 break
 `);
 
-assertTCFail('range: type checking for continue outside loop', rangeStr + `
+assertTCFail('loops_iterators_test 42: range: type checking for continue outside loop', rangeStr + `
 i: int = 0
 for i in range(0,5,10):
     print(i)
 continue
 `);
 
-assertTCFail('next() only takes an iterable object 1', rangeStr + `
+assertTCFail('loops_iterators_test 43: next() only takes an iterable object 1', rangeStr + `
 
 i: [int] = None
 _iter: ListIteratorInt = None
@@ -776,7 +739,7 @@ i = [1,2,3,4]
 print(next(i))
 `);
 
-assertTCFail('next() only takes an iterable object 2', rangeStr + `
+assertTCFail('loops_iterators_test 44: next() only takes an iterable object 2', rangeStr + `
 
 i: [int] = None
 _iter: ListIteratorInt = None
@@ -785,7 +748,7 @@ i = [1,2,3,4]
 print(next(i))
 `);
 
-assertTCFail('iter() only takes an iterable type', rangeStr + `
+assertTCFail('loops_iterators_test 45: iter() only takes an iterable type', rangeStr + `
 
 j:int = 0
 i: [int] = None
@@ -795,7 +758,7 @@ i = [1,2,3,4]
 print(iter(j))
 `);
 
-assertTCFail('next() only takes an iterable object 3', rangeStr + `
+assertTCFail('loops_iterators_test 46: next() only takes an iterable object 3', rangeStr + `
 
 s:str = "abc
 
@@ -804,7 +767,7 @@ print(next(s))
 
 
 
-assertFail('Stop iteration in range 1', rangeStr + `
+assertFail('loops_iterators_test 47: Stop iteration when hasnext() returns false', rangeStr + `
     
 i: [bool] = None
 _iter: ListIteratorBool = None
@@ -816,6 +779,35 @@ print(next(_iter))
 print(next(_iter))
 print(next(_iter))
 print(next(_iter))
+`);
+
+
+assertFail('loops_iterators_test 48: destructuring error', rangeStr + `
+T: TypeVar = TypeVar('T')
+class ListIterator(Generic[T]):
+    list: [T] = {}
+    index:int = 0
+    def new(self: ListIterator[T], initVal: [T]) -> ListIterator[T]:
+        self.list = initVal
+        return self
+    def next(self: ListIterator[T]) -> T:
+        ret: T = {}
+        ret = self.list[self.index]
+        self.index = self.index + 1
+        return ret
+    def hasnext(self: ListIterator[T]) -> bool:
+        return self.index<3
+        
+list1: [[int]] = None
+itr: ListIterator[[int]] = None
+i : [int] = None
+j:int = 0
+k:int = 0
+list1 = [[1,12],[3,44],[1,2]]
+itr = ListIterator[[int]]().new(list1)
+for i, j, k in itr:
+    print(j)
+    print(k)
 `);
 
 });
