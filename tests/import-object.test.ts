@@ -378,7 +378,6 @@ export const importObject : any = {
     print_none: (arg: number) => print(Type.None, arg),
     */ 
 
-   // added so $print_num in sets won't crash testing due to an import in sets.wat 
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
   output: "",
