@@ -1,8 +1,7 @@
 import { readFileSync } from "fs";
-import { Type } from "../ast";
-import { BuiltinLib} from "../builtinlib";
-import * as RUNTIME_ERROR from '../runtime_error'
-import { BOOL, CLASS, NONE, NUM, PrintType } from '../utils';
+import { BuiltinLib } from "../builtinlib";
+import * as RUNTIME_ERROR from '../runtime_error';
+import { PrintType } from '../utils';
 
 
 function stringify(typ: PrintType, arg: any, mem?: WebAssembly.Memory, typeNum?: number) : string {
