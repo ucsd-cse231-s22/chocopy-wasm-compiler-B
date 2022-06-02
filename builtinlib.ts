@@ -1,7 +1,7 @@
 import { Type } from './ast';
 import { RunTimeError } from './error_reporting';
 import { BOOL, NONE, NUM } from './utils';
-import {reconstructBigint, deconstructBigint, abs_big} from './webstart'
+const random = require('random-bigint')
 
 type BuiltinFunc = {
   name: string
@@ -68,79 +68,99 @@ export const BuiltinLib:BuiltinFunc[] = [
   },
   {
     name: "abs",
-    body: Math.abs,
+    body: (x:bigint) => {
+      if (x >= 0) {
+        return x;
+      }
+      return -x;
+    },
     typeSig: [[NUM], NUM]
   },
   {
     name: "min",
-    body: Math.min,
+    body: (x:bigint, y:bigint)=> {
+      if (x < y) {
+        return x;
+      }
+      return y;
+    },
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "max",
-    body: Math.max,
+    body: (x:bigint, y:bigint)=> {
+      if (x > y) {
+        return x;
+      }
+      return y;
+    },
     typeSig: [[NUM, NUM], NUM]
   },
   {
     name: "pow",
-    body: Math.pow,
+    body: (x:bigint, y:bigint)=> {
+      return x ** y;
+    },
     typeSig: [[NUM, NUM], NUM]
   }
 ]
 
 // builtins groups defined functions, have been moved to webstart and modified to take bignums
-function factorial(x:number):number{
-  return x>0 ? x*factorial(x-1): 1
+function factorial(x:bigint):bigint{
+  return x>0 ? x*factorial(x-BigInt(1)): BigInt(1)
 }
  
-function randint(x:number, y:number):number{
+function randint(x:bigint, y:bigint):bigint{
   if(y<x) 
     throw new RunTimeError("randint range error, upperBound less than lowerBound");
-  return Math.floor(Math.random()*(y-x+1) + x);
+  var num = random(128);
+  num %= (x-y+BigInt(1));
+  return x + num;
 }
 
-function gcd(a:number,b:number):number{
-  if (a<0 || b<0 || a==0 && b==0)
+function gcd(a:bigint,b:bigint):bigint{
+  if (a<0 || b<0 || a==BigInt(0) && b==BigInt(0))
     throw new RunTimeError("gcd param error, eq or less than 0");
-  return b==0 ? a : gcd(b,a % b);
+  return b==BigInt(0) ? a : gcd(b,a % b);
 }
 
-function lcm(x:number, y:number):number{
-  if (x<=0 || y<=0 || x==0 && y==0)
+function lcm(x:bigint, y:bigint):bigint{
+  if (x<=0 || y<=0 || x==BigInt(0) && y==BigInt(0))
     throw new RunTimeError("lcm param negative error, eq or less than 0");
-  return Math.floor(x*y/gcd(x,y))
+  return x*y/gcd(x,y)
 }
 
-function comb(x:number, y:number):number{
+function comb(x:bigint, y:bigint):bigint{
   if (x < y || x < 0 || y < 0)
     throw new RunTimeError("comb param error");
 	return perm(x, y) / perm(y, y)
 }
 
-function perm(x:number, y:number):number{
+function perm(x:bigint, y:bigint):bigint{
 
   if (x < y || x < 0 || y < 0)
     throw new RunTimeError("perm param error");
-  let result = 1
+  let result = BigInt(1)
   for (var i = 0; i < y; i++) {
-    result *= (x - i)
+    result *= (x - BigInt(i))
   }
   return result
 }
-function randrange(x:number, y:number, step:number){
+
+function randrange(x:bigint, y:bigint, step:bigint){
   if(y<x) 
     throw new RunTimeError("randrange range error, upperBound less than lowerBound");
   let result = randint(x, y)
-  while ((result - x) % step !== 0) {
+  while ((result - x) % step !== BigInt(0)) {
     result = randint(x, y)
   }
   return result
 }
 
-function sleep(ms:number):number{
+function sleep(ms:bigint):bigint{
 	const start = Date.now();
 	while (Date.now()-start<ms);
-	return 0;
+	return BigInt(0);
 }
 
 // Export helper functions to be called in webstart

@@ -296,11 +296,11 @@ export function division_by_zero(arg: number, line: number, col: number, load: a
 export async function addLibs() {
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
   const bytes = readFileSync("build/memory.wasm");
-  const setBytes = readFileSync("build/sets.wasm");
+  
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports;
-  const setModule = await WebAssembly.instantiate(setBytes, {...importObject, js: { mem: memory } })
-  importObject.libset = setModule.instance.exports;
+  
+  
   importObject.memory_values = memory;
   importObject.js = {memory};
 
@@ -357,6 +357,10 @@ export async function addLibs() {
   importObject.imports.stack_push = (line: number) => RUNTIME_ERROR.stack_push(line);
   importObject.imports.stack_clear = () => RUNTIME_ERROR.stack_clear();
 
+  const setBytes = readFileSync("build/sets.wasm");
+  const setModule = await WebAssembly.instantiate(setBytes, {...importObject, js: { mem: memory } })
+  importObject.libset = setModule.instance.exports;
+
   return importObject;
 }
 
@@ -373,6 +377,7 @@ export const importObject : any = {
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
     */ 
+
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
   output: "",
