@@ -4,22 +4,22 @@
 
 ### Done
 
-In this week, we completed most our design.
+This week, we completed most of our design.
 
-- Bugs: In the previous version, there were some bugs: print(False) will generate redundant "pre" elements on the interactive area, printing fields of type boolean in object cannot displays fields'name, printing fields of type None will cause stack overflow and the 'env' module in wasm cannot be updated, etc. We have fixed all these known bugs.
-- Layout: We updated the layout of the page and carefully adjusted the fonts, colors and sizes, etc. of the interactive area. We also hided unwanted elements and made error messages more visible.
-- Drag bar: It could make adjustment of the size of the editor field and interactive console. With this feature users can focus on a specific mode they are instereted in.
-- Clear button: Clicking this button would reset all content in the editor and interactive area.
-- Refresh button: Clicking this button would remove error hits and breakpoints in the editor.
-- End-to-end test: Referring to the 2021 repo, we introduced Cypress as the testing automation solution used for web automation. Testcases are defined in cypress/integration/fronted.spec.js. Uses could simply run `npm run e2e` to start this test tool.
+- **Bugs**: In the previous version, there were some bugs: print(False) will generate redundant "pre" elements on the interactive area, printing fields of type boolean in an object cannot display fields' name, printing fields of type None will cause a stack overflow and the 'env' module in wasm cannot be updated, etc. We have fixed all these known bugs.
+- **Layout**: We updated the page's layout and carefully adjusted the fonts, colors and sizes, etc. of the interactive area. We also hid unwanted elements and made error messages more visible.
+- **Drag bar**: It could make adjustments to the size of the editor field and interactive console. With this feature, users can focus on a specific mode they are interested in.
+- **Clear button**: Clicking this button would reset all content in the editor and interactive area.
+- **Refresh button**: Clicking this button would remove error hits and breakpoints in the editor.
+- **End-to-end test**: Referring to the 2021 repo, we introduced Cypress as the testing automation solution used for web automation. Testcases are defined in cypress/integration/fronted.spec.js. Uses could simply run `npm run e2e` to start this test tool.
 
-With the power of codemirror, we introduce other fancy features in the editor field:
+With the power of CodeMirror, we introduce other fancy features in the editor field:
 
-- Themes selection: A simple select menu to change the editor style with many options.
-- Edit mode: Users could switch between normal mode and vim mode of editor and write code like in vim.
-- Breakpoint: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible.
-- Error highlight: The code location returned by the error reporting module will be displayed in the editor.
-- Autocompletion: When the user presses the ctrl key, code before the cursor can be automatically completed based on the rules of the config file.
+- **Themes selection**: A simple select menu to change the editor style with many options.
+- **Edit mode**: Users could switch between normal mode and vim mode of the editor and write code like in vim.
+- **Breakpoint**: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible.
+- **Error highlight**: The code location returned by the error reporting module will be displayed in the editor.
+- **Autocompletion**: When the user presses the Ctrl key, code before the cursor can be automatically completed based on the rules of the config file.
 
 The overall front page looks like below:
 ![final front end](./final_preview.png)
