@@ -125,18 +125,60 @@ assertPrint("comprehension comprehensive test", builtinClasses + `
 (print(num if num % 4 == 0 else num + 100) for num in Range().new(0, 20, 1) if num % 2 == 0)`,
 ['0','102','4','106','8','110','12','114','16','118']);
 
-assertPrint("comprehension list iterable test 1", builtinClasses + `
+assertPrint("comprehension int list iterable test 1", builtinClasses + `
 lst:[int] = None
 lst = [1, 2, 3, 4, 5]
 (print(num) for num in lst)`,
 ['1','2','3','4','5']);
 
-assertPrint("comprehension list iterable test 2", builtinClasses + `
+assertPrint("comprehension int list iterable test 2", builtinClasses + `
 (print(num) for num in [1, 2, 3, 4, 5])`,
 ['1','2','3','4','5']);
 
-assertPrint("comprehension list iterable test 3", builtinClasses + `
+assertPrint("comprehension int list iterable test 3", builtinClasses + `
 (print(num if num % 3 == 0 else -1) for num in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] if num % 2 == 0)`,
 ['-1','-1','6','-1','-1']);
+
+assertPrint("comprehension int list iterable test 4", builtinClasses + `
+(print(num) for num in [])`,
+['']);
+
+assertPrint("comprehension bool list iterable test 1", builtinClasses + `
+lst:[bool] = None
+lst = [True, False, True, True]
+(print(b) for b in lst)`,
+['True','False','True','True']);
+
+assertPrint("comprehension bool list iterable test 2", builtinClasses + `
+(print(b) for b in [True, True, False, False, True])`,
+['True','True','False','False','True']);
+
+assertPrint("comprehension int set iterable test 1", builtinClasses + `
+s:set[int] = None
+s = {1, 2, 3, 4, 5}
+(print(num) for num in s)`,
+['1','2','3','4','5']);
+
+assertPrint("comprehension int set iterable test 2", builtinClasses + `
+(print(num) for num in {1, 2, 3, 4, 5})`,
+['1','2','3','4','5']);
+
+assertPrint("comprehension int set iterable test 3", builtinClasses + `
+(print(num + 1) for num in {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} if num % 2 == 0)`,
+['11','3','5','7','9']);
+
+assertPrint("comprehension int set iterable test 4", builtinClasses + `
+(print(num) for num in {1})`,
+['1']);
+
+assertPrint("comprehension bool set iterable test 1", builtinClasses + `
+lst:[bool] = None
+lst = [True, False]
+(print(b) for b in lst)`,
+['True','False']);
+
+assertPrint("comprehension bool set iterable test 2", builtinClasses + `
+(print(b) for b in [False])`,
+['False']);
 
 });

@@ -596,97 +596,90 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: resultName } }
       ];
     case "comprehension":
+      // few notes here regarding the iterable object:
+      // 1. list group doesn't provide an API to traverse lists (next and hasnext),
+      //    so we create an built-in class ListIterable (initialized with an list and
+      //    its length) and use this object as the iterable instead. Currently we
+      //    only support integer/boolean list because the generic class doesn't
+      //    allow classfields so we cannot make a class like ListIterable[T].
+      // 2. set group provides firstItem(), next(key), and hasnext(key) so we
+      //    use their API to traverse sets.
+
       // obtain the iterable obj
       var [objinits, objstmts, objval] = flattenExprToVal(e.iterable, blocks, env);
       var objTyp = e.iterable.a[0];
       var objClassName;
+      // for list iterable only
       var listLengthVarInit : IR.VarInit<[Type, SourceLocation]> = undefined;
       var listIterableVarInit : IR.VarInit<[Type, SourceLocation]> = undefined;
       var liinits : IR.VarInit<[Type, SourceLocation]>[] = [];
       var isListIterable = false;
-      if (objTyp.tag !== "class") {
-        switch (objTyp.tag) {
-          case "list":
-            isListIterable = true;
-            const callConstructListIterable : AST.Expr<[Type, SourceLocation]> = {
-              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
-              tag: "construct",
-              name: "ListIterable"
-            };
-            var listmts;
-            var lival;
-            [liinits, listmts, lival] = flattenExprToVal(callConstructListIterable, blocks, env);
-            const loadListLength : IR.Expr<[Type, SourceLocation]> = {
-              a: [{ tag: "number" }, e.a[1]],
-              tag: "load",
-              start: objval,
-              offset: { tag: "wasmint", value: 0 }
-            };
-            const listLength = generateName("listLength");
-            listLengthVarInit = {
-              name: listLength,
-              type: { tag: "number" },
-              value: { tag: "num", value: BigInt(0) }
-            };
-            const listLengthAssign : IR.Stmt<[Type, SourceLocation]> = {
-              a: [{ tag: "number" }, e.a[1]],
-              tag: "assign",
-              name: listLength,
-              value: loadListLength
-            };
-            const callListIterableNew : IR.Expr<[Type, SourceLocation]> = {
-              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
-              tag: "call",
-              name: `ListIterable$new`,
-              arguments: [lival, objval, { tag: "id", name: listLength }]
-            };
-            const listIterable = generateName("listIterable");
-            listIterableVarInit = {
-              name: listIterable,
-              type: { tag: "class", name: "ListIterable" },
-              value: { tag: "none" }
-            };
-            const listIterableAssign : IR.Stmt<[Type, SourceLocation]> = {
-              a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
-              tag: "assign",
-              name: listIterable,
-              value: callListIterableNew
-            };
-            pushStmtsToLastBlock(blocks, ...objstmts, ...listmts, listLengthAssign, listIterableAssign);
-            objClassName = "ListIterable";
-            objval = { a: [{ tag: "class", name: "ListIterable" }, e.a[1]], tag: "id", name: listIterable }; // update iterable to this newly created ListIterable
-            break;
-          default:
-            throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
-        }
-      } else {
-        objClassName = objTyp.name;
-        pushStmtsToLastBlock(blocks, ...objstmts);
+      // for set iterable only
+      var isSetIterable = false;
+
+      switch (objTyp.tag) {
+        case "list":
+          isListIterable = true;
+          const callConstructListIterable : AST.Expr<[Type, SourceLocation]> = {
+            a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+            tag: "construct",
+            name: "ListIterable"
+          };
+          var listmts;
+          var lival;
+          [liinits, listmts, lival] = flattenExprToVal(callConstructListIterable, blocks, env);
+          const loadListLength : IR.Expr<[Type, SourceLocation]> = {
+            a: [{ tag: "number" }, e.a[1]],
+            tag: "load",
+            start: objval,
+            offset: { tag: "wasmint", value: 0 }
+          };
+          const listLength = generateName("listLength");
+          listLengthVarInit = {
+            name: listLength,
+            type: { tag: "number" },
+            value: { tag: "num", value: BigInt(0) }
+          };
+          const listLengthAssign : IR.Stmt<[Type, SourceLocation]> = {
+            a: [{ tag: "number" }, e.a[1]],
+            tag: "assign",
+            name: listLength,
+            value: loadListLength
+          };
+          const callListIterableNew : IR.Expr<[Type, SourceLocation]> = {
+            a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+            tag: "call",
+            name: `ListIterable$new`,
+            arguments: [lival, objval, { tag: "id", name: listLength }]
+          };
+          const listIterable = generateName("listIterable");
+          listIterableVarInit = {
+            name: listIterable,
+            type: { tag: "class", name: "ListIterable" },
+            value: { tag: "none" }
+          };
+          const listIterableAssign : IR.Stmt<[Type, SourceLocation]> = {
+            a: [{ tag: "class", name: "ListIterable" }, e.a[1]],
+            tag: "assign",
+            name: listIterable,
+            value: callListIterableNew
+          };
+          objClassName = "ListIterable";
+          objval = { a: [{ tag: "class", name: "ListIterable" }, e.a[1]], tag: "id", name: listIterable }; // update iterable to this newly created ListIterable
+          pushStmtsToLastBlock(blocks, ...objstmts, ...listmts, listLengthAssign, listIterableAssign);
+          break;
+        case "set":
+          objClassName = "set";
+          isSetIterable = true;
+          pushStmtsToLastBlock(blocks, ...objstmts);
+          break;
+        case "class":
+          objClassName = objTyp.name;
+          pushStmtsToLastBlock(blocks, ...objstmts);
+          break;
+        default:
+          throw new Error(`${objTyp.tag} as an iterable is not currently supported`);
       }
-      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}};
-      
-      // method calls
-      const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$hasnext`, arguments: [objval] };
-      const callNext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$next`, arguments: [objval] }
-
-      const whileStartLbl = generateName("$whilestart");
-      const whilebodyLbl = generateName("$whilebody");
-      const whileEndLbl = generateName("$whileend");
-
-      // jump to start
-      pushStmtsToLastBlock(blocks, checkObj, { tag: "jmp", lbl: whileStartLbl });
-      blocks.push({  a: e.a, label: whileStartLbl, stmts: [] });
-      // call hasnext
-      const hasnextValName = generateName("condVal");
-      const hasnextVal : IR.VarInit<[Type, SourceLocation]> = { name: hasnextValName, type: { tag: "bool" }, value: { tag: "bool", value: false } };
-      const hasnextValAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: hasnextValName, value: callHasnext };
-      const hasnext : IR.Value<[Type, SourceLocation]> = { a: e.a, tag: "id", name: hasnextValName };
-      const hasnextjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: hasnext, thn: whilebodyLbl, els: whileEndLbl };
-      pushStmtsToLastBlock(blocks, hasnextValAssign, hasnextjmp);
-
-      // body: call next and print result
-      blocks.push({  a: e.a, label: whilebodyLbl, stmts: [] })
-      const nextValName = e.item;
       var nextValType = undefined;
       switch (e.a[0].tag) {
         case "generator":
@@ -694,30 +687,75 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
           nextValType = e.a[0].type;
           break;
         case "set":
-        // case "dictionary":
           nextValType = e.a[0].valueType;
           break;
         case "class":
-          nextValType = NONE; // any way to access type info here?
+          nextValType = NONE;
           break;
         default:
           throw new Error("Iterable is cursed, go home!");
       }
-      const nextVal : IR.VarInit<[Type, SourceLocation]> = { name: nextValName, type: nextValType, value: { tag: "none" } };
-      const nextValAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextValName, value: callNext };
 
+      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}};
+      
+      // for sets -- need to get the first item
+      const callFirstItem : IR.Expr<[Type, SourceLocation]> = {
+        a: [{ tag: "number" }, e.a[1]], tag: "call", name: "set$firstItem", arguments: [objval]
+      };
+
+      const next = e.item;
+      // method calls
+      const nextArgs : IR.Value<[Type, SourceLocation]>[] = isSetIterable ? [objval, { tag: "id", name: next }] : [objval];
+      const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$hasnext`, arguments: nextArgs };
+      const callNext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$next`, arguments: nextArgs }
+
+      const nextVarInit : IR.VarInit<[Type, SourceLocation]> = { name: next, type: nextValType, value: { tag: "none" } };
+      const nextAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: next, value: callNext };
+
+      const firstItemAssign : IR.Stmt<[Type, SourceLocation]> = {
+        a: [nextValType, e.a[1]], tag: "assign", name: next, value: callFirstItem
+      };
+
+      const whileStartLbl = generateName("$whilestart");
+      const whilebodyLbl = generateName("$whilebody");
+      const whileEndLbl = generateName("$whileend");
+
+      // jump to start
+      var firstYieldVarInit : IR.VarInit<[Type, SourceLocation]>;
+      var ffinits : IR.VarInit<[Type, SourceLocation]>[] = [];
+      if (isSetIterable) {
+        // evaluate lhs
+        var ffstmts;
+        var ffval;
+        [ffinits, ffstmts, ffval] = flattenExprToExpr(e.lhs, blocks, env); // careful with ternary case
+        const firstYield = generateName("firstYield");
+        firstYieldVarInit = { name: firstYield, type: ffval.a[0], value: { tag: "none" } };
+        const firstYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: firstYield, value: ffval };
+        pushStmtsToLastBlock(blocks, checkObj, firstItemAssign, ...ffstmts, firstYieldAssign, { tag: "jmp", lbl: whileStartLbl });
+      } else {
+        pushStmtsToLastBlock(blocks, checkObj, { tag: "jmp", lbl: whileStartLbl });
+      }
+      blocks.push({  a: e.a, label: whileStartLbl, stmts: [] });
+      // call hasnext
+      const hasnext = generateName("condVal");
+      const hasnextVarInit : IR.VarInit<[Type, SourceLocation]> = { name: hasnext, type: { tag: "bool" }, value: { tag: "bool", value: false } };
+      const hasnextAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: hasnext, value: callHasnext };
+      const hasnextjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: { tag: "id", name: hasnext }, thn: whilebodyLbl, els: whileEndLbl };
+      pushStmtsToLastBlock(blocks, hasnextAssign, hasnextjmp);
+
+      // body: call next and print result
+      blocks.push({  a: e.a, label: whilebodyLbl, stmts: [] })
+      
       // push call to next to blocks before lhs statements get pushed on the next line
-      pushStmtsToLastBlock(blocks, nextValAssign);
+      pushStmtsToLastBlock(blocks, nextAssign);
 
       // TODO: assign-destructure
       // evaluate lhs
       const [linits, lstmts, lval] = flattenExprToExpr(e.lhs, blocks, env); // careful with ternary case
-      const nextYieldName = generateName("nextYield");
-      const nextYield : IR.VarInit<[Type, SourceLocation]> = { name: nextYieldName, type: lval.a[0], value: { tag: "none" } };
-      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYieldName, value: lval };
-      // for this milestone, we just print out the values
-      const callPrint : IR.Stmt<[Type, SourceLocation]> = { tag: "expr", expr: { tag: "call", name: "print_num", arguments: [{ a: e.a, tag: "id", name: nextYieldName }] } };
-
+      const nextYield = generateName("nextYield");
+      const nextYieldVarInit : IR.VarInit<[Type, SourceLocation]> = { name: nextYield, type: lval.a[0], value: { tag: "none" } };
+      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYield, value: lval };
+      
       // if condition
       const condThenLbl = generateName("$then");
       const condEndLbl = generateName("$end");
@@ -727,29 +765,6 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       var cval : IR.Value<[Type, SourceLocation]> = { tag: "bool", value: true };
       if (e.ifcond != undefined) {
         [cinits, cstmts, cval] = flattenExprToVal(e.ifcond, blocks, env);
-      }
-
-      // TODO: store generated values on heap
-      if (e.a[0].tag === "generator") {
-        const newName = generateName("newGen");
-        // generator has two fields: size (number of elements generated), and addr (start address)
-        const size = 0; // TODO: how to know the number of elements generated at this level?
-        const startAddr = 0; // TODO: decide start address of generator, might need help from list data structure
-        const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
-        const assigns : IR.Stmt<[Type, SourceLocation]>[] = [
-          {
-            tag: "store",
-            start: { tag: "id", name: newName },
-            offset: { tag: "wasmint", value: 0 },
-            value: { tag: "wasmint", value: size }
-          },
-          {
-            tag: "store",
-            start: { tag: "id", name: newName },
-            offset: { tag: "wasmint", value: 1 },
-            value: { tag: "wasmint", value: startAddr }
-          }
-        ];
       }
 
       const condJmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: cval, thn: condThenLbl, els: condElseLbl };
@@ -766,15 +781,21 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
 
       if (isListIterable) {
         return [
-          [...objinits, ...liinits, listLengthVarInit, listIterableVarInit, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
+          [...objinits, ...liinits, listLengthVarInit, listIterableVarInit, ...cinits, ...linits, hasnextVarInit, nextVarInit, nextYieldVarInit],
           [],
-          { tag: "value", value: {tag: "bool", value: false} }
+          { tag: "value", value: { tag: "none" } }
+        ];
+      } else if (isSetIterable) {
+        return [
+          [...objinits, ...cinits, ...ffinits, ...linits, hasnextVarInit, nextVarInit, firstYieldVarInit, nextYieldVarInit],
+          [],
+          { tag: "value", value: { tag: "none" } }
         ];
       } else {
         return [
-          [...objinits, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
+          [...objinits, ...cinits, ...linits, hasnextVarInit, nextVarInit, nextYieldVarInit],
           [],
-          { tag: "value", value: {tag: "bool", value: false} } // what should I return here?
+          { tag: "value", value: { tag: "none" } }
         ];
       }
   }
