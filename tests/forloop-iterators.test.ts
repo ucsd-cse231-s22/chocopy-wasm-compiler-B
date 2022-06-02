@@ -142,7 +142,6 @@ class StringIterator(object):
     
 def strtoStringIterator(initVal: str) -> StringIterator :
     return StringIterator().new(initVal)
-
 `
 
 describe("Basic range and custom iteratable functionalities", () => {
@@ -518,17 +517,6 @@ for i in l:
 
 ` ,["1","2","3"]);
 
-assertPrint('enumerate() on list of integers - destructuring' , rangeStr + `
-
-l : [int] = None
-i: int = 0
-j:int = 0
-l = [1,2,3,4,5,6,7]
-for i, j in enumerate(l):
-    print(i)
-    print(j)
-
-` ,["0","1","1","2","2","3","3","4","4","5"]);
 assertPrint('iter on Sets of ints' , rangeStr + `
 
 l : set[int] = None
@@ -541,6 +529,18 @@ print(next(_iter))
 print(next(_iter))
 
 ` ,["1","2","3"]);
+
+assertPrint('enumerate() on list of integers - destructuring' , rangeStr + `
+
+l : [int] = None
+i: int = 0
+j:int = 0
+l = [1,2,3,4,5,6,7]
+for i, j in enumerate(l):
+    print(i)
+    print(j)
+
+` ,["0","1","1","2","2","3","3","4","4","5"]);
 
 assertPrint('Generics Iterator list of ints' , `
 T: TypeVar = TypeVar('T')
@@ -596,7 +596,38 @@ for i in itr:
 
 ` ,["1","2","3","4","1","2"]);
 
-assertPrint('Generics Iterator list of lists' , `
+assertPrint('Generics Iterator list of lists 1' , `
+
+T: TypeVar = TypeVar('T')
+class ListIterator(Generic[T]):
+    list: [T] = {}
+    index:int = 0
+    def new(self: ListIterator[T], initVal: [T]) -> ListIterator[T]:
+        self.list = initVal
+        return self
+    def next(self: ListIterator[T]) -> T:
+        ret: T = {}
+        ret = self.list[self.index]
+        self.index = self.index + 1
+        return ret
+    def hasnext(self: ListIterator[T]) -> bool:
+        return self.index<3
+
+list1: [[int]] = None
+itr: ListIterator[[int]] = None
+i : [int] = None
+j:int = 0
+k:int = 0
+list1 = [[1,12],[3,44],[1,2]]
+itr = ListIterator[[int]]().new(list1)
+for j, k in itr:
+    print(j)
+    print(k)
+
+` ,["1", "12", "3", "44", "1", "2"]);
+
+
+assertPrint('Generics Iterator list of lists 2' , `
 
 T: TypeVar = TypeVar('T')
 class ListIterator(Generic[T]):
@@ -613,18 +644,25 @@ class ListIterator(Generic[T]):
     def hasnext(self: ListIterator[T]) -> bool:
         return self.index<3
         
-list1: [[int]] = None
+list_list: [[int]] = None
 itr: ListIterator[[int]] = None
-i : [int] = None
+list1: [int] = None
+list2: [int] = None
+list3: [int] = None
 j:int = 0
 k:int = 0
-list1 = [[1,12],[3,44],[1,2]]
-itr = ListIterator[[int]]().new(list1)
-for j, k in itr:
+l:int = 0
+list1 = [4,5,6]
+list2 = [44, 55,66]
+list3 = [444, 555,666]
+list_list = [list1, list2, list3]
+itr = ListIterator[[int]]().new(list_list)
+for j, k, l in itr:
     print(j)
     print(k)
+    print(l)
 
-` ,["1", "12", "3", "44", "1", "2"]);
+` ,["4", "5", "6", "44", "55", "66" ,"444", "555", "666"]);
 
 
 assertTCFail('range: type checking for loop variable ', rangeStr + `
@@ -767,7 +805,7 @@ print(next(s))
 
 
 
-assertFail('Stop iteration in range', rangeStr + `
+assertFail('Stop iteration in range 1', rangeStr + `
     
 i: [bool] = None
 _iter: ListIteratorBool = None
@@ -780,6 +818,7 @@ print(next(_iter))
 print(next(_iter))
 print(next(_iter))
 `);
+
 });
 
 /**

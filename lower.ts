@@ -331,7 +331,6 @@ function lowerAllDestructureForAssignments(blocks: { a?: [AST.Type, AST.SourceLo
         var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] ,a: [NONE, dummyLoc] };
         //@ts-ignore
         if(lhs.length > 1) {
-          // add cases here for list of lists
           dummyNext = { tag: "method-call", obj: {a:rhs.a, tag: "id", name: iterableObject}, method: `next`, arguments: [] , a:[{tag: "list", type: {tag: "list", type: NUM}}, rhs.a[1]] };
           
           lowerAllDestructureAssignments_SpecialFor(blocks, lhs, dummyNext, env, allinits,iterableObject, lhs[0].a[1]);
@@ -339,35 +338,11 @@ function lowerAllDestructureForAssignments(blocks: { a?: [AST.Type, AST.SourceLo
         }
         while(lhs_index < lhs.length){
           l = lhs[lhs_index].lhs
-
-          //   var list_literal : AST.Expr<[Type, SourceLocation]>  = {a:}
-
-          //   var index_expr: AST.Expr<[Type, SourceLocation]> = {a:[NUM, rhs.a[1]], tag: "literal", value: {a:[NUM, rhs.a[1]], tag: "num", value: lhs_index}};
-          //   var dummyNextIndex: AST.Expr<[Type, SourceLocation]> =  { a: [NUM, dummyLoc], tag: "index", obj: dummyNext, index:index_expr }
-          //  // var [inits, stmts, val] = flattenExprToVal(dummyNextIndex, blocks, env);
-          //  // pushStmtsToLastBlock(blocks, ...stmts);
-          //  // allinits.push(...inits);
-          //   lowerDestructAssignment(blocks, l, dummyNextIndex, env, allinits);
-          //   lhs_index++;
-          
-          //var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
-          //pushStmtsToLastBlock(blocks, ...stmts);
-          //allinits.push(...inits);
-          //var dummyNextIndex: AST.Expr<[Type, SourceLocation]> = | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
-         
           lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
           lhs_index++;
           
         }
         rhs_index++;
-        
-        // while(lhs_index < lhs.length){
-        //   l = lhs[lhs_index].lhs;
-          
-        //   lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
-        //   lhs_index++;
-        // }
-        // rhs_index++;
       }
     }
     if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
