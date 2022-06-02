@@ -54,13 +54,13 @@ describe("set-functionalities", () => {
     set_1.update({3, 4})
     print(set_1.length())`, [`4`])
 
-    assertPrint("set-update", `
+    assertPrint("set-update-1", `
     set_1: set[int] = None
     set_1 = set({1, 2})
     set_1.update({3, 4})
     print(set_1)`, ["1", "2", "3", "4"])
 
-    assertPrint("set-update", `
+    assertPrint("set-update-2", `
     set_1: set[int] = None
     set_1 = set([1, 2, 2])
     set_1.update([4,3,4])

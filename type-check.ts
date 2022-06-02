@@ -1,4 +1,3 @@
-import { equal } from 'assert';
 import { BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from './ast';
 import { BuiltinLib } from './builtinlib';
 import { TypeCheckError } from './error_reporting';
@@ -781,7 +780,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                 throw new TypeCheckError("Mismatched Type when calling method", expr.a)
               }
             } else if (tArgs[0].a[0].tag === "class" && tArgs[0].a[0].name === "list") {
-              if (tArgs[0].a[0] !== tObj.a[0].valueType) {
+              if (tArgs[0].a[0].type !== tObj.a[0].valueType) {
                 throw new TypeCheckError("Mismatched Type when calling method", expr.a)
               }
             } else {
