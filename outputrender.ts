@@ -75,7 +75,7 @@ function renderClassObject(result: Value, objectTrackList: Array<ObjectField>, e
       case "object":
         fele.innerHTML = "<b class='tag'>" + field.fieldName + ": </b>";
         if (field.objectTrackList.length === 0) {
-          fele.innerHTML += "<p class='val'>none</p>";
+          fele.innerHTML += "<p class='val'>None</p>";
         } else {
           const objEle = document.createElement("pre"); //pre or div?
           fele.appendChild(objEle);
@@ -115,18 +115,32 @@ function renderObject(result: Value, objectTrackList: Array<ObjectField>, elt: H
 function renderNewLine(result: Value, elt: HTMLElement){
   switch (result.tag) {
     case "none":
-      elt.innerText = "success"
+      if (elt.innerHTML === ""){
+          elt.innerHTML = "None";
+      }
       break;
     case "num":
-      elt.innerText = String(result.value);
+      if (elt.innerHTML === ""){
+        elt.innerHTML = String(result.value);
+      } else {
+        elt.innerHTML += "<br>" + String(result.value);
+      }
       break;
     case "bool":
-      elt.innerHTML = (result.value) ? "True" : "False";
+      if (elt.innerHTML === ""){
+        elt.innerHTML = (result.value) ? "True" : "False";
+      } else {
+        elt.innerHTML += "<br>" + (result.value) ? "True" : "False";
+      }
       break;
     case "object":
-      elt.innerHTML = `Object: ${result.name} ${result.address}`;
-      break
-    default: 
+      if (elt.innerHTML === ""){
+        elt.innerHTML = `Object: ${result.name} at ${result.address}`;
+      } else {
+        elt.innerHTML += "<br>" + `Object: ${result.name} at ${result.address}`;
+      }
+      break;
+    default:
       throw new Error(`Could not render value: ${result}`);
   }
 }
