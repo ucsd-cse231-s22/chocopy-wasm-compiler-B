@@ -1,7 +1,43 @@
-import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assertPass } from "./asserts.test";
+import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assertPass, assertOptimizeCorrect } from "./asserts.test";
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { builtinClasses } from './comp.test'
 
-xdescribe("Optimization tests", () => {
+// borrowed from `forloop-iterators.test.ts`
+var rangeStr = `
+class __range__(object):
+    start: int = 0
+    stop: int = 0
+    step: int = 1
+    hasNext: bool = False
+    currval: int = 0
+    def __init__(self: __range__):
+        pass
+    def new(self: __range__, start: int, stop: int, step: int) -> __range__:
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.currval = start
+        return self
+
+    def next(self: __range__) -> int:
+        prev: int = 0
+        prev = self.currval
+        self.currval = prev+self.step
+        return prev
+        
+    def hasnext(self: __range__) -> bool:
+        nextval: int = 0
+        nextval = self.currval
+        if((self.step>0 and nextval<self.stop) or (self.step<0 and nextval>self.stop)):
+            self.hasNext = True
+        else:
+            self.hasNext = False
+        return self.hasNext
+
+def range(start: int, stop: int, step: int) -> __range__:
+    return __range__().new(start, stop, step)`
+
+describe("Optimization tests", () => {
   // 1
   assertOptimize("Constant Folding (add in print)", `print(100 + 20 + 3)`);
   // 2
@@ -23,48 +59,134 @@ x = not True
 print(x)
   `);
   // 5
-  assertOptimize("Constant Folding (builtin2-max)",
+  assertOptimize("Constant Folding (builtin-max)",
   `
 x:int = 1
 x = max(3,4)
 print(x)
   `);
   // 6
-  assertOptimize("Constant Folding (builtin2-min)",
+  assertOptimize("Constant Folding (builtin-min)",
   `
 x:int = 1
 x = min(3,4)
 print(x)
   `),
   // 7
-  assertOptimize("Constant Folding (builtin2-pow)",
+  assertOptimize("Constant Folding (builtin-pow)",
   `
 x:int = 1
 x = pow(3,2)
 print(x)
   `),
   // 8
+  assertOptimize("Constant Folding (builtin-factorial)",
+  `
+x:int = 0
+x = factorial(3) + 1
+x = factorial(1+2) + x
+x = factorial(1*2*3) + x
+print(x)
+  `),
+  // 9
+  assertOptimize("Constant Folding (builtin-gcd)",
+  `
+x:int = 0
+x = gcd(25, 100) + 1
+x = gcd(gcd(12, 9), gcd(4*4, 4+4)) + x
+x = gcd((2+3)*5*6, 4+5+1+2+3) + x
+print(x)
+  `),
+  // 10
+  assertOptimize("Constant Folding (builtin-lcm)",
+  `
+x:int = 0
+x = lcm(25, 100) + 1
+x = lcm(lcm(12, 9), lcm(4*4, 4+4)) + x
+x = lcm((2+3)*5*6, 4+5+1+2+3) + x
+print(x)
+  `),
+  // 11
+  assertOptimize("Constant Folding (builtin-comb)",
+  `
+x:int = 0
+x = comb(5, 2) + 1
+x = comb(comb(5+1, 2), comb(2*2, 1+1)) + x + 10
+x = comb((2+3)*6, 1+2+3) + x
+print(x)
+  `),
+  // 12
+  assertOptimize("Constant Folding (builtin-perm)",
+  `
+x:int = 0
+x = perm(5, 2) + 1
+x = perm(perm(2+1, 2), perm(1*2, 1+1)) + x + 5
+x = perm((2+3)*3, 1+2+3) + x
+print(x)
+  `),
+  // 13
+  assertOptimize("Constant Folding (builtin-int)",
+  `
+x:int = 0
+y:int = 0
+y = int(True)
+x = int(True) + int(False) + int(True)
+print(x+y)
+  `),
+  // 14
+  assertOptimize("Constant Folding (builtin-bool)",
+  `
+x:bool = True
+y:bool = False
+y = bool(2*(1+2+3))
+x = bool(0) or bool(1) and bool(2)
+print(x or y)
+  `),
+  // 15
+  assertOptimize("Constant Folding (builtin-abs)",
+  `
+x:int = 0
+y:int = 0
+z:int = 0
+x = abs(-5) + abs(1*3)
+y = abs(-2) * abs(3-5)
+z = -x - y
+print(x + y + abs(z))
+  `),
+  // 16
   assertOptimize("Constant Folding (mod)",
   `
 x:int = 1
 x = 8 % 3
 print(x)
   `)
-  // 9
+  // 17
   assertOptimize("Constant Folding (greater than)",
   `
 x:bool = True
 x = 0 > 1
 print(x)
   `),
-  // 10
+  // 18
   assertOptimize("Constant Folding (Not equal)",
   `
 x:bool = True
 x = 1 != 1
 print(x)
   `),
-  // 11
+
+  // 19
+  assertOptimize("Dead code elimination (while loop)",
+  `
+a:int = 0
+while False:
+    a = a + 100000
+while a < 5:
+    print(a)
+    a = a + 1
+`),
+
+  // 20
   assertOptimize("Dead code elimination (statements after return)",
   `
 def f() -> int:
@@ -72,7 +194,7 @@ def f() -> int:
     print(100)
 f()
 `),
-  // 12
+  // 21
   assertOptimize("Dead code elimination (if branch)",
 `
 print(100)
@@ -86,7 +208,8 @@ if False:
 else:
     print(1*2*3*4)
   `)
-  // 13
+
+  // 22
   assertOptimize("Dead code elimination (while loop)",
   `
 a:int = 0
@@ -96,7 +219,7 @@ while a < 5:
     print(a)
     a = a + 1
 `),
-  // 14
+  // 23
   assertPass("Dead code elimination (pass statement)",
   `
 a:int = 0
@@ -114,7 +237,7 @@ while False:
 pass
 print(1*2*3*4)
 `),
-  // 15
+  // 24
   assertPass("Dead code elimination (pass statement with one line)",
   `
 def f():
@@ -124,7 +247,7 @@ pass
 f()
 pass
 `),
-  // 16
+  // 25
   assertOptimize("Dead code elimination (Nested while and if)",
   `
 a:int = 0
@@ -144,7 +267,7 @@ while a > 0:
 pass
 print(a)
 `),
-  // 17
+  // 26
   assertOptimize("Optimization (Class definition)",
   `
 class Rat(object):
@@ -163,7 +286,7 @@ r = Rat()
 r.f()
 r.b()
 `),
-  // 18
+  // 27
   assertOptimize("Optimization (Anonymous Class)",
   `
 class Rat(object):
@@ -180,7 +303,7 @@ class Rat(object):
 Rat().f()
 Rat().b()
 `),
-  // 19
+  // 28
   assertOptimize("Optimization (UniOp)",
   `
 a:int = 0
@@ -193,7 +316,7 @@ else:
 if not False:
     print((1+2+3+4)*1*2*3)
 `),
-  // 20
+  // 29
   assertOptimize("Optimization (Return in if branch)",
   `
 class C(object):
@@ -204,7 +327,7 @@ class C(object):
             return 1
 C().f()
 `),
-  // 21
+  // 30
   assertOptimize("Optimization (Return in while loop)",
   `
 def f() -> int:
@@ -216,7 +339,7 @@ def f() -> int:
     pass
     return 100
 `),
-  // 22
+  // 31
   assertOptimize("Optimization (Linkedlist)",
   `
 class LinkedList(object):
@@ -248,7 +371,7 @@ l.f()
 while False:
     l = LinkedList()
 `),
-  // 23
+  // 32
   assertOptimize("Optimization (And/Or ops for boolean literals)",
   `
 x:bool = True
@@ -261,7 +384,7 @@ y = False or False or True or False
 z = (True or False) and False or (True or False) and (False or False)
 a = True or (False and (True or (False and True)))
 `),
-  // 24
+  // 33
   // Calculate the variance of [2, 3, 4]
   assertOptimize("Optimization (Calculate variance)",
   `
@@ -269,7 +392,20 @@ variance:int = 0
 variance = pow(((2+3+4)//3 - 2), 2) + pow(((2+3+4)//3 - 2), 3) + pow(((2+3+4)//3 - 2), 4)
 print(variance)
 `),
-  // 25
+  // 34
+  // There is 5 balls, 3 red and 2 blue, what's the probability of taking 2 balls and all of them blue
+  // Result should be 0 since there is no float division
+  assertOptimize("Optimization (Calculate probability using builtin)",
+`
+a:int = 0
+b:int = 0
+a = comb(1, 1)
+b = comb(5, 2)
+print(a)
+print(b)
+print(a // b)
+`),
+  // 35
   assertOptimize("Optimization (Number comparison)",
   `
 a:bool = False
@@ -281,14 +417,14 @@ c = c and True and (100!=200)
 print(a)
 print(b)
 `),
-  // 26
+  // 36
   assertOptimize("Optimization (Modulus)",
   `
 b:int = 0
 b = (100 % 3) % 10 % 2 % 1
 print(b)
 `);
-  // 27
+  // 37
   assertOptimize("Optimization (Multiple while loop and if branch)",
 `
 a:int = 5
@@ -307,8 +443,8 @@ while a < 0:
     pass
 pass
 `),
-  // 28
-  assertOptimize("Optimization (Multiple builtins)",
+  // 38
+  assertOptimize("Optimization (Multiple builtins 1)",
 `
 a:int = 5
 b:int = 0
@@ -318,7 +454,7 @@ print(a)
 print(b)
 print(min(a, b))
 `),
-  // 29
+  // 39
   assertOptimize("Optimization (Field assignment 1)",
 `
 class X(object):
@@ -351,7 +487,7 @@ if True:
 print(X().f())
 X().x = 100
 `),
-  // 30
+  // 44
   assertOptimize("Optimization (Field assignment 2)",
 `
 class C(object):
@@ -374,5 +510,92 @@ class C(object):
 
 if True:
     print(C().new(1, 2).add())
+`),
+  // 45
+  assertOptimize("Optimization (Neededness DCE)",
+`
+def f() -> int:
+  p:int = 1
+  x:int = 5
+  z:int = 1
+  while x > 0:
+    p = p * x
+    z = z + 1
+    x = x - 1
+  return p
+`),
+// 46
+  assertOptimize("Optimization (Constant Propagation)",
+`
+a:bool = True
+b:bool = False
+b = a and False
+print(a)
+print(b)
 `)
+
+ //46
+ assertOptimize("Optimization (Constant Propergation 1)",
+`
+a:int = 1
+b:int = 2
+print(a+b)
+`)
+
+//47 
+assertOptimize("Optimization (Constant Propergation 2)",
+`
+a:bool = True
+b:bool = False
+print(a and b)
+`)
+
+//48
+assertOptimize("Optimization (Constant Propergation 3)",
+`
+a: int = 1
+b: int = 2
+if a > b:
+  print(a)
+else:
+  print(b)
+`)
+
+//49
+assertOptimize("Optimization (Constant Propergation 4)",
+rangeStr + `
+i:int = 0
+j:int = 3
+for i in range(0,5,1):
+  print(i)
+  if i > j:
+    print(j+1)
+    break  
+`)
+
+//50
+assertOptimize("Optimization (Constant Propergation 5)",
+`
+i: int = 3
+b: bool = False
+while i > 0:
+  print(i+1)
+  if i == 1:
+    b = True
+    print(b)
+  i = i-1
+`)
+
+//50
+assertOptimize("Optimization (Constant Propergation 6)",
+`
+i: int = 3
+b: int = 2
+while i > 0:
+  print(max(i, b))
+  if i == 2:
+    print(-b)
+  i = i-1
+`)
+
 });

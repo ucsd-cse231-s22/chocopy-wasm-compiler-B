@@ -84,10 +84,13 @@ export function assertParserFail(name: string, source: string) {
 export function assertOptimize(name: string, source: string, astOpt: boolean = true, irOpt: boolean = true) {
   it(name, async () => {
     const repl0 = new BasicREPL(await addLibs());
-    const v0 = await repl0.run(source, false, false);
+    await repl0.run(source, false, false);
+    const v0 = importObject.output.trim().split("\n");
     const watLen0 = repl0.watCode.length;
+    importObject.output = "";
     const repl1 = new BasicREPL(await addLibs());
-    const v1 = await repl1.run(source, astOpt, irOpt);
+    await repl1.run(source, astOpt, irOpt);
+    const v1 = importObject.output.trim().split("\n");
     const watLen1 = repl1.watCode.length;
     expect(watLen0).gt(watLen1);
     expect(v0).deep.eq(v1);
@@ -97,12 +100,28 @@ export function assertOptimize(name: string, source: string, astOpt: boolean = t
 export function assertPass(name: string, source: string, astOpt: boolean = true, irOpt: boolean = true) {
   it(name, async () => {
     const repl0 = new BasicREPL(await addLibs());
-    const v0 = await repl0.run(source, false, false);
+    await repl0.run(source, false, false);
+    const v0 = importObject.output.trim().split("\n");
     const watLen0 = repl0.watCode.length;
+    importObject.output = "";
     const repl1 = new BasicREPL(await addLibs());
-    const v1 = await repl1.run(source, astOpt, irOpt);
+    await repl1.run(source, astOpt, irOpt);
+    const v1 = importObject.output.trim().split("\n");
     const watLen1 = repl1.watCode.length;
     expect(watLen0).gte(watLen1);
+    expect(v0).deep.eq(v1);
+  });
+}
+
+export function assertOptimizeCorrect(name: string, source: string, astOpt: boolean = true, irOpt: boolean = true) {
+  it(name, async () => {
+    const repl0 = new BasicREPL(await addLibs());
+    await repl0.run(source, false, false);
+    const v0 = importObject.output.trim().split("\n");
+    importObject.output = "";
+    const repl1 = new BasicREPL(await addLibs());
+    await repl1.run(source, astOpt, irOpt);
+    const v1 = importObject.output.trim().split("\n");
     expect(v0).deep.eq(v1);
   });
 }

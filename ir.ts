@@ -30,6 +30,7 @@ export type Expr<A> =
   | {  a: A, tag: "alloc", amount: Value<A> }
   | {  a: A, tag: "load", start: Value<A>, offset: Value<A> }
 
+
 export type Value<A> = 
     { a: A, tag: "num", value: bigint }
   | { a: A, tag: "wasmint", value: number }
