@@ -1,5 +1,6 @@
 import { BasicREPL} from './repl';
 import { Type, Value } from './ast';
+import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
 import { jsopen, jsclose, jsread, jswrite, jslength, fileObjectDefinition } from './io';
 
@@ -44,8 +45,8 @@ function webStart() {
     }
   });
   var filecontent: string | ArrayBuffer;
-
   document.addEventListener("DOMContentLoaded", async function() {
+  
     // https://github.com/mdn/webassembly-examples/issues/5
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
     const memoryModule = await fetch('memory.wasm').then(response =>

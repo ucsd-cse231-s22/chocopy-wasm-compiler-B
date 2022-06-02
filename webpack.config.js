@@ -34,7 +34,7 @@ module.exports = {
     hot: true,  // 打开热更新开关
   },
   resolve: {
-    extensions: ['.ts', '.js'],
+    extensions: ['.ts','.js'],
     alias: {
       'fs': 'browserfs/dist/shims/fs.js',
       'buffer': 'browserfs/dist/shims/buffer.js',
