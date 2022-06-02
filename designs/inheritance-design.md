@@ -578,7 +578,7 @@ print(c.x) # this prints 4
 # print: 5 True 0 4
 ``` 
 
-``` python
+```python
 class A(object):
   x : int = 0
   def __init__(self: A, x: int):
@@ -601,4 +601,72 @@ class B(A):
         pass
     def show(self:B, superObj: A):
         super().show()
+```
+
+# Week 10 Updates
+
+We now support calling `__init__` with arguments beyond `self`.
+
+Furthermore, we now allow subclasses to call superclass methods even if they were overriden using a CPython-like syntax.
+
+## Augmenting `__init__`
+
+This feature should be pretty self-explanatory based on the prevous week's notes.
+
+## Supporting calling superclasses' methods
+
+Here are 2 simple examples of how this feature works:
+
+```python
+class A(object):
+    x : int = 1
+    def foo(self : A):
+        print(self.x)
+class B(object):
+    def foo(self : B):
+        A.foo(self) # this calls A's foo() which prints 1
+b : B = None
+b = B()
+b.foo()
+```
+
+This syntax also works:
+```python
+class A(object):
+    x : int = 1
+    def foo(self : A):
+        print(self.x)
+class B(object):
+    def foo(self : B):
+        super().foo(self) # this calls A's foo() which prints 1
+b : B = None
+b = B()
+b.foo()
+```
+
+The implementation is a bit hacked together due to time constraints, but essentially, the superclass name or `super()` is parsed as an `"id"` and then treated specially by the type-checker. First, `super` is swapped out for the actual superclass name. Then, when typechecking the method call, we rely on the type of the `self` argument, since the class name isn't actually a real argument.
+
+When lowering to the IR, we supply the explicit `self` argument to the `"assert-not-none"` statement. Then, we still put the superclass name into the arglist for the compiler.
+
+Given the superclass name as the first argument, the compiler can then fetch that class's offset into the vtable instead of relying on the offset of the `self` object. In the above examples, the class offset of `self` corresponds to `B`, but when calling `A.foo(self)` or `super().foo(self)`, the compiler needs to use the class offset of `A`, not `B`.
+
+In regular CPython, if `super()` is used, then `self` is not supplied explicitly. However, we found it easier to make this feature work if `self` had to be supplied explicitly in both cases.
+
+Here is a test that shows this works with multi-argument functions:
+
+```python
+class A(object):
+  x : int = 5
+  def foo(self : A, arg : bool, arg2 : int):
+    if arg:
+      print(self.x)
+    else:
+      print(arg2 + self.x)
+class B(A):
+  def foo(self : B, arg : bool, arg2 : int):
+    A.foo(self, arg, arg2)
+b : B = None
+b = B()
+b.foo(True, 10) # this prints 5
+b.foo(False, 12) # this prints 17
 ```
