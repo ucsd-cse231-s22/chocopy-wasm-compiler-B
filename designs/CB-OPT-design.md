@@ -451,7 +451,7 @@ We added 47 test cases in `optimize.test.ts` to test the optimization effect, wh
 * Constant propagation for programs with different kinds of branches 
 * A few programs that combine the optimizations above
 
-We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimization hasn't introduced new bugs into other group's implementation, which only checks the consistency of programs' running result before and after optimizing. Those test cases cover:
+We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimization hasn't introduced new bugs into other group's implementation, where we only checks the consistency of programs' running result before and after optimizing. Those test cases cover:
 * Destructuring
 * Comprehension
 * Builtin
