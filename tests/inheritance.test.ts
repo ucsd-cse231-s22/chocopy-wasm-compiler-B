@@ -208,4 +208,285 @@ print(Single().getval())
     `,
     ["1","2","4"]
     );
+
+    assertPrint("Calling parent method without creating parent object. The Python way",
+    `
+
+    class A(object):
+       
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       def show(self:B):
+           A.show(self)
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1"]
+    );
+
+    assertPrint("Chained parent method call. Calling parent method without creating parent object.",
+    `
+    class C(object):
+      def __init__(self:C):
+          pass
+      def show(self:C):
+        print(2)
+    class A(C):
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+           C.show(self)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       def show(self:B):
+           A.show(self)
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1","2"]
+    );
+
+    assertPrint("Chained parent method call with no inherited function. Calling parent method without creating parent object.",
+    `
+    class C(object):
+      def __init__(self:C):
+          pass
+      def show(self:C):
+        print(5)
+    class A(C):
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+           C.show(self)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1","5"]
+    );
+
+
+    assertPrint("Calling parent method without creating parent object, through super()",
+    `
+
+    class A(object):
+       
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       def show(self:B):
+           super().show(self)
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1"]
+    );
+
+    assertPrint("Chained parent method call. Calling parent method with super().",
+    `
+    class C(object):
+      def __init__(self:C):
+          pass
+      def show(self:C):
+        print(2)
+    class A(C):
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+           super().show(self)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       def show(self:B):
+           super().show(self)
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1","2"]
+    );
+
+    assertPrint("Chained parent method call with no inherited function. Calling parent method with super()",
+    `
+    class C(object):
+      def __init__(self:C):
+          pass
+      def show(self:C):
+        print(5)
+    class A(C):
+       def __init__(self:A):
+           pass
+       def show(self:A):
+           print(1)
+           super().show(self)
+
+    class B(A):
+       def __init__(self:B):
+           pass
+       
+            
+    b:B = None
+    b= B()
+    b.show()
+    `
+    ,
+    ["1","5"]
+    );
+
+    assertPrint("super() with multiple arguments",
+    `
+    class A(object):
+       x : int = 5
+       def foo(self : A, arg : bool, arg2 : int):
+           if arg:
+              print(self.x)
+           else:
+              print(arg2 + self.x)
+    class B(A):
+        def foo(self : B, arg : bool, arg2 : int):
+            A.foo(self, arg, arg2)
+    b : B = None
+    b = B()
+    b.foo(True, 10)
+    b.foo(False, 12)
+    `
+    ,
+    ["5","17"]
+    );
+
+
+
+    
+    assertPrint("Initialize fields through __init__",
+    `
+    class A(object):
+       x : int = 0
+       def __init__(self : A, arg : int):
+           self.x = arg
+       def getx(self:A)->int:
+           return self.x
+
+    a:A = None
+    a = A(5)
+    print(a.getx())
+    `
+    ,
+    ["5"]
+    );
+
+    assertPrint("Initialize fields through __init__ inherited from parent",
+    `
+    class A(object):
+        x : int = 0
+        def __init__(self : A, arg : int):
+            self.x = arg
+    class B(A):
+        y : bool = True
+        def __init__(self : B):
+            print(self.y)
+
+    class C(A):
+        z : int = 1
+
+    a : A = None
+    b : B = None
+    c : C = None
+
+    a = A(5) 
+    print(a.x)
+
+    b = B()
+    print(b.x)
+    c = C(4)
+    print(c.x)
+    `
+    ,
+    ["5","True","0","4"]
+    );
+
+    assertPrint("__init__ override allowed",
+    `
+    class A(object):
+        x : int = 0
+        def __init__(self : A, arg : int):
+            self.x = arg
+    class B(A):
+        y : bool = True
+        def __init__(self : B):
+            print(self.y)
+
+    a : A = None
+    b : B = None
+
+    a = A(5) 
+    print(a.x)
+
+    b = B()
+    print(b.x)
+    `
+    ,
+    ["5","True","0"]
+    );
+    assertTCFail("SuperClass-Subclass TC",
+    `
+    class A(object):
+        x : int = 0
+        def __init__(self : A, arg : int):
+            self.x = arg
+    class B(A):
+        y : bool = True
+        def __init__(self : B):
+            print(self.y)
+
+    a : A = None
+    b : B = None
+
+    a = A(5) 
+    print(a.x)
+
+    b = B(6)
+    `
+    );
+
+
+
 })
