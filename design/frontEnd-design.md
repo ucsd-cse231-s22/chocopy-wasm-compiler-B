@@ -23,6 +23,9 @@ With the power of CodeMirror, we introduce other fancy features in the editor fi
 
 The overall front page looks like below:
 ![final front end](./final_preview.png)
+![breakpoint demo](./bp1.png)
+![breakpoint demo](./bp2.png)
+
 
 ### Future work
 
