@@ -210,7 +210,8 @@ describe("Milestone 2 list tests", () => {
     assertPrint("list-insert", `
     a: [int] = None
     a = [1, 2, 3]
-    a.insert(1, 4)`, [`[1, 4, 2, 3]`])
+    a.insert(1, 4)
+    print(a)`, [`[1, 4, 2, 3]`])
 
     // 10
     assertPrint("list-pop", `

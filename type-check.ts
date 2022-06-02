@@ -172,6 +172,7 @@ export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
   // don't know how to check type here so I'll do type check in Expr method-call
   listMethods.set("append", [[], { tag: "class", name: "list" }]);
   listMethods.set("insert", [[{ tag: "class", name: "list" }, NUM], { tag: "class", name: "list" }]);
+  listMethods.set("pop", [[NUM], NUM])
   //TODO add all list methods here
   env.classes.set("list", [listFields, listMethods]);
   return env;
@@ -726,6 +727,22 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                 if (!equalType(tObj.a[0].type, realArgs[2].a[0])) {
                   throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
                 }
+              } else if (expr.method === "pop") {
+                if (realArgs.length > 2) {
+                  throw new TypeCheckError(`pop expected at most 1 argument, got ${realArgs.length - 1}`);
+                }
+                if (realArgs.length == 1) {
+                  // add -1 as pos
+                  var pos : Literal<SourceLocation> = { a: expr.a, tag: "num", value: -1 };
+                  var typedPos = tcExpr(env, locals, { tag: "literal", value: pos });
+                  realArgs.push(typedPos)
+                } else {
+                  if (!equalType(NUM, realArgs[1].a[0])) {
+                    throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
+                  }
+                }
+              } else {
+                throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
               }
               
               return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };

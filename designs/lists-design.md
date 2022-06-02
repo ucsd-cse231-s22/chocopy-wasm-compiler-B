@@ -125,6 +125,7 @@ print(b)
 a: [int] = None
 a = [1, 2, 3]
 a.insert(1, 4)
+print(a)
 ```
 *Output:*
 ```
