@@ -176,7 +176,7 @@ class Range(object):
     c = self.current
     self.current = self.current + 1
     return c
-  def hasNext(self:Range)->bool:
+  def hasnext(self:Range)->bool:
     return self.current < self.end
 def range(s: int, e: int)->Range:
   r: Range = None

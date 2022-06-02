@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-import { parse } from "./parser";
-import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
-=======
 import { TreeCursor } from "lezer-tree";
 import { parser } from "lezer-python";
 import { parse } from "./parser";
@@ -32,7 +27,6 @@ export function stringifyTree(t: TreeCursor, source: string, d: number) {
   }
   return str;
 }
->>>>>>> 7af383ab173909c8d986731d04e2ac97dfa4603e
 
 // entry point for debugging
 async function debug() {
