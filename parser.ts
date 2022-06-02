@@ -4,7 +4,6 @@ import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Cl
 import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
 import { stringifyTree } from "./treeprinter";
 import { ParseError} from "./error_reporting";
-import { type } from "os";
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {

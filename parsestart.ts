@@ -20,6 +20,7 @@ import {parse} from "./parser";
 // `);
 
 var result = parse(`
-f(2,3,a=4)`)
+while True:
+  pass`)
 
 console.log(JSON.stringify(result, null, 4));

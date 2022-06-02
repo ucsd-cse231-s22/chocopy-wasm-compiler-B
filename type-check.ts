@@ -298,6 +298,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
 
       var tRhs: Expr<[Type, SourceLocation]> = tcDestructureValues(tDestr, stmt.rhs, env, locals, stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, destr: tDestr, rhs:tRhs}
+
     case "expr":
       const tExpr = tcExpr(env, locals, stmt.expr);
       return {a: tExpr.a, tag: stmt.tag, expr: tExpr};
@@ -391,6 +392,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
 }
 
 export function tcDestructure(env : GlobalTypeEnv, locals : LocalTypeEnv, destr : DestructureLHS<SourceLocation>) : DestructureLHS<[Type, SourceLocation]> {
+
   // If it is an Ignore variable, do an early return as we don't need
   // to type-check
   if (destr.lhs.tag === "id" && destr.lhs.name === "_") {
@@ -441,6 +443,7 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
 }
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
+
   let lhs_index = 0
   let rhs_index = 0
 
@@ -472,6 +475,7 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
         rhs_index++
       }
     }
+
   }
 
   // Only doing this reverse operation in case of starred
@@ -628,7 +632,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         }
         
         return {...expr, a: [NONE, expr.a], arguments: tArgs, namedArgs:undefined};
-      } 
+      }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
@@ -891,6 +895,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "non-paren-vals":
       const nonParenVals = expr.values.map((val) => tcExpr(env, locals, val));
       return { ...expr, a: [NONE, expr.a], values: nonParenVals };
+
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`, expr.a);
   }
 }
