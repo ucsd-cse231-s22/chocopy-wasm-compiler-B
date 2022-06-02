@@ -717,7 +717,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         if (!equalType(targs[0].a[0], CLASS("str"))) {
           throw new TypeCheckError("len() incorrect arugment type");
         }
-        return { a: [{ tag: "number" }, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
+        return { a: [NUM, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
