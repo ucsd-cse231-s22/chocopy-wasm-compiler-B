@@ -331,25 +331,26 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
     let l = lhs[lhs_index].lhs
     let r = rhs_vals[rhs_index]
     if(r.a[0].tag==="class"){ //for all iterable classes
-      var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
+      var [valinits, valstmts, va] = flattenExprToExpr(r, blocks, env);
       allinits.push(...valinits);
-      pushStmtsToLastBlock(blocks, ...valstmts);
+      var iterableObject = generateName("$iterableobject")
+      var iterInit:IR.VarInit<[AST.Type, SourceLocation]> = {a:r.a, name:iterableObject, type:r.a[0], value:{tag:"none"}}
+      allinits.push(iterInit)
+      var assignIterable:IR.Stmt<[AST.Type, SourceLocation]> = {a:[NONE, dummyLoc], tag: "assign", name: iterableObject, value: va}
+      pushStmtsToLastBlock(blocks, ...valstmts, assignIterable);
       const iterClassName = r.a[0].name;
-      if(va.tag==="id"){
-        var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-        var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasnext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-      
-        //will probably fail for cases like 'a,b,c = range(1,3),5
+        let dummyHasNext:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, dummyLoc],tag: "method-call", obj: {a:r.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
+        let dummyNext: AST.Expr<[AST.Type, SourceLocation]> = {a: [NUM, dummyLoc], tag: "method-call", obj: {a:r.a, tag: "id", name: iterableObject} , method: "next", arguments: []}
+        
         while(lhs_index < lhs.length){
           l = lhs[lhs_index].lhs
-          var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
+          var [inits, stmts, val] = flattenExprToExpr(dummyHasNext, blocks, env);
           pushStmtsToLastBlock(blocks, ...stmts);
           allinits.push(...inits);
           lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
           lhs_index++;
         }
         rhs_index++;
-      }
 
     }
     if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
