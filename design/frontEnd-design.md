@@ -24,10 +24,9 @@ With the power of CodeMirror, we introduce other fancy features in the editor fi
 The overall front page looks like below:
 ![final front end](./img/final_preview.png)
 
-And the overall error display and breakpoing functionalities are like below
-![breakpoint demo](./img/bp1.png)
-![breakpoint demo](./img/bp2.png)
-
+And the overall error display and breakpoing functionalities are like below:
+![breakpoint demo1](./img/bp1.png)
+![breakpoint demo2](./img/bp2.png)
 
 ### Future work
 
