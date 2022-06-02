@@ -777,15 +777,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         }
       }
       const tLhs = tcExpr(env, locals, expr.lhs);
-      // TODO: need to talk to the other groups
       if (expr.type.tag == "generator"
         || expr.type.tag == "list"
       ) {
         expr.type = { ...(expr.type), type: itemTyp };
       }
-      if (expr.type.tag == "set"
-        // || expr.type.tag == "dictionary"
-      ) {
+      if (expr.type.tag == "set") {
         expr.type = { ...(expr.type), valueType: itemTyp };
       }
       // delete comp var name from globals

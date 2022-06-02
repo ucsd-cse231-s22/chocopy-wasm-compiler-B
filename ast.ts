@@ -8,7 +8,7 @@ export type Type =
   | {tag: "list", type: Type}
   | {tag: "class", name: string, genericArgs?: Array<Type>}
   | {tag: "either", left: Type, right: Type }
-  | {tag: "generator", type: Type } // generator type
+  | {tag: "generator", type: Type }
   | {tag: "set", valueType: Type }
   | {tag: "type-var"}
 
@@ -50,8 +50,8 @@ export type Expr<A> =
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
-  | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
-  | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression
+  | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> }
+  | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> }
   | {  a?: A, tag: "non-paren-vals", values: Array<Expr<A>> }
 
 export type Literal<A> = 
