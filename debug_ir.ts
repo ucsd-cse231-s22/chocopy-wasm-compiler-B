@@ -8,8 +8,51 @@ import { BasicREPL } from "./repl";
 import * as ir from './ir';
 import { CliRenderer } from "@diagrams-ts/graphviz-cli-renderer";
 import { optimizeAst } from './optimize_ast';
-import { optimizeIr, liveness_analysis, live_predicate, needed_predicate, needednessAnalysis } from './optimize_ir';
+import { optimizeIr, liveness_analysis, live_predicate, needed_predicate, needednessAnalysis, needednessDCE, optimizeFuncDef} from './optimize_ir';
 
+const builtinClasses : string = `
+class Range(object):
+  cur : int = 0
+  min : int = 0
+  max : int = 0
+  stp : int = 0
+  def new(self : Range, min : int, max : int, stp : int)->Range:
+    if stp == 0:
+      return None
+    if min <= max and stp < 0:
+      stp = 1
+    if min >= max and stp > 0:
+      stp = -1
+    self.min = min
+    self.cur = min
+    self.max = max
+    self.stp = stp
+    return self
+  def next(self : Range)->int:
+    c : int = 0
+    c = self.cur
+    self.cur = self.cur + self.stp
+    return c
+  def hasnext(self : Range)->bool:
+    return self.cur < self.max if self.stp >=0 else self.cur > self.max
+
+class generator(object):
+  size : int = 0
+  addr : int = 0
+  def new(self : generator, size : int, addr : int)->generator:
+    self.size = size
+    self.addr = addr
+    return self
+  def next(self : generator)->int:
+    c : int = 0
+    c = self.addr
+    self.size = self.size - 1
+    self.addr = self.addr + 4
+    return c
+  def hasnext(self : generator)->bool:
+    return self.size < 1
+
+`
 
 export function printProgIR(p: ir.Program<[Type, SourceLocation]>) {
   // p.body.map(bb => bb.stmts.map(stmt => printStmt(stmt)));
@@ -101,7 +144,8 @@ function printStmt(stmt: ir.Stmt<[Type, SourceLocation]>) {
     console.log(" --> " + stmt.lbl);
     break;
   case "store":
-    console.log(" Not handled yet " + stmt.tag);
+    // console.log(" Not handled yet " + stmt.tag);
+    console.log(valStr(stmt.start) + "." + valStr(stmt.offset) + " <-- " + valStr(stmt.value));
     break;
   }
   console.log("\n");
@@ -119,9 +163,9 @@ function exprStr(expr: ir.Expr<[Type, SourceLocation]>): string {
     const argStrs = expr.arguments.map(valStr).join(", ");
     return `${expr.name}(${argStrs})`;
   case "alloc":
-    return ("alloc: " + expr.amount);
+    return ("alloc: " + valStr(expr.amount));
   case "load":
-    return ("load: " + expr.start + " " + expr.offset);
+    return ("load: " + valStr(expr.start) + " " + valStr(expr.offset));
   }
 }
 
@@ -296,25 +340,8 @@ function valInline(val: ir.Value<[Type, SourceLocation]>): string {
 // entry point for debugging
 async function debug(optAst: boolean = false, optIR: boolean = false) {
   var source = 
-`
-p: int = 1
-x: int = 2
-z: int = 3
-def f() -> int:
-  p:int = 1
-  x:int = 5
-  z:int = 1
-  while x > 0:
-    p = p * x
-    z = z + 1
-    x = x - 1
-  return p
-
-while x > 0:
-  p = p * x
-  z = z + 1
-  x = x - 1
-print(p)
+builtinClasses + `
+(print(min(num, 3)) for num in Range().new(0, 6, 1))
 `
   const parsed = parse(source);
   // console.log(JSON.stringify(parsed, null, 2));
@@ -324,26 +351,36 @@ print(p)
   var [tprogram, tenv] = tc(config.typeEnv, parsed);
   if (optAst)
     tprogram = optimizeAst(tprogram);
+  console.log("ast -----------");
   console.log(JSON.stringify(tprogram, null, 2));
   const globalEnv = augmentEnv(config.env, tprogram);
   var irprogram = lowerProgram(tprogram, globalEnv);
-  if (optIR)
-    irprogram = optimizeIr(irprogram);
-  console.log(JSON.stringify(irprogram, (k, v) => typeof v === "bigint" ? v.toString(): v, 2));
   printProgIR(irprogram);
+  if (optIR) {
+    console.log("After ir opt");
+    irprogram = optimizeIr(irprogram);
+    printProgIR(irprogram);
+  }
 
-  const lp: live_predicate = liveness_analysis(irprogram.funs[0].body);
-  const np: needed_predicate = needednessAnalysis(irprogram.funs[0].body);
-  console.log("Liveness Analysis");
-  console.log(lp);
-  console.log("Needed Analysis, fuction body");
-  console.log(np);
-  console.log("Needed Analysis, main body");
-  const np_main: needed_predicate = needednessAnalysis(irprogram.body);
-  console.log(np_main);
-  // const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
-  // const dot = dotProg(irprogram);
-  // await render(dot);
+  // const lp: live_predicate = liveness_analysis(irprogram.funs[0].body);
+  // const np: needed_predicate = needednessAnalysis(irprogram.funs[0].body);
+  // console.log("Liveness Analysis");
+  // console.log(lp);
+  // console.log("Needed Analysis, fuction body");
+  // console.log(np);
+  // console.log("Needed Analysis, main body");
+  // const np_main: needed_predicate = needednessAnalysis(irprogram.body);
+  // console.log(np_main);
+  // console.log("After DCE");
+  // const dce_ir = needednessDCE(irprogram.body);
+  // console.log(dce_ir);
+  // irprogram = {...irprogram, body: dce_ir};
+  // printProgIR(irprogram);
+
+  const render = CliRenderer({ outputFile: "./example.svg", format: "svg" });
+  const dot = dotProg(irprogram);
+  await render(dot);
 }
 
-debug(false, false);
+// debug(false, false);
+debug(false, true);

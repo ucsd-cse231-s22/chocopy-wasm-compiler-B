@@ -25,12 +25,12 @@ export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Pro
         const optClss = newProgram.classes.map(classDef => optimizeClass(classDef, newProgram));
         var optStmts = newProgram.body.map(optBasicBlock);
         optStmts = needednessDCE(optStmts);
-        // optStmts = livenessDCE(optStmts);
+        optStmts = livenessDCE(optStmts);
         const cfa: CFA = flow_wklist(newProgram.inits, optStmts);
-        printCFA(cfa);
+        // printCFA(cfa);
         optStmts = constantPropagation(newProgram.inits, optStmts, cfa);
         newProgram = {...newProgram, funs: optFuns, classes: optClss, body: optStmts};
-        console.log(counter++);
+        // console.log(counter++);
     } while(isChanged);
     console.log("**** IR optimization over")
     
@@ -210,7 +210,66 @@ export function needednessAnalysis(blocks: Array<IR.BasicBlock<[Type, SourceLoca
     return reverseNp;
 }
 
-function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>> {
+function isCurValNeeded(val: IR.Value<[Type, SourceLocation]>, curNp: Set<string>): boolean {
+    if (val.tag === "id" && curNp.has(val.name)) return true;
+    return false;
+}
+
+function isCurStmtNeeded(stmt: IR.Stmt<[Type, SourceLocation]>, np: needed_predicate, curLabel: string, idx: number): boolean {
+    const curNp = np.get(curLabel + idx.toString());
+    switch (stmt.tag) {
+        case "assign": {
+            const nextNp = np.get(curLabel + (idx+1).toString());
+            if (nextNp.has(stmt.name) || isCurExprNeeded(stmt.value, curNp)) return true;
+            return false;
+        }
+        case "return": {
+            return true;
+        }
+        case "expr": {
+            return isCurExprNeeded(stmt.expr, curNp);
+        }
+        case "pass": {
+            return false;
+        }
+        case "ifjmp": {
+            return true;
+        }
+        case "jmp": {
+            return true;
+        }
+        case "store": {
+            return true;
+        }
+        default: 
+            return true;
+    }
+}
+
+function isCurExprNeeded(expr: IR.Expr<[Type, SourceLocation]>, curNp: Set<string>): boolean {
+    switch (expr.tag) {
+        case "value": {
+            return isCurValNeeded(expr.value, curNp);
+        }
+        case "binop": {
+            return isCurValNeeded(expr.left, curNp) || isCurValNeeded(expr.right, curNp);
+        }
+        case "uniop": {
+            return isCurValNeeded(expr.expr, curNp);
+        }
+        case "call": {
+            return true;
+        }
+        case "alloc": {
+            return true;
+        }
+        case "load": {
+            return true;
+        }
+    }
+}
+
+export function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>> {
     const np: needed_predicate = needednessAnalysis(blocks);
     const lp: live_predicate = liveness_analysis(blocks);
     //console.log(np);
@@ -221,8 +280,8 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
         blockStmts = [];
         for (const [stmtIndex, stmt] of block.stmts.entries()) {
             let stmtLabel = block.label+stmtIndex.toString();           
-            // if needed is empty OR not present
-            if (!np.has(stmtLabel) || np.get(stmtLabel).size == 0) {
+            if (np.has(stmtLabel) && !isCurStmtNeeded(stmt, np, block.label, stmtIndex)) {
+                isChanged = true;
                 continue;
             }
             blockStmts.push(stmt);
@@ -248,6 +307,7 @@ function needednessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Ar
     }
     return newBlocks;
 }
+
 export function livenessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): Array<IR.BasicBlock<[Type, SourceLocation]>>{
     const lp: live_predicate = liveness_analysis(blocks);
     var blockStmts = [];
@@ -421,7 +481,7 @@ function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock
     return {...bb, stmts: bb.stmts.map(optimizeIRStmt)};
 }
 
-function optimizeFuncDef(fun: IR.FunDef<[Type, SourceLocation]>, program: IR.Program<[Type, SourceLocation]>): IR.FunDef<[Type, SourceLocation]> {
+export function optimizeFuncDef(fun: IR.FunDef<[Type, SourceLocation]>, program: IR.Program<[Type, SourceLocation]>): IR.FunDef<[Type, SourceLocation]> {
     let newFunBody = fun.body.map(optBasicBlock);
     newFunBody = needednessDCE(newFunBody);
     var cfa_fun: CFA = flow_wklist(fun.inits, newFunBody);
