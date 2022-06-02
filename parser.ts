@@ -322,59 +322,96 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         op: op,
         expr: expr
       }
-    case "MemberExpression":
-      c.firstChild(); // Focus on object
-      var objExpr = traverseExpr(c, s);
-      c.nextSibling(); // Focus on . or [
-      var dotOrBracket = s.substring(c.from, c.to);
-      if( dotOrBracket === "[") {
-        var start_index: Expr<any>;
-        var stop_index: Expr<any>;
-        var step: Expr<any> = {
-          tag: "literal",
-          value: { a: location,tag: "num", value: 1 }
-        };
-
-        var indexItems = "";
-        c.nextSibling();
-        while (s.substring(c.from, c.to) != "]") {
-          indexItems += s.substring(c.from, c.to);
+      case "MemberExpression":
+        c.firstChild(); // Focus on object
+        var objExpr = traverseExpr(c, s);
+        c.nextSibling(); // Focus on . or [
+        var dotOrBracket = s.substring(c.from, c.to);
+        if (dotOrBracket === "[") {
+          var start_index: Expr<SourceLocation> = {
+            tag: "literal",
+            value: { tag: "num", value: 0 }
+          };;
+          var stop_index: Expr<SourceLocation> = {
+            tag: "literal",
+            value: { tag: "num", value: 2147483647 }
+          };;
+          var step: Expr<SourceLocation> = {
+            tag: "literal",
+            value: { a: location,tag: "num", value: 1 }
+          };
+  
+          var isSlice = false; 
           c.nextSibling();
+          
+          for (let i = 0; i < 3; i++) {
+            if(s.substring(c.from, c.to) != "]" && s.substring(c.from, c.to) != ":"){
+              switch (i){
+                case 0:
+                  start_index = traverseExpr(c, s);
+                  break;
+                case 1:
+                  stop_index = traverseExpr(c, s);
+                  break;
+                case 2:
+                  step = traverseExpr(c, s);
+                  break;
+              }
+              c.nextSibling(); 
+            }
+            
+            if (s.substring(c.from, c.to) === ":"){
+              isSlice = true;
+              c.nextSibling();
+            }
+            else if (s.substring(c.from, c.to) !== "]"){
+              throw new ParseError("Could not parse index expression", location);
+            }
+          }
+          
+          
+          c.parent();
+          c.firstChild(); // str object name
+          c.nextSibling(); // "[""
+          c.nextSibling(); // start index
+  
+          // if (indexItems.length === 0) {
+          //   throw new Error("Error: there should have at least one value inside the brackets");
+          // }
+  
+          // var sliced_indices = indexItems.split(":");
+          // if (sliced_indices.length > 3) {
+          //   throw new Error("Too much indices, maximum is three");
+          // }
+  
+          c.parent();
+          if (isSlice){
+            return {
+              a: location,
+              tag: "index",
+              obj: objExpr,
+              index: start_index,
+              end: stop_index,
+              steps: step
+            }
+          }
+          return {
+            a: location,
+            tag: "index",
+            obj: objExpr,
+            index: start_index
+          }
         }
-        c.parent();
-        c.firstChild(); // str object name
-        c.nextSibling(); // "[""
-        c.nextSibling(); // start index
-
-        if(indexItems.length === 0) {
-          throw new Error("Error: there should have at least one value inside the brackets");
-        }
-
-        var sliced_indices = indexItems.split(":");
-        if(sliced_indices.length > 3){
-          throw new Error("Too much indices, maximum is three");
-        }
-
-        start_index = traverseExpr(c, s)
-
+  
+        c.nextSibling(); // Focus on property
+        var propName = s.substring(c.from, c.to);
         c.parent();
         return {
           a: location,
-          tag: "index",
+          tag: "lookup",
           obj: objExpr,
-          index: start_index
+          field: propName
         }
-      }
-
-      c.nextSibling(); // Focus on property
-      var propName = s.substring(c.from, c.to);
-      c.parent();
-      return {
-        a: location,
-        tag: "lookup",
-        obj: objExpr,
-        field: propName
-      }
     case "SetExpression":
       c.firstChild();
       let setValues = new Array<Expr<any>>();

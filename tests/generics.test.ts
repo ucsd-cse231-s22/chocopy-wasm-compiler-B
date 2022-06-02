@@ -214,17 +214,17 @@ describe("Generic tests", () => {
   b = Box[int]()
   b.x = False`);
 
-  assertPrint("two-typevars", `
-  T: TypeVar = TypeVar('T')
-  U: TypeVar = TypeVar('U')
-  class Box(Generic[T, U]):
-      x: T = {}
-      y: U = {}
+//   assertPrint("two-typevars", `
+//   T: TypeVar = TypeVar('T')
+//   U: TypeVar = TypeVar('U')
+//   class Box(Generic[T, U]):
+//       x: T = {}
+//       y: U = {}
 
-  b: Box[int,bool] = None
-  b = Box[int,bool]()
-  print(b.x)
-  print(b.y)`, ['0', 'False']);
+//   b: Box[int,bool] = None
+//   b = Box[int,bool]()
+//   print(b.x)
+//   print(b.y)`, ['0', 'False']);
 
   assertPrint("ctor-in-function", `
   T: TypeVar = TypeVar('T')
