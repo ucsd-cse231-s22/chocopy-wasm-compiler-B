@@ -52,6 +52,7 @@
   ;; handle suitable for giving to other access methods
   (func (export "alloc") (param $amount i32) (param $type i32) (result i32)
     (local $addr i32)
+    (local $i i32)
     (local.get $amount)
     (call $alloc_memory)
     (local.set $addr)
@@ -62,6 +63,29 @@
     (i32.store (i32.add (local.get $addr) (global.get $type_pos)) (local.get $type))
     ;; store ref_count
     (i32.store (i32.add (local.get $addr) (global.get $ref_pos)) (i32.const 0))
+    ;; clear the memory
+    (i32.gt_s (local.get $amount) (i32.const 0))
+    (if
+      (then
+        (loop $clean_memory
+          ;; set field i to 0
+          (i32.add (local.get $addr) (global.get $header_size))
+          (i32.mul (local.get $i) (i32.const 4))
+          (i32.add)
+          (i32.const 0)
+          (i32.store)
+          ;; i + 1
+          (i32.add (local.get $i) (i32.const 1))
+          (local.set $i)
+          ;; if $i == amount break
+          (local.get $i)
+          (local.get $amount)
+          (i32.lt_s)
+          br_if $clean_memory
+        )
+      )
+    )
+    
     ;; encode the address
     (local.get $addr)
     (i32.const 1) ;; it's a pointer
@@ -311,20 +335,22 @@
     (i32.eq)
     (if ;; free a class
       (then
-        (local.set $i (i32.const 0))
-        (loop $free_class
-          (i32.add (local.get $decoded_addr) (global.get $header_size))
-          (i32.mul (local.get $i) (i32.const 4))
-          (i32.add)
-          (i32.load)
-          (call $dec_refcount)
-          (call $free_no_ref)
-          (drop)
-          (local.set $i (i32.add (local.get $i) (i32.const 1)))
-          (local.get $i)
-          (local.get $size)
-          (i32.eq)
-          br_if $free_class
+        (i32.gt_s (local.get $size) (i32.const 0))
+        (if
+          (then
+            (loop $free_class
+              (i32.add (local.get $decoded_addr) (global.get $header_size))
+              (i32.mul (local.get $i) (i32.const 4))
+              (i32.add)
+              (i32.load)
+              (call $dec_refcount)
+              (call $free_no_ref)
+              (drop)
+              (local.set $i (i32.add (local.get $i) (i32.const 1)))
+              (i32.lt_s (local.get $i) (local.get $size))
+              br_if $free_class
+            )
+          )
         )
         (local.get $decoded_addr)
         (local.get $size)

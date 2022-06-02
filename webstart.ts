@@ -73,7 +73,8 @@ function webStart() {
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
-      js: {memory: memory}
+      js: {memory: memory},
+      memory_allocator: mem_allocator
     };
     var repl = new BasicREPL(importObject);
 

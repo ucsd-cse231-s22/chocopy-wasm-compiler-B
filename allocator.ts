@@ -48,11 +48,13 @@ function getActualSize(size: number){
 
 export class FreeList {
     free_blocks: Array<Block>;
+    max_size: number;
 
     constructor(max_page: number){
         this.free_blocks = [];
         const page_size = 64 * 1024; // 64 KB per page
-        this.free_blocks.push({start: 4, size: max_page * page_size - 4});
+        this.max_size = max_page * page_size
+        this.free_blocks.push({start: 4, size: this.max_size - 4});
     }
 
     alloc(size: number): number{
@@ -109,5 +111,10 @@ export class FreeList {
         this.free_blocks.forEach(block =>{
             console.log(print_block(block));
         })
+    }
+
+    clear(){
+        this.free_blocks = [];
+        this.free_blocks.push({start: 4, size: this.max_size - 4});
     }
 }
