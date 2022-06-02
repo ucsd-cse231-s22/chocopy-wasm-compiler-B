@@ -1,11 +1,11 @@
 (module
   (memory (import "js" "mem") 1)
   (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
-  (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
+  (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (param i32) (param i32) (result i32))
   (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
   (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
   (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-  (func (export "str$access") (param $self i32) (param $index i32) (result i32)
+  (func (export "str$access") (param $self i32) (param $index i32) (param $line i32) (param $col i32) (result i32)
     (local $newstr i32)
     (local $buffer i32)
     (local $selfLength i32)
@@ -23,6 +23,8 @@
     ;; check if index is out of range
     (local.get $selfLength)
     (local.get $index)
+    (local.get $line)
+    (local.get $col)
     (call $index_out_of_bounds)
     (local.set $newstr) ;; just scraping up the return
     ;; alloc space for new string and set 1 as length

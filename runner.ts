@@ -134,7 +134,7 @@ ${BuiltinLib.map(x => `    (func $${x.name} (import "imports" "${x.name}") ${"(p
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-    (func $str$access (import "libstring" "str$access") (param $self i32) (param $index i32) (result i32))
+    (func $str$access (import "libstring" "str$access") (param $self i32) (param $index i32) (param $line i32) (param $col i32) (result i32))
     (func $str$length (import "libstring" "str$length") (param $self i32) (result i32))
     (func $str$lessthan (import "libstring" "str$lessthan") (param $self i32) (param $rhs i32) (result i32))
     (func $str$greaterthan (import "libstring" "str$greaterthan") (param $self i32) (param $rhs i32) (result i32))
