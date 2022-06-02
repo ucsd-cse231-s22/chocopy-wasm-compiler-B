@@ -37,7 +37,7 @@ class __range__(object):
 def range(start: int, stop: int, step: int) -> __range__:
     return __range__().new(start, stop, step)`
 
-describe("Optimization tests", () => {
+describe("Optimization Sanity tests", () => {
   // 1
   assertOptimizeCorrect("Optimization Sanity Check (Destructuring 1)",
 `

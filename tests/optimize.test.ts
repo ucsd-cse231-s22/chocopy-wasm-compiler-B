@@ -491,11 +491,29 @@ def f() -> int:
 `)
 
  //46
- assertOptimize("Optimization (Constant Propergation)",
+ assertOptimize("Optimization (Constant Propergation 1)",
 `
 a:int = 1
 b:int = 2
 print(a+b)
 `)
 
+//47 
+assertOptimize("Optimization (Constant Propergation 2)",
+`
+a:bool = True
+b:bool = False
+print(a and b)
+`)
+
+//48
+assertOptimize("Optimization (Constant Propergation 3)",
+`
+a: int = 1
+b: int = 2
+if a > b:
+  print(a)
+else:
+  print(b)
+`)
 });
