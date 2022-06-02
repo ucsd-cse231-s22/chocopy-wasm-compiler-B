@@ -60,6 +60,14 @@ function webStart() {
       })
     );
 
+    function print_obj_in_mem(){
+      print(NUM, importObject.memory_allocator.get_obj_num());
+    }
+    
+    function print_mem_used(){
+      print(NUM, importObject.memory_allocator.get_mem_used());
+    }
+
     var importObject = {
       imports: {
         assert_not_none: (arg: any) => assert_not_none(arg),
@@ -69,7 +77,9 @@ function webStart() {
         abs: Math.abs,
         min: Math.min,
         max: Math.max,
-        pow: Math.pow
+        pow: Math.pow,
+        print_obj_in_mem: print_obj_in_mem,
+        print_mem_used: print_mem_used,
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory,
