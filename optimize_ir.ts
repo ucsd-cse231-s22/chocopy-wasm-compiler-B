@@ -125,7 +125,7 @@ function foldBinop(lhs: IR.Value<[Type, SourceLocation]>, rhs: IR.Value<[Type, S
             } else if(lhs.tag === "id" || rhs.tag === "id") {
                 return {tag: "none", a: lhs.a};
             }
-            return {tag: "bool", value: lhs.value === rhs.value};
+            return {a: lhs.a, tag: "bool", value: lhs.value === rhs.value};
         case BinOp.Neq:
             if(lhs.tag === "none" || rhs.tag === "none"){
                 return {tag: "bool", value: false, a: lhs.a};

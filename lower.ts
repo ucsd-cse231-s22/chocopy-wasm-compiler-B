@@ -46,7 +46,7 @@ function lowerFunDef(f : AST.FunDef<[Type, SourceLocation]>, env : GlobalEnv) : 
   var firstBlock : IR.BasicBlock<[Type, SourceLocation]> = {  a: f.a, label: generateName("$startFun"), stmts: [] }
   blocks.push(firstBlock);
   var bodyinits = flattenStmts(f.body, blocks, env);
-    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks}
+    return {...f, inits: [...bodyinits, ...lowerVarInits(f.inits, env)], body: blocks, a: f.a}
 }
 
 function lowerVarInits(inits: Array<AST.VarInit<[Type, SourceLocation]>>, env: GlobalEnv) : Array<IR.VarInit<[Type, SourceLocation]>> {
@@ -56,6 +56,7 @@ function lowerVarInits(inits: Array<AST.VarInit<[Type, SourceLocation]>>, env: G
 function lowerVarInit(init: AST.VarInit<[Type, SourceLocation]>, env: GlobalEnv) : IR.VarInit<[Type, SourceLocation]> {
     return {
         ...init,
+        a: init.a, 
         value: literalToVal(init.value)
     }
 }
@@ -67,6 +68,7 @@ function lowerClasses(classes: Array<AST.Class<[Type, SourceLocation]>>, env : G
 function lowerClass(cls: AST.Class<[Type, SourceLocation]>, env : GlobalEnv) : IR.Class<[Type, SourceLocation]> {
     return {
         ...cls,
+        a: cls.a, 
         fields: lowerVarInits(cls.fields, env),
         methods: lowerFunDefs(cls.methods, env)
     }
@@ -228,12 +230,12 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       
       var [in_inits, in_stmts, in_expr] = flattenExprToExpr(s.iterable, blocks, env);
       pushStmtsToLastBlock(blocks, ...in_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: iterableObject, value: in_expr} );
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl })
+      pushStmtsToLastBlock(blocks, { a: s.a, tag: "jmp", lbl: forStartLbl })
       blocks.push({  a: s.a, label: forStartLbl, stmts: [] })
 
       let condExpr:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, s.a[1]],tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
       var [cinits, cstmts, cexpr] = flattenExprToVal(condExpr, blocks, env);
-      pushStmtsToLastBlock(blocks, ...cstmts, { tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forElseLbl });
+      pushStmtsToLastBlock(blocks, ...cstmts, { a: s.a, tag: "ifjmp", cond: cexpr, thn: forbodyLbl, els: forElseLbl });
       blocks.push({  a: s.a, label: forbodyLbl, stmts: [] })
 
       const iterVal: AST.Expr<[AST.Type, SourceLocation]> = {a: s.a, tag: "method-call", obj: {a:s.iterable.a, tag: "id", name: iterableObject} , method: "next", arguments: []}
@@ -242,27 +244,27 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
       pushStmtsToLastBlock(blocks, ...s_stmts, {a:[NONE, s.a[1]],  tag: "assign", name: s.vars.name, value: s_expr } );
       
       var bodyinits = flattenStmts(s.body, blocks, env);
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forStartLbl });
+      pushStmtsToLastBlock(blocks, { a:s.a, tag: "jmp", lbl: forStartLbl });
       blocks.push({  a: s.a, label: forElseLbl, stmts: [] })
 
       var elsebodyinits = flattenStmts(s.elseBody, blocks, env);
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: forEndLbl });
+      pushStmtsToLastBlock(blocks, { a:s.a, tag: "jmp", lbl: forEndLbl });
       blocks.push({  a: s.a, label: forEndLbl, stmts: [] })
 
-      return [...in_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { tag: "none" } }]
+      return [...in_inits, ...cinits, ...s_inits, ...bodyinits, ...elsebodyinits, { a: s.iterable.a, name: iterableObject, type: s.iterable.a[0], value: { a:s.a, tag: "none" } }]
     
     case "break":
       var counter = s.loopCounter;
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: "$whileend" + counter});
+      pushStmtsToLastBlock(blocks, { a: s.a, tag: "jmp", lbl: "$whileend" + counter});
       return []
     case "continue":
       var counter = s.loopCounter;
-      pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: "$whilestart" + counter});
+      pushStmtsToLastBlock(blocks, { a: s.a, tag: "jmp", lbl: "$whilestart" + counter});
       return []
   }
 }
 
-function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
+function lowerAllDestructureAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
   switch(rhs.tag){
     case "non-paren-vals":
       let lhs_index = 0
@@ -309,7 +311,7 @@ function lowerAllDestructureAssignments(blocks: { a?: [AST.Type, AST.SourceLocat
 
 
 function lowerDestructAssignment(blocks: {
-  a?: [AST.Type, AST.SourceLocation]; label: string;
+  a: [AST.Type, AST.SourceLocation]; label: string;
   //   return [name, {tag: "label", a: a, name: name}];
   // }
   stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[];
@@ -320,7 +322,7 @@ function lowerDestructAssignment(blocks: {
     var [ninits, nstmts, nval] = flattenExprToVal(r, blocks, env);
     if(l.obj.a[0].tag !== "class") { throw new Error("Compiler's cursed, go home."); }
     const classdata = env.classes.get(l.obj.a[0].name);
-    const offset : IR.Value<[Type, SourceLocation]> = { tag: "wasmint", value: classdata.get(l.field)[0] };
+    const offset : IR.Value<[Type, SourceLocation]> = { a: l.a, tag: "wasmint", value: classdata.get(l.field)[0] };
     pushStmtsToLastBlock(blocks,
       ...ostmts, ...nstmts, {
         tag: "store",
@@ -346,6 +348,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       var [inits, stmts, val] = flattenExprToVal(e.expr, blocks, env);
       return [inits, stmts, {
         ...e,
+        a: e.a, 
         expr: val
       }];
     case "binop":
@@ -353,6 +356,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       var [rinits, rstmts, rval] = flattenExprToVal(e.right, blocks, env);
       return [[...linits, ...rinits], [...lstmts, ...rstmts], {
           ...e,
+          a: e.a, 
           left: lval,
           right: rval
         }];
@@ -362,10 +366,10 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           // construct empty set
           const newSetName = generateName("newSet");
           // size will be 10 for now
-          const allocSet : IR.Expr<[Type, SourceLocation]> = {tag: "alloc", amount: {tag: "wasmint", value: 10}};
+          const allocSet : IR.Expr<[Type, SourceLocation]> = {a: e.a, tag: "alloc", amount: {a: e.a, tag: "wasmint", value: 10}};
           return [
-            [ { name: newSetName, type: e.a[0], value: { tag: "none" } } ],
-            [ { tag: "assign", name: newSetName, value: allocSet } ],
+            [ { a: e.a, name: newSetName, type: e.a[0], value: { a: e.a, tag: "none" } } ],
+            [ { a: e.a, tag: "assign", name: newSetName, value: allocSet } ],
             { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newSetName } }
           ]; 
         } else {
@@ -376,6 +380,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           return [ callinits, callstmts,
             {
               ...e,
+              a: e.a, 
               arguments: callvals
             }
           ];  
@@ -388,6 +393,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       return [ callinits, callstmts,
         {
           ...e,
+          a: e.a, 
           arguments: callvals
         }
       ];
@@ -397,14 +403,35 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const arginits = argpairs.map(cp => cp[0]).flat();
       const argstmts = argpairs.map(cp => cp[1]).flat();
       const argvals = argpairs.map(cp => cp[2]).flat();
+
       var objTyp = e.obj.a[0];
       if(objTyp.tag === "set") {
-        const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
-        return [
-          [...objinits, ...arginits],
-          [...objstmts, ...argstmts],
-          callMethod
-        ];
+        // set_a.update([...]) ==> set_a.update({...})
+        if (e.method === "update" && e.arguments[0].tag == "listliteral") {
+          e.arguments[0] = {
+            a: e.arguments[0].a,
+            tag: "set",
+            values: e.arguments[0].elements
+          }
+          const newargpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
+          const newarginits = newargpairs.map(cp => cp[0]).flat();
+          const newargstmts = newargpairs.map(cp => cp[1]).flat();
+          const newargvals = newargpairs.map(cp => cp[2]).flat();
+
+          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...newargvals] } 
+          return [
+            [...objinits, ...newarginits],
+            [...objstmts, ...newargstmts],
+            callMethod
+          ];
+        } else {
+          const callMethod : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `set$${e.method}`, arguments: [objval, ...argvals] }
+          return [
+            [...objinits, ...arginits],
+            [...objstmts, ...argstmts],
+            callMethod
+          ];
+        }
       }
       if(objTyp.tag !== "class") { // I don't think this error can happen
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
@@ -427,7 +454,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         a: e.a,
         tag: "load",
         start: oval,
-        offset: { tag: "wasmint", value: offset }}];
+        offset: { a: e.a, tag: "wasmint", value: offset }}];
     }
     case "index":
       const [oinits, ostmts, oval] = flattenExprToVal(e.obj, blocks, env);
@@ -462,14 +489,14 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         return {
           a: e.a,
           tag: "store",
-          start: { tag: "id", name: newName },
-          offset: { tag: "wasmint", value: index },
+          start: { a: e.a, tag: "id", name: newName },
+          offset: { a: e.a, tag: "wasmint", value: index },
           value: value
         }
       });
 
       return [
-        [ { name: newName, type: e.a[0], value: { a: e.a, tag: "none" } }],
+        [ { a: e.a, name: newName, type: e.a[0], value: { a: e.a, tag: "none" } }],
         [ { a: e.a, tag: "assign", name: newName, value: alloc }, ...assigns,
           { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
         ],
@@ -477,13 +504,14 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       ];
     case "listliteral":
       const newListName = generateName("newList");
-      const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: e.elements.length + 1 } };
+      const allocList : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "alloc", amount: { a: e.a, tag: "wasmint", value: e.elements.length + 1 } };
       var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
       var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
       var storeLength : IR.Stmt<[Type, SourceLocation]> = {
+        a: e.a, 
         tag: "store",
-        start: { tag: "id", name: newListName },
-        offset: { tag: "wasmint", value: 0 },
+        start: { a: e.a, tag: "id", name: newListName },
+        offset: { a:e.a, tag: "wasmint", value: 0 },
         value: { a: [{tag: "number"}, e.a[1]], tag: "num", value: BigInt(e.elements.length) }
       }
       const assignsList : IR.Stmt<[Type, SourceLocation]>[] = e.elements.map((e, i) => {
@@ -491,25 +519,27 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         inits = [...inits, ...init];
         stmts = [...stmts, ...stmt];
         return {
+          a: e.a, 
           tag: "store",
-          start: { tag: "id", name: newListName },
-          offset: { tag: "wasmint", value: i+1 },
+          start: { a: e.a, tag: "id", name: newListName },
+          offset: { a: e.a, tag: "wasmint", value: i+1 },
           value: val
         }
       })
       return [
-        [ { name: newListName, type: e.a[0], value: { tag: "none" } }, ...inits ],
+        [ { a:e.a, name: newListName, type: e.a[0], value: { a: e.a, tag: "none" } }, ...inits ],
         [ { a: e.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newListName } }
       ];
     case "id":
-      return [[], [], {a: e.a, tag: "value", value: { ...e }} ];
+      return [[], [], {a: e.a, tag: "value", value: { ...e, a: e.a }} ];
     case "literal":
       return [[], [], {a: e.a, tag: "value", value: literalToVal(e.value) } ];
+
     case "set":
       const newSetName = generateName("newSet");
       // 10 buckets for now
-      const allocSet : IR.Expr<[Type, SourceLocation]> = {tag: "alloc", amount: {tag: "wasmint", value: 10}};
+      const allocSet : IR.Expr<[Type, SourceLocation]> = {a: e.a, tag: "alloc", amount: {a: e.a, tag: "wasmint", value: 10}};
       //const allocSet : IR.Expr<[Type, SourceLocation]> = {tag: "alloc", amount: {tag: "wasmint", value: e.contents.length}};
       var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
       var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
@@ -517,18 +547,20 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         const [init, stmt, value] = flattenExprToVal(e, blocks, env);
         inits = [...inits, ...init];
         stmts = [...stmts, ...stmt];
+        // return an IR.Stmt
         return {
           a: e.a,
           tag: "expr",
-          expr: { a: e.a, tag: "call", name: `set$add`, arguments: [{ tag: "id", name: newSetName}, value]}
+          expr: { a: e.a, tag: "call", name: `set$add`, arguments: [{ a: e.a, tag: "id", name: newSetName}, value]}
         }
       })
       return [
-        [ { a: e.a, name: newSetName, type: e.a[0], value: { tag: "none" } }, ...inits ],
-        //[ { tag: "assign", name: newSetName, value: allocSet }, ...stmts, storeLength, ...assignsSet ], 
-        [ { tag: "assign", name: newSetName, value: allocSet }, ...stmts, ...assignsSet ],
+        [ { a: e.a, name: newSetName, type: e.a[0], value: { a: e.a, tag: "none" } }, ...inits ],
+        // [ { tag: "assign", name: newSetName, value: allocSet }, ...stmts, storeLength, ...assignsSet ], 
+        [ { a: e.a, tag: "assign", name: newSetName, value: allocSet }, ...stmts, ...assignsSet ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newSetName } }
       ];
+
     case "ternary":
     case "comprehension":
       return flattenExprToExprWithBlocks(e, blocks, env);
@@ -543,17 +575,17 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       var [condinits, condstmts, condval] = flattenExprToVal(e.ifcond, blocks, env);
 
       const resultName = generateName("resultVal");
-      const resultInit : IR.VarInit<[Type, SourceLocation]> = { name: resultName, type: e.a[0], value: { tag: "none" } };
+      const resultInit : IR.VarInit<[Type, SourceLocation]> = { a: e.a, name: resultName, type: e.a[0], value: { a: e.a, tag: "none" } };
 
       var thenLbl = generateName("$ternaryThen");
       var elseLbl = generateName("$ternaryElse");
       var endLbl = generateName("$ternaryEnd");
       
-      const condjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: condval, thn: thenLbl, els: elseLbl };
-      const endjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "jmp", lbl: endLbl };
+      const condjmp : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "ifjmp", cond: condval, thn: thenLbl, els: elseLbl };
+      const endjmp : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "jmp", lbl: endLbl };
 
-      const assignTrue : IR.Stmt<[Type, SourceLocation]> = { tag: "assign", name: resultName, value: tval };
-      const assignFalse : IR.Stmt<[Type, SourceLocation]> = { tag: "assign", name: resultName, value: fval };
+      const assignTrue : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "assign", name: resultName, value: tval };
+      const assignFalse : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "assign", name: resultName, value: fval };
 
       // in case of a lonely ternary expression in the program
       if (blocks.length == 0) {
@@ -590,14 +622,14 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const whileEndLbl = generateName("$whileend");
 
       // jump to start
-      pushStmtsToLastBlock(blocks, ...objstmts, checkObj, { tag: "jmp", lbl: whileStartLbl });
+      pushStmtsToLastBlock(blocks, ...objstmts, checkObj, { a: e.a, tag: "jmp", lbl: whileStartLbl });
       blocks.push({  a: e.a, label: whileStartLbl, stmts: [] });
       // call hasnext
       const hasnextValName = generateName("condVal");
-      const hasnextVal : IR.VarInit<[Type, SourceLocation]> = { name: hasnextValName, type: { tag: "bool" }, value: { tag: "bool", value: false } };
-      const hasnextValAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: hasnextValName, value: callHasnext };
+      const hasnextVal : IR.VarInit<[Type, SourceLocation]> = { a: e.a, name: hasnextValName, type: { tag: "bool" }, value: { a: e.a, tag: "bool", value: false } };
+      const hasnextValAssign : IR.Stmt<[Type, SourceLocation]> =  { a: e.a, tag: "assign", name: hasnextValName, value: callHasnext };
       const hasnext : IR.Value<[Type, SourceLocation]> = { a: e.a, tag: "id", name: hasnextValName };
-      const hasnextjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: hasnext, thn: whilebodyLbl, els: whileEndLbl };
+      const hasnextjmp : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "ifjmp", cond: hasnext, thn: whilebodyLbl, els: whileEndLbl };
       pushStmtsToLastBlock(blocks, hasnextValAssign, hasnextjmp);
 
       // body: call next and print result
@@ -619,8 +651,8 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
         default:
           throw new Error("Iterable is cursed, go home!");
       }
-      const nextVal : IR.VarInit<[Type, SourceLocation]> = { name: nextValName, type: nextValType, value: { tag: "none" } };
-      const nextValAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextValName, value: callNext };
+      const nextVal : IR.VarInit<[Type, SourceLocation]> = { a: e.a, name: nextValName, type: nextValType, value: { a: e.a, tag: "none" } };
+      const nextValAssign : IR.Stmt<[Type, SourceLocation]> =  { a: e.a, tag: "assign", name: nextValName, value: callNext };
 
       // push call to next to blocks before lhs statements get pushed on the next line
       pushStmtsToLastBlock(blocks, nextValAssign);
@@ -629,10 +661,10 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       // evaluate lhs
       const [linits, lstmts, lval] = flattenExprToExpr(e.lhs, blocks, env); // careful with ternary case
       const nextYieldName = generateName("nextYield");
-      const nextYield : IR.VarInit<[Type, SourceLocation]> = { name: nextYieldName, type: lval.a[0], value: { tag: "none" } };
-      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYieldName, value: lval };
+      const nextYield : IR.VarInit<[Type, SourceLocation]> = { a: e.a, name: nextYieldName, type: lval.a[0], value: { a: e.a, tag: "none" } };
+      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { a: e.a, tag: "assign", name: nextYieldName, value: lval };
       // for this milestone, we just print out the values
-      const callPrint : IR.Stmt<[Type, SourceLocation]> = { tag: "expr", expr: { tag: "call", name: "print_num", arguments: [{ a: e.a, tag: "id", name: nextYieldName }] } };
+      const callPrint : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: "print_num", arguments: [{ a: e.a, tag: "id", name: nextYieldName }] } };
 
       // if condition
       const condThenLbl = generateName("$then");
@@ -640,7 +672,7 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const condElseLbl = generateName("$else");
       var cinits : IR.VarInit<[Type, SourceLocation]>[] = []
       var cstmts : IR.Stmt<[Type, SourceLocation]>[] = []
-      var cval : IR.Value<[Type, SourceLocation]> = { tag: "bool", value: true };
+      var cval : IR.Value<[Type, SourceLocation]> = { a: e.a, tag: "bool", value: true };
       if (e.ifcond != undefined) {
         [cinits, cstmts, cval] = flattenExprToVal(e.ifcond, blocks, env);
       }
@@ -651,39 +683,41 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
         // generator has two fields: size (number of elements generated), and addr (start address)
         const size = 0; // TODO: how to know the number of elements generated at this level?
         const startAddr = 0; // TODO: decide start address of generator, might need help from list data structure
-        const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: 2 } };
+        const alloc : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "alloc", amount: { a: e.a, tag: "wasmint", value: 2 } };
         const assigns : IR.Stmt<[Type, SourceLocation]>[] = [
           {
+            a: e.a, 
             tag: "store",
-            start: { tag: "id", name: newName },
-            offset: { tag: "wasmint", value: 0 },
-            value: { tag: "wasmint", value: size }
+            start: { a: e.a, tag: "id", name: newName },
+            offset: { a: e.a, tag: "wasmint", value: 0 },
+            value: { a: e.a, tag: "wasmint", value: size }
           },
           {
+            a: e.a, 
             tag: "store",
-            start: { tag: "id", name: newName },
-            offset: { tag: "wasmint", value: 1 },
-            value: { tag: "wasmint", value: startAddr }
+            start: { a: e.a, tag: "id", name: newName },
+            offset: { a: e.a, tag: "wasmint", value: 1 },
+            value: { a: e.a, tag: "wasmint", value: startAddr }
           }
         ];
       }
 
-      const condJmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: cval, thn: condThenLbl, els: condElseLbl };
-      const endJmp : IR.Stmt<[Type, SourceLocation]> = { tag: "jmp", lbl: condEndLbl };
+      const condJmp : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "ifjmp", cond: cval, thn: condThenLbl, els: condElseLbl };
+      const endJmp : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "jmp", lbl: condEndLbl };
 
       pushStmtsToLastBlock(blocks, ...lstmts, ...cstmts, condJmp);
       blocks.push({ a: e.a, label: condThenLbl, stmts: [nextYieldAssign] });
       pushStmtsToLastBlock(blocks, endJmp);
       blocks.push({ a: e.a, label: condElseLbl, stmts: [] });
       pushStmtsToLastBlock(blocks, endJmp);
-      blocks.push({ a: e.a, label: condEndLbl, stmts: [{ tag: "jmp", lbl: whileStartLbl }] });
+      blocks.push({ a: e.a, label: condEndLbl, stmts: [{ a: e.a, tag: "jmp", lbl: whileStartLbl }] });
 
       blocks.push({  a: e.a, label: whileEndLbl, stmts: [] });
 
       return [
         [...objinits, ...cinits, ...linits, hasnextVal, nextVal, nextYield],
         [],
-        { tag: "value", value: {tag: "bool", value: false} } // what should I return here?
+        { a: e.a, tag: "value", value: {a: e.a, tag: "bool", value: false} } // what should I return here?
       ]
   }
 }
@@ -723,18 +757,18 @@ function listIndexOffsets(iinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], 
       a: ival.a,
       tag: "load",
       start: oval,
-      offset: { tag: "wasmint", value: 0 }} 
+      offset: { a: ival.a, tag: "wasmint", value: 0 }} 
   };
-  iinits.push({ a: ival.a, name: listLength, type: {tag: "number"}, value: { tag: "none" } })
+  iinits.push({ a: ival.a, name: listLength, type: {tag: "number"}, value: { a: ival.a, tag: "none" } })
   istmts.push(setLength);
-  const checkIndex: IR.Stmt<[Type, SourceLocation]> = { a: ival.a, tag: "expr", expr: { a: ival.a, tag: "call", name: `index_out_of_bounds`, arguments: [{tag: "id", name: listLength, a: ival.a}, ival]}}
+  const checkIndex: IR.Stmt<[Type, SourceLocation]> = { a: ival.a, tag: "expr", expr: { a: ival.a, tag: "call", name: `index_out_of_bounds`, arguments: [{tag: "id", name: listLength, a: ival.a}, ival, {a: ival.a, tag: "wasmint", value: ival.a[1].line}, {a: ival.a, tag: "wasmint", value: ival.a[1].column}]}}
   istmts.push(checkIndex);
 
   // Get rest of index offsets
   const value1: IR.Value<[Type, SourceLocation]> = { a: ival.a, tag: "wasmint", value: 1 };
   const indexAdd1Expr: IR.Expr<[Type, SourceLocation]> = {  a: ival.a, tag: "binop", op: AST.BinOp.Plus, left: ival, right: value1};
   const offsetName = generateName("offsetname");
-  const offsetInit: IR.VarInit<[Type, SourceLocation]> = { a: ival.a, name: offsetName, type: {tag: "number"}, value: { tag: "none" } }
+  const offsetInit: IR.VarInit<[Type, SourceLocation]> = { a: ival.a, name: offsetName, type: {tag: "number"}, value: { a: ival.a, tag: "none" } }
   iinits.push(offsetInit);
   const setOffset : IR.Stmt<[Type, SourceLocation]> = { tag: "assign", a: ival.a, name: offsetName, value: indexAdd1Expr };
   istmts.push(setOffset);

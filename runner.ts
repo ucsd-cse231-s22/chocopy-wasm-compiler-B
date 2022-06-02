@@ -120,7 +120,7 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
 
   const wasmSource = `(module
     (import "js" "memory" (memory 1))
-    (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
+    (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (param i32) (param i32) (result i32))
     (func $division_by_zero (import "imports" "division_by_zero") (param i32) (param i32) (param i32) (result i32))
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (param i32) (param i32) (result i32))
     (func $stack_push (import "imports" "stack_push") (param i32))
@@ -133,10 +133,16 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-    (func $set$add (import "libset" "set$add") (param $baseAddr i32) (param $key i32) (result i32))
-    (func $set$contains (import "libset" "set$contains") (param $baseAddr i32) (param $key i32) (result i32))
-    (func $set$length (import "libset" "set$length") (param $baseAddr i32) (result i32))
-    (func $set$remove (import "libset" "set$remove") (param $baseAddr i32) (param $key i32) (result i32))
+    (func $set$add (import "libset" "set$add") (param i32) (param i32) (result i32))
+    (func $set$contains (import "libset" "set$contains") (param i32) (param i32) (result i32))
+    (func $set$length (import "libset" "set$length") (param i32) (result i32))
+    (func $set$remove (import "libset" "set$remove") (param i32) (param i32) (result i32))
+    (func $set$print (import "libset" "set$print") (param i32) (result i32))
+    (func $set$update (import "libset" "set$update") (param i32) (param i32) (result i32))
+    (func $set$clear (import "libset" "set$clear") (param i32) (result i32))
+    (func $set$firstItem (import "libset" "set$firstItem") (param i32) (result i32))
+    (func $set$hasnext (import "libset" "set$hasnext") (param i32) (param i32) (result i32))
+    (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
