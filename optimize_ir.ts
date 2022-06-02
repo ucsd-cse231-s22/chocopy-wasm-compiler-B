@@ -219,8 +219,10 @@ function isCurStmtNeeded(stmt: IR.Stmt<[Type, SourceLocation]>, np: needed_predi
     const curNp = np.get(curLabel + idx.toString());
     switch (stmt.tag) {
         case "assign": {
-            const nextNp = np.get(curLabel + (idx+1).toString());
-            if (nextNp.has(stmt.name) || isCurExprNeeded(stmt.value, curNp)) return true;
+            const next_label = curLabel + (idx+1).toString();
+            let left_needed = false;
+            if (np.has(next_label) && np.get(next_label).has(stmt.name)) left_needed = true;
+            if (left_needed || isCurExprNeeded(stmt.value, curNp)) return true;
             return false;
         }
         case "return": {

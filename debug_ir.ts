@@ -8,7 +8,7 @@ import { BasicREPL } from "./repl";
 import * as ir from './ir';
 import { CliRenderer } from "@diagrams-ts/graphviz-cli-renderer";
 import { optimizeAst } from './optimize_ast';
-import { optimizeIr, liveness_analysis, live_predicate, needed_predicate, needednessAnalysis, needednessDCE, optimizeFuncDef} from './optimize_ir';
+import { optimizeIr, liveness_analysis, live_predicate, needed_predicate, needednessAnalysis, needednessDCE} from './optimize_ir';
 
 const builtinClasses : string = `
 class Range(object):
