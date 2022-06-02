@@ -6,84 +6,84 @@ import { splitString, stackTrace } from './runtime_error'
 type BuiltinFunc = {
   name: string
   body: Function
-  typeSig: [Type[], Type]
+  typeSig: [Map<string, Type>, Type, number]
 }
 // here to register builtinFunctions
 export const BuiltinLib:BuiltinFunc[] = [
   {
     name: "factorial",
     body: factorial,
-    typeSig: [[NUM], NUM]
+    typeSig: [new Map([["num",NUM]]), NUM, 1]
   },
   {
     name: "randint",
     body: randint,
-    typeSig: [[NUM,NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["start",NUM],["stop",NUM],["line",NUM],["col",NUM]]), NUM, 4]
   },
   {
     name: "gcd",
     body: gcd,
-    typeSig: [[NUM,NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["num1",NUM],["num2",NUM],["line",NUM],["col",NUM]]), NUM, 4]
   },
   {
     name: "lcm",
     body: lcm,
-    typeSig: [[NUM,NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["num1",NUM],["num2",NUM],["line",NUM],["col",NUM]]), NUM, 4]
   },
   {
     name: "comb",
     body: comb,
-    typeSig: [[NUM,NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["n",NUM],["r",NUM],["line",NUM],["col",NUM]]), NUM, 4]
   },
   {
     name: "perm",
     body: perm,
-    typeSig: [[NUM,NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["n",NUM],["r",NUM],["line",NUM],["col",NUM]]), NUM, 4]
   },
   {
     name: "randrange",
     body: randrange,
-    typeSig: [[NUM,NUM, NUM,NUM,NUM], NUM]
+    typeSig: [new Map([["start",NUM],["stop",NUM],["step",NUM],["line",NUM],["col",NUM]]), NUM, 5]
   },
   {
     name: "time",
     body: ()=>Date.now()%1000000000,
-    typeSig: [[], NUM]
+    typeSig: [new Map([]), NUM, 0]
   },
   {
     name: "sleep",
     body: sleep,
-    typeSig: [[NUM], NONE]
+    typeSig: [new Map([["milliseconds",NUM]]), NONE, 1]
   },
   {
     name: "int",
     body: (x:any)=>x,
-    typeSig: [[BOOL], NUM]
+    typeSig: [new Map([["x",BOOL]]), NUM, 1]
   },
   {
     name: "bool",
     body: (x:number)=>x!=0,
-    typeSig: [[NUM], BOOL]
+    typeSig: [new Map([["num",NUM]]), BOOL, 1]
   },
   {
     name: "abs",
     body: Math.abs,
-    typeSig: [[NUM], NUM]
+    typeSig: [new Map([["num",NUM]]), NUM, 1]
   },
   {
     name: "min",
     body: Math.min,
-    typeSig: [[NUM, NUM], NUM]
+    typeSig: [new Map([["num1",NUM],["num2",NUM]]), NUM, 2]
   },
   {
     name: "max",
     body: Math.max,
-    typeSig: [[NUM, NUM], NUM]
+    typeSig: [new Map([["num1",NUM],["num2",NUM]]), NUM, 2]
   },
   {
     name: "pow",
     body: Math.pow,
-    typeSig: [[NUM, NUM], NUM]
+    typeSig: [new Map([["base",NUM],["power",NUM]]), NUM, 2]
   }
 ]
 

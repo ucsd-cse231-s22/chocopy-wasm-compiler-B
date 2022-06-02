@@ -34,8 +34,8 @@ function retrieveCompvar(base : string) : string {
 
 export type GlobalTypeEnv = {
   globals: Map<string, Type>,
-  functions: Map<string, [Array<Type>, Type]>,
-  classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>
+  functions: Map<string, [Map<string, Type>, Type, number]>,
+  classes: Map<string, [Map<string, Type>, Map<string, [Map<string, Type>, Type, number]>]>
 }
 
 export type LocalTypeEnv = {
@@ -47,11 +47,11 @@ export type LocalTypeEnv = {
   currLoop: Array<number>
 }
 
-const defaultGlobalFunctions = new Map();
+const defaultGlobalFunctions:GlobalTypeEnv["functions"] = new Map();
 BuiltinLib.forEach(x=>{
   defaultGlobalFunctions.set(x.name, x.typeSig);
 })
-defaultGlobalFunctions.set("print", [[CLASS("object")], NUM]);
+defaultGlobalFunctions.set("print", [new Map([["x",CLASS("object")]]), NUM,1]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -174,12 +174,20 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
   const newFuns = new Map(env.functions);
   const newClasses = new Map(env.classes);
   program.inits.forEach(init => newGlobs.set(init.name, init.type));
-  program.funs.forEach(fun => newFuns.set(fun.name, [fun.parameters.map(p => p.type), fun.ret]));
+  // if -1, there are no defaults
+  // else, everything before this index is a non-default argument
+  program.funs.forEach(fun => {
+    const nonDefault = fun.parameters.filter(p => p.defaultValue === undefined).length;
+    newFuns.set(fun.name, [new Map(fun.parameters.map(p => [p.name,p.type])), fun.ret, nonDefault])
+  }); // add defaultLength
   program.classes.forEach(cls => {
     const fields = new Map();
     const methods = new Map();
     cls.fields.forEach(field => fields.set(field.name, field.type));
-    cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
+    cls.methods.forEach(method => {
+      const nonDefault = method.parameters.filter(p => p.defaultValue === undefined).length;
+      methods.set(method.name, [new Map(method.parameters.map(p => [p.name,p.type])), method.ret, nonDefault])
+    });
     newClasses.set(cls.name, [fields, methods]);
   });
   return { globals: newGlobs, functions: newFuns, classes: newClasses };
@@ -224,7 +232,20 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
   var locals = emptyLocalTypeEnv();
   locals.expectedRet = fun.ret;
   locals.topLevel = false;
-  fun.parameters.forEach(p => locals.vars.set(p.name, p.type));
+  const tcparameters = fun.parameters.map(p => {
+    if (locals.vars.has(p.name)) {
+      throw new TypeCheckError(`Duplicate argument ${p.name} for function ${fun.name}`, fun.a);
+
+    }
+    locals.vars.set(p.name, p.type);
+    if (p.defaultValue) {
+      const tcValue = tcExpr(env, emptyLocalTypeEnv(), p.defaultValue);
+      if (!isAssignable(env, tcValue.a[0], p.type))
+        throw new TypeCheckError(`Type mismatch for default value of argument ${p.name}`, fun.a);
+      return { ...p, defaultValue: tcValue };
+    }
+    return { name: p.name, type: p.type };
+  });
   var tcinits: VarInit<[Type, SourceLocation]>[] = [];
   fun.inits.forEach(init => {
     const tcinit = tcInit(env, init);
@@ -235,7 +256,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
     throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet.tag)} does not match actual return type: ${JSON.stringify(locals.actualRet.tag)}`, fun.a);
-  return {...fun, a:[NONE, fun.a], body: tBody, inits: tcinits};
+  return {...fun, a:[NONE, fun.a], body: tBody, parameters: tcparameters, inits: tcinits};
 }
 
 export function tcClass(env: GlobalTypeEnv, cls : Class<SourceLocation>) : Class<[Type, SourceLocation]> {
@@ -259,6 +280,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
   switch(stmt.tag) {
     case "assign":
       const tValExpr = tcExpr(env, locals, stmt.value);
+      console.log(tValExpr)
       var nameTyp;
       if (locals.vars.has(stmt.name)) {
         nameTyp = locals.vars.get(stmt.name);
@@ -397,29 +419,88 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
   })
 
   switch(tRhs.tag) {
-    case "non-paren-vals":
-      //TODO logic has to change - when all iterables are introduced
-      var isIterablePresent = false;
-      tRhs.values.forEach(r => {
-        //@ts-ignore
-        if(r.a[0].tag==="class" && r.a[0].name === "Range"){ //just supporting range now, extend it to all iterables
-          isIterablePresent = true;
-        }
-      })
+    case "lookup":
+    case "id":
+    case "method-call":
+    case "binop":
+      checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
+      return tRhs;
 
+    case "set":
+    case "non-paren-vals":
       //Code only when RHS is of type literals
-      if(tDestr.length === tRhs.values.length ||
-        (hasStarred && tDestr.length < tRhs.values.length)||
-        (hasStarred && tDestr.length-1 === tRhs.values.length) ||
-        isIterablePresent){
+      if(checkDestrLength(tDestr, tRhs.values, hasStarred)) {
           tcAssignTargets(env, locals, tDestr, tRhs.values, hasStarred)
           return tRhs
-        }
+      }
       else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+
+    case "call":
+      if(tRhs.a[0].tag === "class"){ 
+        tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
+        return tRhs
+      } 
+      checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
+      return tRhs;
+      
+
+    case "listliteral":
+      if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
+        tcAssignTargets(env, locals, tDestr, tRhs.elements, hasStarred)
+        return tRhs
+      }
+      else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+      
     default:
       throw new Error("not supported expr type for destructuring")
   }
 }
+
+function checkArbitraryTypes(env: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], rhsType : Type, hasStarred : boolean, stmtLoc: SourceLocation) {
+  if (rhsType.tag === "list" || rhsType.tag === "set") {
+    tDestr.forEach(r => {
+
+      if (r.isIgnore) {
+        return
+      }
+
+      //@ts-ignore
+      if (!r.isStarred && !isAssignable(env, r.lhs.a[0], rhsType.type) || r.isStarred && !isAssignable(env, r.lhs.a[0].type, rhsType.type)) {
+        throw new TypeCheckError("Type Mismatch while destructuring assignment", r.lhs.a[1])
+      }
+    })
+  } else {throw new TypeCheckError(`cannot unpack ${rhsType.tag}`, stmtLoc)}
+}
+
+function checkDestrLength(tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs : Expr<[Type, SourceLocation]>[], hasStarred : boolean): boolean {
+  
+  //TODO logic has to change - when all iterables are introduced
+  var isIterablePresent = checkIterablePresence(tRhs)
+
+  // TODO : Consider starred expressions
+  if (tDestr.length === tRhs.length || 
+    (hasStarred && tDestr.length < tRhs.length)||
+    (hasStarred && tDestr.length-1 === tRhs.length) || 
+    isIterablePresent) {
+      return true
+  }
+
+  return false
+
+}
+
+function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean {
+  var isIterablePresent = false
+  values.forEach(r => {
+    //@ts-ignore
+    if(r.a[0].tag==="class") { 
+      isIterablePresent = true;
+    }
+  })
+  return isIterablePresent
+}
+
+
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {
 
@@ -434,10 +515,15 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       rhs_index++
     } else {
       //@ts-ignore
-      if(tRhs[rhs_index].a[0].tag==="class" && tRhs[rhs_index].a[0].name === "Range"){
-        //FUTURE: support range class added by iterators team, currently support range class added from code
-        var expectedRhsType:Type = env.classes.get('Range')[1].get('next')[1];
-        //checking type of lhs with type of return of range
+      if(tRhs[rhs_index].a[0].tag==="class") {
+        //FUTURE: support range class added by iterators team, currently supports range class added from code
+        //@ts-ignore
+        var clsName = tRhs[rhs_index].a[0].name
+        if (env.classes.get(clsName)[1].get('next')==null) {
+          throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
+        }
+        var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
+        //checking type of lhs with type of return of iterator
         //Length mismatch from iterables will be RUNTIME ERRORS
         if(!isAssignable(env, tDestr[lhs_index].lhs.a[0], expectedRhsType)) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
@@ -445,11 +531,9 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
           lhs_index++
           rhs_index++
         }
-      }
-      else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
+      } else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0], tRhs[rhs_index].a[0])) {
           throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
-        }
-      else {
+      } else {
         lhs_index++
         rhs_index++
       }
@@ -457,19 +541,20 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
 
   }
 
+
+  let rev_lhs_index = tDestr.length - 1;
+  let rev_rhs_index = tRhs.length - 1;  
   // Only doing this reverse operation in case of starred
   if (hasStarred) {
-    if (lhs_index == tDestr.length - 1 && rhs_index == tRhs.length) {
-      //@ts-ignore
-    } else if (tDestr[lhs_index].isIgnore) {
-      lhs_index--
-      rhs_index--
+    if (lhs_index === tDestr.length - 1 && rhs_index === tRhs.length) {
+      return
     } else {
-      let rev_lhs_index = tDestr.length - 1;
-      let rev_rhs_index = tRhs.length - 1;
       while (rev_lhs_index > lhs_index) {
-        if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
-          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].a[1])
+        if (tDestr[rev_lhs_index].isIgnore) {
+          rev_rhs_index--
+          rev_lhs_index--
+        } else if (!isAssignable(env, tDestr[rev_lhs_index].lhs.a[0], tRhs[rev_rhs_index].a[0])) {
+          throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[rev_lhs_index].lhs.a[1])
         } else {
           rev_rhs_index--
           rev_lhs_index--
@@ -477,6 +562,35 @@ function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: Destr
       }
     }
   }
+
+
+  //Check starred expression type vs remaining values
+  if (hasStarred && rev_rhs_index >= lhs_index) {
+    // Get type of the starred expression
+    if (tDestr[lhs_index].lhs.a[0].tag !== "list") {
+      throw new TypeCheckError("Unsupported Type for starred expression destructuring", tDestr[lhs_index].lhs.a[1])
+    }
+
+    if (tRhs[rev_rhs_index].a[0].tag==="class") {
+      //@ts-ignore
+      var clsName = tRhs[rev_rhs_index].a[0].name
+      if (env.classes.get(clsName)[1].get('next')==null) {
+        throw new TypeCheckError(`Iterator ${clsName} doesn't have next function.`, tDestr[lhs_index].lhs.a[1])
+      }
+      var expectedRhsType:Type = env.classes.get(clsName)[1].get('next')[1];
+      //checking type of lhs with type of return of iterator
+      //Length mismatch from iterables will be RUNTIME ERRORS
+      //@ts-ignore
+      if(!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, expectedRhsType)) {
+        throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+      } 
+    } //@ts-ignore  
+    else if (!isAssignable(env, tDestr[lhs_index].lhs.a[0].type, tRhs[rev_rhs_index].a[0])) {
+      throw new TypeCheckError("Type Mismatch while destructuring assignment", tDestr[lhs_index].lhs.a[1])
+    } 
+    rev_rhs_index--
+  }
+  
 }
 
 export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<SourceLocation>) : Expr<[Type, SourceLocation]> {
@@ -606,21 +720,20 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if (expr.arguments.length===0)
           throw new TypeCheckError("print needs at least 1 argument", expr.a);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        return {...expr, a: [NONE, expr.a], arguments: tArgs};
+        if(expr.namedArgs && expr.namedArgs.size != 0){
+          throw new TypeCheckError("print() doesn't support keyword arguments",expr.a)
+        }
+        
+        return {...expr, a: [NONE, expr.a], arguments: tArgs, namedArgs:undefined};
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
         const tConstruct : Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
 
-        //To support range class for now
-        if (expr.name === "range") {
-          return tConstruct;
-        }
-
         const [_, methods] = env.classes.get(expr.name);
         if (methods.has("__init__")) {
           const [initArgs, initRet] = methods.get("__init__");
-          if (expr.arguments.length !== initArgs.length - 1)
+          if (expr.arguments.length !== initArgs.size - 1)
             throw new TypeCheckError("__init__ didn't receive the correct number of arguments from the constructor", expr.a);
           if (initRet !== NONE)
             throw new TypeCheckError("__init__  must have a void return type", expr.a);
@@ -629,16 +742,50 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           return tConstruct;
         }
       } else if(env.functions.has(expr.name)) {
-        const [argTypes, retType] = env.functions.get(expr.name);
+        const [argTypes, retType, nonDefault] = env.functions.get(expr.name);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        console.log(tArgs);
+        // check if length is at least non-default (here 2-4)
+        const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
+        if (expr.namedArgs) {
+          expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val))); 
+        }
+        const passedArgLength = tArgs.length + tNamedArgs.size;
+        if (passedArgLength > argTypes.size) {
+          throw new TypeCheckError(`${expr.name}() takes from ${nonDefault} to ${argTypes.size} positional arguments but ${passedArgLength} were given`, expr.a);
+        }
+        const argTypesArray = Array.from(argTypes.entries());
+        const passedArgKeys:Set<string> = new Set();
+        for (let index = 0; index < tArgs.length; index++) {
+          let [name, type] = argTypesArray[index]
+          if (!isAssignable(env, tArgs[index].a[0], type )) {
+            throw new TypeCheckError("Function call type mismatch: " + expr.name + " for argument " + index, expr.a);
+          }
+          passedArgKeys.add(name);
+        }
 
-        if(argTypes.length === expr.arguments.length &&
-           tArgs.every((tArg, i) => isAssignable(env, tArg.a[0], argTypes[i]))) {
-             return {...expr, a: [retType, expr.a], arguments: tArgs};
-           } else {
-            throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
-           }
+        tNamedArgs.forEach((arg,name)=>{
+          if (passedArgKeys.has(name)) {
+            throw new TypeCheckError(`${expr.name}() got multiple values for argument '${name}'`,expr.a);
+          }
+          if (!argTypes.has(name)) {
+            throw new TypeCheckError(`${expr.name}() got an unexpected keyword argument '${name}'`,expr.a);
+          }
+          if (!isAssignable(env,arg.a[0],argTypes.get(name))) {
+            throw new TypeCheckError("Function call type mismatch: " + expr.name + " for argument " + name, expr.a);
+          }
+          passedArgKeys.add(name);
+        });
+        const missing:Array<string> = []
+        for (let index = 0; index < nonDefault; index++) {
+          const [name,] = argTypesArray[index];
+          if (!passedArgKeys.has(name)) {
+            missing.push(name)
+          }
+        }
+        if (missing.length>0) {
+          throw new TypeCheckError(`${expr.name}() missing ${missing.length} required positional argument(s) '${missing.join("','")}'`,expr.a);
+        }
+        return { ...expr, a: [retType, expr.a], arguments: tArgs, namedArgs:tNamedArgs };
       } else if (expr.name === "set") {
         if (expr.arguments.length > 1){
           throw new TypeCheckError("Set constructor can only accept one argument", expr.a);
@@ -647,8 +794,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           throw new TypeCheckError("Set constructor's argument must be an iterable", expr.a);
         }
         var initial_value = tcExpr(env, locals, expr.arguments[0]);
-        console.log("hello", {...expr, a: initial_value.a, arguments: [initial_value]})
-        return {...expr, a: initial_value.a, arguments: [initial_value]};
+        if(expr.namedArgs && expr.namedArgs.size != 0){
+          throw new TypeCheckError("set() doesn't support keyword arguments",expr.a)
+        }
+        return {...expr, a: initial_value.a, arguments: [initial_value], namedArgs:undefined};
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -671,20 +820,56 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
     case "method-call":
       var tObj = tcExpr(env, locals, expr.obj);
       var tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+      const tNamedArgs:Map<string, Expr<[Type,SourceLocation]>> = new Map();
+      if (expr.namedArgs) {
+        expr.namedArgs.forEach((val,key)=>tNamedArgs.set(key,tcExpr(env,locals,val)));
+      }
+      
       if (tObj.a[0].tag === "class") {
         if (env.classes.has(tObj.a[0].name)) {
           const [_, methods] = env.classes.get(tObj.a[0].name);
           if (methods.has(expr.method)) {
-            const [methodArgs, methodRet] = methods.get(expr.method);
+            const [methodArgs, methodRet, nonDefault] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
-            if(methodArgs.length === realArgs.length &&
-              methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
-                return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};
-              } else {
-               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a );
+            const passedArgLength = realArgs.length + tNamedArgs.size;
+            if (passedArgLength > methodArgs.size) {
+              throw new TypeCheckError(`Method ${expr.method}() takes from ${nonDefault} to ${methodArgs.size} positional arguments but ${passedArgLength} were given`, expr.a);
+            }
+            const argTypesArray = Array.from(methodArgs.entries());
+            const passedArgKeys:Set<string> = new Set();
+            for (let index = 0; index < realArgs.length; index++) {
+              let [name, type] =  argTypesArray[index]
+              if (!isAssignable(env, realArgs[index].a[0],type)) {
+                throw new TypeCheckError("Method call type mismatch: " + expr.method + " for argument " + index, expr.a);
               }
+              passedArgKeys.add(name);
+
+            }
+            tNamedArgs.forEach((arg,name)=>{
+              if (passedArgKeys.has(name)) {
+                throw new TypeCheckError(`${expr.method}() got multiple values for argument '${name}'`,expr.a);
+              }
+              if (!methodArgs.has(name)) {
+                throw new TypeCheckError(`${expr.method}() got an unexpected keyword argument '${name}'`,expr.a);
+              }
+              if (!isAssignable(env,arg.a[0],methodArgs.get(name))) {
+                throw new TypeCheckError("Function call type mismatch: " + expr.method + " for argument " + name, expr.a);
+              }
+              passedArgKeys.add(name)
+            });
+            const missing:Array<string> = []
+            for (let index = 0; index < nonDefault; index++) {
+              const [name,] = argTypesArray[index];
+              if (!passedArgKeys.has(name)) {
+                missing.push(name)
+              }
+            }
+            if (missing.length>0) {
+              throw new TypeCheckError(`${expr.method}() missing ${missing.length} required positional argument(s) '${missing.join("','")}'`,expr.a);
+            }
+            return { ...expr, a: [methodRet,expr.a], obj: tObj, arguments: tArgs, namedArgs:tNamedArgs };
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
+            throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
           }
         } else {
           throw new TypeCheckError("method call on an unknown class", expr.a);
@@ -692,6 +877,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       } else if (tObj.a[0].tag === 'set'){
         const set_method = ["add", "remove", "get", "contains", "length", "update", "clear", "firstItem", "hasnext", "next"]
         if (set_method.includes(expr.method)){
+          if(expr.namedArgs && expr.namedArgs.size != 0){
+            throw new TypeCheckError("set methods do not support keyword arguments",expr.a)
+          }
           if (expr.method === "update") {
             // update
             if (tArgs[0].a[0].tag === 'set') {
@@ -725,23 +913,23 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         switch (expr.method) {
           case "contains":
           case "hasnext":
-            return {...expr, a: [BOOL, expr.a], obj: tObj, arguments: tArgs};
+            return {...expr, a: [BOOL, expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined};
 
           case "add":
           case "remove":
           case "update":
           case "clear":
-            return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs};
+            return {...expr, a: [NONE, expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined};
 
           case "length":
-            return {...expr, a: [NUM, expr.a], obj: tObj, arguments: tArgs};
+            return {...expr, a: [NUM, expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined};
 
           case "firstItem":
           case "next":
-            return {...expr, a: [tObj.a[0].valueType, expr.a], obj: tObj, arguments: tArgs};
+            return {...expr, a: [tObj.a[0].valueType, expr.a], obj: tObj, arguments: tArgs, namedArgs:undefined};
         }
 
-        return {...expr, a:tObj.a, obj: tObj, arguments: tArgs}
+        return {...expr, a:tObj.a, obj: tObj, arguments: tArgs, namedArgs:undefined}
 
       } else {
         throw new TypeCheckError("method calls require an object", expr.a);

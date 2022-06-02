@@ -10,7 +10,8 @@
     "test-set-only": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && mocha -r ts-node/register tests/set.test.ts",
     "build": "tsc debuggerstart.ts  --downlevelIteration --esModuleInterop --moduleResolution node --outDir debugger/",
     "start": "node debugger/debuggerstart.js",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "destr-test": "set TS_NODE_COMPILER_OPTIONS={\"module\": \"commonjs\" } && for FILE in tests/destructuring.test.ts; do mocha -r ts-node/register $FILE; done"
   },
   "author": "",
   "license": "ISC",

@@ -14,7 +14,7 @@ export type Type =
 
 export type SourceLocation = { line: number, column: number, srcCode: string }
 
-export type Parameter<A> = { name: string, type: Type }
+export type Parameter<A> = { name: string, type: Type, defaultValue?: Expr<A> }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
@@ -43,11 +43,11 @@ export type Expr<A> =
   | {  a?: A, tag: "id", name: string}
   | {  a?: A, tag: "binop", op: BinOp, left: Expr<A>, right: Expr<A>}
   | {  a?: A, tag: "uniop", op: UniOp, expr: Expr<A> }
-  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
+  | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, namedArgs?:Map<string,Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
-  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
+  | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>>, namedArgs?:Map<string,Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression

@@ -78,7 +78,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       c.firstChild();
       let callExpr = traverseExpr(c, s);
       c.nextSibling(); // go to arglist
-      const args = traverseArguments(c, s);
+      const {args, namedArgs} = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
       if(genericArgs) {
@@ -90,6 +90,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           tag: "call",
           name: callStr.split('[')[0],
           arguments: args,
+          namedArgs,
           genericArgs: genTypes
         };
       } 
@@ -100,7 +101,8 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           tag: "method-call",
           obj: callExpr.obj,
           method: callExpr.field,
-          arguments: args
+          arguments: args,
+          namedArgs
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
@@ -133,7 +135,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           }
           return expr;
         }
-        expr = { a: location, tag: "call", name: callName, arguments: args};
+        expr = { a: location, tag: "call", name: callName, arguments: args, namedArgs};
         return expr;  
       } else {
         throw new ParseError("Unknown target while parsing assignment", location);
@@ -435,18 +437,38 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
   }
 }
 
-export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<SourceLocation>> {
+type Arguments<A> = {args: Array<Expr<A>>, namedArgs?: Map<string,Expr<A>>};
+export function traverseArguments(c : TreeCursor, s : string) : Arguments<SourceLocation> {
   c.firstChild();  // Focuses on open paren
   const args = [];
+  const namedArgs: Map<string,Expr<SourceLocation>> = new Map();
   c.nextSibling();
+  var named_started = false;
   while(c.type.name !== ")") {
-    let expr = traverseExpr(c, s);
-    args.push(expr);
-    c.nextSibling(); // Focuses on either "," or ")"
+    let arg = traverseExpr(c,s);
+    c.nextSibling(); // Focuses on either "," or ")" or "="
+    if( s.substring(c.from,c.to) === "=" ) {
+      if(arg.tag !== 'id')
+        throw new  ParseError(`Expression cannot contain assignment, perhaps you meant "=="?`, getSourceLocation(c,s));
+        
+      c.nextSibling();
+      let expr =  traverseExpr(c,s);
+      namedArgs.set(arg.name,expr);
+      named_started = true;
+      c.nextSibling(); // Focus on "," or ")"
+    }
+    else {
+      if(named_started) {
+        throw new ParseError("Can't have positional argument after keyword argument", getSourceLocation(c,s));
+      }
+      args.push(arg);
+    }
+    
+    
     c.nextSibling(); // Focuses on a VariableName
   } 
   c.parent();       // Pop to ArgList
-  return args;
+  return {args, namedArgs};
 }
 
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> {
@@ -502,6 +524,14 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       } 
       //Destructure return
       else {
+        if(rhsargs.length==1){
+          return {
+            a : location,
+            tag : "assign-destr", 
+            destr : target, 
+            rhs : rhsargs[0]
+          };
+        }
         return {
           a : location,
           tag : "assign-destr", 
@@ -664,21 +694,47 @@ function traverseDestructureTargets(c: TreeCursor, s: string):DestructureLHS<Sou
   var location = getSourceLocation(c, s);
   var hasStarred = 0;
 
-  do{
-    if(c.name === "AssignOp") 
-      break;
-    else if (c.type.name === ",") 
-      continue;
-    else {
-      var lhs = traverseDestructureLHS(c,s);
-      if(lhs.isStarred){
-        hasStarred = hasStarred + 1
-        if (hasStarred > 1)
-          throw new ParseError("Multiple starred expressions.", location)
-      }
-      lhsargs.push(lhs)
-    } 
-  } while(c.nextSibling())
+  if(c.type.name == "ArrayExpression" || c.type.name == "SetExpression" || c.type.name == "TupleExpression"){
+    c.firstChild();
+    c.nextSibling();
+    do{
+      //@ts-ignore
+      if(c.type.name === "]" || c.type.name === "}" || c.type.name === ")") 
+        break;
+      //@ts-ignore
+      else if (c.type.name === ",") 
+        continue;
+      else {
+        var lhs = traverseDestructureLHS(c,s);
+        if(lhs.isStarred){
+          hasStarred = hasStarred + 1
+          if (hasStarred > 1)
+            throw new ParseError("Multiple starred expressions.", location)
+        }
+        lhsargs.push(lhs)
+      } 
+    } while(c.nextSibling()) 
+    c.parent();  
+    c.nextSibling();
+  }
+  else {
+    do{
+      if(c.name === "AssignOp") 
+        break;
+      else if (c.type.name === ",") 
+        continue;
+      else {
+        var lhs = traverseDestructureLHS(c,s);
+        if(lhs.isStarred){
+          hasStarred = hasStarred + 1
+          if (hasStarred > 1)
+            throw new ParseError("Multiple starred expressions.", location)
+        }
+        lhsargs.push(lhs)
+      } 
+    } while(c.nextSibling())
+  }
+
   // check if we want normal assignment expressions to have * or not
 
   return lhsargs;
@@ -782,11 +838,12 @@ export function traverseType(c : TreeCursor, s : string) : Type {
   }
 }
 
-export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter<null>> {
+export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter<SourceLocation>> {
   var location = getSourceLocation(c, s);
   c.firstChild();  // Focuses on open paren
   const parameters = [];
   c.nextSibling(); // Focuses on a VariableName
+  var default_started = false;
   while(c.type.name !== ")") {
     let name = s.substring(c.from, c.to);
     c.nextSibling(); // Focuses on "TypeDef", hopefully, or "," if mistake
@@ -796,8 +853,20 @@ export function traverseParameters(c : TreeCursor, s : string) : Array<Parameter
     c.nextSibling(); // Focuses on type itself
     let typ = traverseType(c, s);
     c.parent();
-    c.nextSibling(); // Move on to comma or ")"
-    parameters.push({name, type: typ});
+    let defaultValue;
+    c.nextSibling(); // possibly go to the equals
+    if( s.substring(c.from,c.to) === "=" ) { // check if equals (assign op)
+      c.nextSibling()
+      defaultValue = traverseExpr(c,s);// traverse expression to store in value
+      c.nextSibling(); // Move on to comma or ")"
+      default_started = true;
+    } else {
+      if(default_started) {
+        throw new ParseError("Can't have non default parameters after default parameters ", getSourceLocation(c,s));
+      }
+    }
+    
+    parameters.push({name, type: typ, defaultValue});
     c.nextSibling(); // Focuses on a VariableName
   }
   c.parent();       // Pop to ParamList
