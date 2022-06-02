@@ -303,7 +303,7 @@ In terms of the definition of a successor, we say `l'` is a successor of `l` if 
 
 - `l`: jmp `l'` => succ(`l`,`l'`) 
 - `l`: if `cond` then `lt` else `lf` => succ(`l`, `lt`), succ(`l`, `lf`)
-- otherwise: succ(l, l + 1)
+- otherwise: succ(`l`, `l + 1`)
 
 In the implementation, we never eliminate statements other than dead `assign`, `expr` and any `pass`.
 
