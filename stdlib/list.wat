@@ -4,7 +4,6 @@
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
-    (func $print_num (import "imports" "print_num") (param i32) (result i32))
     
     (func (export "list$length") (param $self i32) (result i32)
         (local.get $self)
@@ -15,9 +14,9 @@
     )
 
     (func (export "list$append") (param $self i32) (param $arg i32) (result i32)
-        (local $len1 i32)
+        (local $len i32)
         (local $newLen i32)
-        (local $addr1 i32)
+        (local $addr i32)
         (local $newAddr i32)
         (local $i i32)
         (local $val i32)
@@ -25,8 +24,8 @@
         (local.get $self)
         (i32.const 0)
         (call $load)
-        (local.set $len1)
-        (i32.add (local.get $len1) (i32.const 1))
+        (local.set $len)
+        (i32.add (local.get $len) (i32.const 1))
         (local.set $newLen)
         (local.get $newLen)
         (call $alloc)
@@ -34,10 +33,10 @@
 
         ;;load original address
         (call $load (local.get $self) (i32.const 1))
-        (local.set $addr1)
+        (local.set $addr)
         (local.set $i (i32.const 0))
-        (loop $loop1
-            (call $load (local.get $addr1) (local.get $i))
+        (loop $loop
+            (call $load (local.get $addr) (local.get $i))
             (local.set $val)
 
             (local.get $newAddr)
@@ -45,8 +44,8 @@
             (local.get $val)
             (call $store)
             (local.set $i (i32.add (local.get $i) (i32.const 1)))
-            (i32.lt_s (local.get $i) (local.get $len1))
-            br_if $loop1
+            (i32.lt_s (local.get $i) (local.get $len))
+            br_if $loop
         )
         (local.get $newAddr)
         (local.get $i)
@@ -260,7 +259,7 @@
                 (local.set $newListLength)
             )
         )
-        
+
         ;; allocate the memory heap of newList
         (i32.const 2)
         (call $alloc)
@@ -322,6 +321,57 @@
                     br_if $pos_loop
                 )
             )
+        )
+
+        (local.get $newList)
+        (return)
+    )
+
+    (func (export "list$copy") (param $self i32) (result i32)
+        (local $len i32)
+        (local $oldListElements i32)
+        (local $newList i32)
+        (local $newListElements i32)
+        (local $i i32)
+        (local $val i32)
+        
+        ;; get len and allocate new address
+        (local.get $self)
+        (i32.const 0)
+        (call $load)
+        (local.set $len)
+
+        ;; allocate the memory heap of newList
+        (i32.const 2)
+        (call $alloc)
+        (local.set $newList)
+        (local.get $newList)
+        (i32.const 0)
+        (local.get $len)
+        (call $store)
+        (local.get $len)
+        (call $alloc)
+        (local.set $newListElements)
+        (local.get $newList)
+        (i32.const 1)
+        (local.get $newListElements)
+        (call $store)
+
+        ;; load original address
+        (call $load (local.get $self) (i32.const 1))
+        (local.set $oldListElements)
+        (local.set $i (i32.const 0))
+        (loop $loop
+            (call $load (local.get $oldListElements) (local.get $i))
+            (local.set $val)
+
+            (local.get $newListElements)
+            (local.get $i)
+            (local.get $val)
+            (call $store)
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (i32.lt_s (local.get $i) (local.get $len))
+            br_if $loop
         )
 
         (local.get $newList)

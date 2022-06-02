@@ -163,15 +163,16 @@ export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
   return true;
 }
 
-export function builtinListClass(classes: Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]>): Map<string, [Map<string, Type>, Map<string, [Array<Type>, Type]>]> {
+export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var listFields: Map<string, Type> = new Map();
   var listMethods: Map<string, [Array<Type>, Type]> = new Map();
   listMethods.set("length", [[{ tag: "class", name: "list" }], NUM])
+  listMethods.set("copy", [[{ tag: "class", name: "list", type: NONE }], { tag: "class", name: "list" }])
   // don't know how to check type here so I'll do type check in Expr method-call
   listMethods.set("append", [[], { tag: "class", name: "list" }]);
   //TODO add all list methods here
-  classes.set("list", [listFields, listMethods]);
-  return classes;
+  env.classes.set("list", [listFields, listMethods]);
+  return env;
 }
 
 export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocation>) : GlobalTypeEnv {
@@ -187,8 +188,9 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
     cls.methods.forEach(method => methods.set(method.name, [method.parameters.map(p => p.type), method.ret]));
     newClasses.set(cls.name, [fields, methods]);
   });
-  builtinListClass(newClasses);
-  return { globals: newGlobs, functions: newFuns, classes: newClasses };
+  var env = { globals: newGlobs, functions: newFuns, classes: newClasses }
+  env = builtinListClass(env);
+  return env;
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<SourceLocation>) : [Program<[Type, SourceLocation]>, GlobalTypeEnv] {
@@ -704,15 +706,18 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           if (methods.has(expr.method)) {
             const [methodArgs, methodRet] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
-            if (tObj.a[0].name === "list" && expr.method === "append") {
-              if (realArgs.length !== 2) {
-                throw new TypeCheckError(`list.append() takes exactly one argument (${realArgs.length - 1} given)`, expr.a);
+            if (tObj.a[0].name === "list") {
+              if (expr.method === "append") {
+                if (realArgs.length !== 2) {
+                  throw new TypeCheckError(`list.append() takes exactly one argument (${realArgs.length - 1} given)`, expr.a);
+                }
+                if (!equalType(tObj.a[0].type, realArgs[1].a[0])) {
+                  throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
+                }
+                return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };
               }
-              if (!equalType(tObj.a[0].type, realArgs[1].a[0])) {
-                throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
-              }
-              return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };
-            } else if(methodArgs.length === realArgs.length &&
+            }
+            if (methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
                 return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};
               } else {
