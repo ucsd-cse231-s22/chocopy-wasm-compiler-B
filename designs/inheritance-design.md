@@ -613,6 +613,8 @@ Furthermore, we now allow subclasses to call superclass methods even if they wer
 
 This feature should be pretty self-explanatory based on the prevous week's notes.
 
+Of note is that `pa3-hidden.test.ts`'s `init-no-args` test will now fail as expected.
+
 ## Supporting calling superclasses' methods
 
 Here are 2 simple examples of how this feature works:
