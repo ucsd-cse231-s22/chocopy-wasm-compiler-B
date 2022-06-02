@@ -362,7 +362,7 @@ whileend1
 
 ### 4. Reaching Analysis
 We implemented reaching analysis to get reaching definitions of each variable in each line. We traversed every line in every blocks to propagate the definitions that begin at global or local `inits` , or the assignment statement in `BasicBlock`s. After running the reaching analysis algorithm, an array of maps is generated where each map contains current line's variables' reaching definitions.
-We also differentiate the global variable inits and local variable inits when generating reaching definition as 
+
 ### 5. Constant Propagation
 The constant propagation is implemented on the basis of reaching definition. We would propatate the constant value to an id only if it's reaching definition is unique. We performed constant propagation in Program, FunDef and Class's methods, and we would not propagate the global definitions (classes' fields or global variables) since they could be re-assigned in other function or methods' bodies. 
 
