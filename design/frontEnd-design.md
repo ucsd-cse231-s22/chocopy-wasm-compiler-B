@@ -17,7 +17,7 @@ With the power of CodeMirror, we introduce other fancy features in the editor fi
 
 - **Themes selection**: A simple select menu to change the editor style with many options.
 - **Edit mode**: Users could switch between normal mode and vim mode of the editor and write code like in vim.
-- **Breakpoint**: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible. However ew can still make multiple brekapoints and achieve similar functionalities.
+- **Breakpoint**: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible. However we can still make multiple brekapoints and achieve similar functionalities.
 - **Error highlight**: The code location returned by the error reporting module will be displayed in the editor and will be marked as well as underline the word casuign errors.
 - **Autocompletion and hint**: When the user presses the Ctrl key, code before the cursor can be automatically completed based on the rules of the config file we add.
 
