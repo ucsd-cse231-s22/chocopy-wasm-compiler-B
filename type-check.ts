@@ -79,9 +79,9 @@ export function emptyLocalTypeEnv() : LocalTypeEnv {
   };
 }
 
-export type TypeError = {
+/*export type TypeError = {
   message: string
-}
+}*/
 
 export function equalType(t1: Type, t2: Type): boolean {
   return (
@@ -217,7 +217,7 @@ export function tcInit(env: GlobalTypeEnv, init : VarInit<SourceLocation>) : Var
   if (isAssignable(env, tcVal.a[0], init.type)) {
     return {...init, a: [NONE, init.a], value: tcVal};
   } else {
-    throw new TypeCheckError("Expected type `" + init.type + "`; got type `" + tcVal.a[0] + "`", init.a);
+    throw new TypeCheckError("Expected type `" + init.type.tag + "`; got type `" + tcVal.a[0].tag + "`", init.a);
   }
 }
 
@@ -235,7 +235,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
 
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet)} does not match actual return type: ${JSON.stringify(locals.actualRet)}`, fun.a);
+    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet.tag)} does not match actual return type: ${JSON.stringify(locals.actualRet.tag)}`, fun.a);
   return {...fun, a:[NONE, fun.a], body: tBody, inits: tcinits};
 }
 
@@ -590,7 +590,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``);
+        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, expr.a);
       }
       // if (equalType(tObj.a[0], CLASS("str"))) {
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
@@ -601,11 +601,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // if (tObj.a[0].tag === "tuple") {
       //   ...
       // }
-      throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``); // Can only index into strings, list, dicts, and tuples
+      throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``, expr.a); // Can only index into strings, list, dicts, and tuples
     case "call":
       if (expr.name === "print") {
         if (expr.arguments.length===0)
           throw new TypeCheckError("print needs at least 1 argument", expr.a);
+
         let args = expr.arguments.map(arg => tcExpr(env, locals, arg));
         args.forEach(arg=> {
           if(arg.a[0].tag==="class" && ! env.classes.get(arg.a[0].name)[1].has('__str__'))
@@ -618,6 +619,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if(args.length!=1 || (args[0].a[0].tag!="list" && args[0].a[0].tag!="set"))
           throw new TypeCheckError("argument for len need to be a list or a set", expr.a)
         return {...expr, a: [NUM, expr.a], arguments: args};
+
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
@@ -762,7 +764,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       const tIfCond = tcExpr(env, locals, expr.ifcond);
       const tExprIfFalse = tcExpr(env, locals, expr.exprIfFalse);
       if (!equalType(tIfCond.a[0], BOOL)) {
-        throw new TypeCheckError("if condition must be a bool");
+        throw new TypeCheckError("if condition must be a bool", expr.a);
       }
       const exprIfTrueTyp = tExprIfTrue.a[0];
       const exprIfFalseTyp = tExprIfFalse.a[0];
@@ -775,7 +777,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       const tIterable = tcExpr(env, locals, expr.iterable);
       const [iterable, itemTyp] = isIterable(env, tIterable.a[0])
       if (!iterable) {
-        throw new TypeCheckError(`Type ${tIterable.a[0]} is not iterable`);
+        throw new TypeCheckError(`Type ${tIterable.a[0]} is not iterable`, expr.a);
       }
       // shadow item name always globally
       const newItemName = generateCompvar(expr.item);
@@ -784,7 +786,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       if (expr.ifcond) {
         tCompIfCond = tcExpr(env, locals, expr.ifcond);
         if (!equalType(tCompIfCond.a[0], BOOL)) {
-          throw new TypeCheckError("if condition must be a bool");
+          throw new TypeCheckError("if condition must be a bool", expr.a);
         }
       }
       const tLhs = tcExpr(env, locals, expr.lhs);

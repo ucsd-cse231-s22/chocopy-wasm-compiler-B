@@ -176,18 +176,18 @@ function foldBuiltin2(lsh: Literal<[Type, SourceLocation]>, rhs: Literal<[Type, 
     switch (name) {
         case "max":
             if (lsh.tag === "num" && rhs.tag === "num")
-                return {tag: "num", value: Math.max(lsh.value, rhs.value)};
-            return {tag: "none"};
+                return {a:lsh.a,tag: "num", value: Math.max(lsh.value, rhs.value)};
+            return {a:lsh.a,tag: "none"};
         case "min":
             if (lsh.tag === "num" && rhs.tag === "num")
-                return {tag: "num", value: Math.min(lsh.value, rhs.value)};
-            return {tag: "none"};
+                return {a:lsh.a,tag: "num", value: Math.min(lsh.value, rhs.value)};
+            return {a:lsh.a,tag: "none"};
         case "pow":
             if (lsh.tag === "num" && rhs.tag === "num")
-                return {tag: "num", value: Math.pow(lsh.value, rhs.value)};
-            return {tag: "none"};
+                return {a:lsh.a,tag: "num", value: Math.pow(lsh.value, rhs.value)};
+            return {a:lsh.a,tag: "none"};
         default:
-            return {tag: "none"};
+            return {a:lsh.a,tag: "none"};
     }
 }
 
@@ -195,71 +195,71 @@ function foldBinop(lhs: Literal<[Type, SourceLocation]>, rhs: Literal<[Type, Sou
     switch(op) {
         case BinOp.Plus:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a, tag: "none"};
             }  
-            return {tag: "num", value: lhs.value + rhs.value};
+            return {a:lhs.a,tag: "num", value: lhs.value + rhs.value};
         case BinOp.Minus:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "num", value: lhs.value - rhs.value};
+            return {a:lhs.a,tag: "num", value: lhs.value - rhs.value};
         case BinOp.Mul:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "num", value: lhs.value * rhs.value};
+            return {a:lhs.a,tag: "num", value: lhs.value * rhs.value};
         case BinOp.IDiv:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "num", value: Math.floor(lhs.value / rhs.value)};
+            return {a:lhs.a,tag: "num", value: Math.floor(lhs.value / rhs.value)};
         case BinOp.Mod:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "num", value: lhs.value % rhs.value};
+            return {a:lhs.a,tag: "num", value: lhs.value % rhs.value};
         case BinOp.Eq:
             if(lhs.tag === "none" || rhs.tag === "none" || lhs.tag === "TypeVar" || rhs.tag === "TypeVar"){
-                return {tag: "bool", value: true};
+                return {a:lhs.a,tag: "bool", value: true};
             }  
-            return {tag: "bool", value: lhs.value === rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value === rhs.value};
         case BinOp.Neq:
             if(lhs.tag === "none" || rhs.tag === "none" || lhs.tag === "TypeVar" || rhs.tag === "TypeVar"){
-                return {tag: "bool", value: false};
+                return {a:lhs.a,tag: "bool", value: false};
             }  
-            return {tag: "bool", value: lhs.value !== rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value !== rhs.value};
         case BinOp.Lte:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value <= rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value <= rhs.value};
         case BinOp.Gte:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }    
-            return {tag: "bool", value: lhs.value >= rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value >= rhs.value};
         case BinOp.Lt:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value < rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value < rhs.value};
         case BinOp.Gt:
             if(lhs.tag !== "num" || rhs.tag !== "num"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "bool", value: lhs.value > rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value > rhs.value};
         case BinOp.And:
             if(lhs.tag !== "bool" || rhs.tag !== "bool"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }   
-            return {tag: "bool", value: lhs.value && rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value && rhs.value};
         case BinOp.Or:
             if(lhs.tag !== "bool" || rhs.tag !== "bool"){
-                return {tag: "none"};
+                return {a:lhs.a,tag: "none"};
             }  
-            return {tag: "bool", value: lhs.value || rhs.value};
+            return {a:lhs.a,tag: "bool", value: lhs.value || rhs.value};
         default:
-            return {tag: "none"};
+            return {a:lhs.a,tag: "none"};
       }
 }
 
@@ -267,16 +267,16 @@ function foldUniop(expr: Literal<[Type, SourceLocation]>, op: UniOp): Literal<[T
     switch (op){
         case UniOp.Neg:
             if(expr.tag != "num"){
-                return {tag: "none"};
+                return {a:expr.a,tag: "none"};
             }
-            return {tag: "num", value: -1*expr.value};
+            return {a:expr.a,tag: "num", value: -1*expr.value};
         case UniOp.Not:
             if(expr.tag != "bool"){
-                return {tag: "none"};
+                return {a:expr.a,tag: "none"};
             }
-            return {tag: "bool", value: !(expr.value)};
+            return {a:expr.a,tag: "bool", value: !(expr.value)};
         default:
-            return {tag: "none"};
+            return {a:expr.a,tag: "none"};
     }
 }
 
