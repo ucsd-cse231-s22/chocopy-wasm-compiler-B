@@ -2,6 +2,41 @@ import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assert
 import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
 import { builtinClasses } from './comp.test'
 
+// borrowed from `forloop-iterators.test.ts`
+var rangeStr = `
+class __range__(object):
+    start: int = 0
+    stop: int = 0
+    step: int = 1
+    hasNext: bool = False
+    currval: int = 0
+    def __init__(self: __range__):
+        pass
+    def new(self: __range__, start: int, stop: int, step: int) -> __range__:
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.currval = start
+        return self
+
+    def next(self: __range__) -> int:
+        prev: int = 0
+        prev = self.currval
+        self.currval = prev+self.step
+        return prev
+        
+    def hasnext(self: __range__) -> bool:
+        nextval: int = 0
+        nextval = self.currval
+        if((self.step>0 and nextval<self.stop) or (self.step<0 and nextval>self.stop)):
+            self.hasNext = True
+        else:
+            self.hasNext = False
+        return self.hasNext
+
+def range(start: int, stop: int, step: int) -> __range__:
+    return __range__().new(start, stop, step)`
+
 describe("Optimization tests", () => {
   // 1
   assertOptimize("Constant Folding (add in print)", `print(100 + 20 + 3)`);
@@ -491,11 +526,67 @@ def f() -> int:
 `)
 
  //46
- assertOptimize("Optimization (Constant Propergation)",
+ assertOptimize("Optimization (Constant Propergation 1)",
 `
 a:int = 1
 b:int = 2
 print(a+b)
+`)
+
+//47 
+assertOptimize("Optimization (Constant Propergation 2)",
+`
+a:bool = True
+b:bool = False
+print(a and b)
+`)
+
+//48
+assertOptimize("Optimization (Constant Propergation 3)",
+`
+a: int = 1
+b: int = 2
+if a > b:
+  print(a)
+else:
+  print(b)
+`)
+
+//49
+assertOptimize("Optimization (Constant Propergation 4)",
+rangeStr + `
+i:int = 0
+j:int = 3
+for i in range(0,5,1):
+  print(i)
+  if i > j:
+    print(j+1)
+    break  
+`)
+
+//50
+assertOptimize("Optimization (Constant Propergation 5)",
+`
+i: int = 3
+b: bool = False
+while i > 0:
+  print(i+1)
+  if i == 1:
+    b = True
+    print(b)
+  i = i-1
+`)
+
+//50
+assertOptimize("Optimization (Constant Propergation 6)",
+`
+i: int = 3
+b: int = 2
+while i > 0:
+  print(max(i, b))
+  if i == 2:
+    print(-b)
+  i = i-1
 `)
 
 });
