@@ -596,6 +596,36 @@ for i in itr:
 
 ` ,["1","2","3","4","1","2"]);
 
+assertPrint('Generics Iterator list of lists' , `
+
+T: TypeVar = TypeVar('T')
+class ListIterator(Generic[T]):
+    list: [T] = {}
+    index:int = 0
+    def new(self: ListIterator[T], initVal: [T]) -> ListIterator[T]:
+        self.list = initVal
+        return self
+    def next(self: ListIterator[T]) -> T:
+        ret: T = {}
+        ret = self.list[self.index]
+        self.index = self.index + 1
+        return ret
+    def hasnext(self: ListIterator[T]) -> bool:
+        return self.index<3
+        
+list1: [[int]] = None
+itr: ListIterator[[int]] = None
+i : [int] = None
+j:int = 0
+k:int = 0
+list1 = [[1,12],[3,44],[1,2]]
+itr = ListIterator[[int]]().new(list1)
+for j, k in itr:
+    print(j)
+    print(k)
+
+` ,["1", "12", "3", "44", "1", "2"]);
+
 
 assertTCFail('range: type checking for loop variable ', rangeStr + `
 
