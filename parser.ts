@@ -118,6 +118,12 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         }
       } else if (callExpr.tag === "id") {
         const callName = callExpr.name;
+        if(callName === "perm" || callName === "randint" || callName === "gcd" || callName === "lcm" || callName === "comb" || callName === "randrange") {
+          var line: Expr<SourceLocation> = {a: location, tag: "literal", value: {a: location, tag: "num", value: location.line}}
+          var col: Expr<SourceLocation> = {a: location, tag: "literal", value: {a: location, tag: "num", value: location.column}}
+          args.push(line)
+          args.push(col) 
+        }
         var expr : Expr<SourceLocation>;
         if (callName === "set") {
           c.firstChild();
@@ -311,7 +317,7 @@ export function traverseExpr(c: TreeCursor, s: string): Expr<SourceLocation> {
         };;
         var step: Expr<SourceLocation> = {
           tag: "literal",
-          value: { tag: "num", value: 1 }
+          value: { a: location,tag: "num", value: 1 }
         };
 
         var isSlice = false; 
@@ -513,7 +519,7 @@ export function traverseStmt(c: TreeCursor, s: string): Stmt<SourceLocation> {
       if (c.nextSibling()) // Focus expression
         value = traverseExpr(c, s);
       else
-        value = { a: location, tag: "literal", value: { tag: "none" } };
+        value = { a: location, tag: "literal", value: { a: location, tag: "none" } };
       c.parent();
       return { a: location, tag: "return", value };
     case "AssignStatement":
