@@ -21,14 +21,14 @@ export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Pro
     let counter = 1;
     do {
         isChanged = false;
-        const optFuns = newProgram.funs.map(funDef => optimizeFuncDef(funDef, newProgram));
+        const optFuns = newProgram.funs.map(funDef => optimizeFuncDef([], funDef, newProgram));
         const optClss = newProgram.classes.map(classDef => optimizeClass(classDef, newProgram));
         var optStmts = newProgram.body.map(optBasicBlock);
         optStmts = needednessDCE(optStmts);
-        optStmts = livenessDCE(optStmts);
-        const cfa: CFA = flow_wklist(newProgram.inits, optStmts);
+        // optStmts = livenessDCE(optStmts);
+        const cfa: CFA = flow_wklist([], newProgram.inits, optStmts);
         // printCFA(cfa);
-        optStmts = constantPropagation(newProgram.inits, optStmts, cfa);
+        optStmts = constantPropagation([], newProgram.inits, optStmts, cfa);
         newProgram = {...newProgram, funs: optFuns, classes: optClss, body: optStmts};
         // console.log(counter++);
     } while(isChanged);
@@ -340,10 +340,10 @@ export function livenessDCE(blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>
     return newBlocks;
 }
 
-function constantPropagationValue(value: IR.Value<[Type, SourceLocation]>, cfa: CFA, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]> {
+function constantPropagationValue(value: IR.Value<[Type, SourceLocation]>, cfa: CFA, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]> {
     switch(value.tag) {
         case "id": {
-            var defVal = findReachingDef(cfa, value.name, line, inits, blocks);
+            var defVal = findReachingDef(cfa, value.name, line, gInits, inits, blocks);
             if (defVal.tag !== 'none' && defVal.tag !== 'id') {
                 // Do not consider load for now
                 // Convert all numeric to num, not wasmint
@@ -372,23 +372,23 @@ function constantPropagationValue(value: IR.Value<[Type, SourceLocation]>, cfa: 
     }
 }
 
-function constantPropagationExpr(expr: IR.Expr<[Type, SourceLocation]>, cfa: CFA, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Expr<[Type, SourceLocation]> {
+function constantPropagationExpr(expr: IR.Expr<[Type, SourceLocation]>, cfa: CFA, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Expr<[Type, SourceLocation]> {
     switch(expr.tag) {
         case "value": {
-            let newValue = constantPropagationValue(expr.value, cfa, line, inits, blocks);
+            let newValue = constantPropagationValue(expr.value, cfa, line, gInits, inits, blocks);
             return {...expr, value: newValue};
         }
         case "binop": {
-            let newLHS = constantPropagationValue(expr.left, cfa, line, inits, blocks);
-            let newRHS = constantPropagationValue(expr.right, cfa, line, inits, blocks);
+            let newLHS = constantPropagationValue(expr.left, cfa, line, gInits, inits, blocks);
+            let newRHS = constantPropagationValue(expr.right, cfa, line, gInits, inits, blocks);
             return {...expr, left: newLHS, right: newRHS};
         }
         case "uniop": {
-            let newExpr = constantPropagationValue(expr.expr, cfa, line, inits, blocks);
+            let newExpr = constantPropagationValue(expr.expr, cfa, line, gInits, inits, blocks);
             return {...expr, expr: newExpr};
         }
         case "call": {
-            let newArgs = expr.arguments.map(arg => constantPropagationValue(arg, cfa, line, inits, blocks));
+            let newArgs = expr.arguments.map(arg => constantPropagationValue(arg, cfa, line, gInits, inits, blocks));
             return {...expr, arguments: newArgs};
         }
         case "alloc":
@@ -398,22 +398,22 @@ function constantPropagationExpr(expr: IR.Expr<[Type, SourceLocation]>, cfa: CFA
     }
 }
 
-function constantPropagationStmt(stmt: IR.Stmt<[Type, SourceLocation]>, cfa: CFA, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Stmt<[Type, SourceLocation]> {
+function constantPropagationStmt(stmt: IR.Stmt<[Type, SourceLocation]>, cfa: CFA, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Stmt<[Type, SourceLocation]> {
     switch(stmt.tag) {
         case "assign": {
-            let newValue = constantPropagationExpr(stmt.value, cfa, line, inits, blocks);
+            let newValue = constantPropagationExpr(stmt.value, cfa, line, gInits, inits, blocks);
             return {...stmt, value: newValue};
         }
         case "return": {
-            let newValue = constantPropagationValue(stmt.value, cfa, line, inits, blocks);
+            let newValue = constantPropagationValue(stmt.value, cfa, line, gInits, inits, blocks);
             return {...stmt, value: newValue};
         }
         case "expr": {
-            let newExpr = constantPropagationExpr(stmt.expr, cfa, line, inits, blocks);
+            let newExpr = constantPropagationExpr(stmt.expr, cfa, line, gInits, inits, blocks);
             return {...stmt, expr: newExpr};
         }
         case "ifjmp": {
-            let newCond = constantPropagationValue(stmt.cond, cfa, line, inits, blocks);
+            let newCond = constantPropagationValue(stmt.cond, cfa, line, gInits, inits, blocks);
             return {...stmt, cond:newCond};
         }
         case "pass":
@@ -424,14 +424,14 @@ function constantPropagationStmt(stmt: IR.Stmt<[Type, SourceLocation]>, cfa: CFA
     }
 }
 
-export function constantPropagation(inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, cfa:CFA): Array<IR.BasicBlock<[Type, SourceLocation]>>{
+export function constantPropagation(ginits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, cfa:CFA): Array<IR.BasicBlock<[Type, SourceLocation]>>{
     const newBlocks = [];
     for (let block of blocks) {
         var blockStmts = [];
         for(let i = 0; i < block.stmts.length; ++i)
         {
             var line: Line = {block: block.label, line: i};
-            blockStmts.push(constantPropagationStmt(block.stmts[i], cfa, line, inits, blocks));
+            blockStmts.push(constantPropagationStmt(block.stmts[i], cfa, line, ginits, inits, blocks));
         }
         //blockStmts = block.stmts.map(stmt => constantPropagationStmt(stmt, cfa, block, program));
         let newBlock = {...block, stmts:blockStmts};
@@ -440,7 +440,7 @@ export function constantPropagation(inits: Array<IR.VarInit<[Type, SourceLocatio
     return newBlocks;
 }
 
-export function findReachingDef(cfa: CFA, id: string, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
+export function findReachingDef(cfa: CFA, id: string, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
     for (let l of cfa) {
         if (l.line.block === line.block && l.line.line === line.line) {
             for(let key of l.varant.keys()){
@@ -448,7 +448,7 @@ export function findReachingDef(cfa: CFA, id: string, line: Line, inits: Array<I
                     var defSet = l.varant.get(key);
                     if(defSet.size == 1){
                         var defLine = defSet.values().next().value;
-                        return getDefFromLine(id, defLine, inits, blocks);
+                        return getDefFromLine(id, defLine, gInits, inits, blocks);
                     }
                 }
             }
@@ -457,13 +457,15 @@ export function findReachingDef(cfa: CFA, id: string, line: Line, inits: Array<I
     return {tag: "none"};
 }
 
-function getDefFromLine(id: string, line: Line, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
+function getDefFromLine(id: string, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
     if(line.block === '$varInit'){
         for(let varini of inits){
             if(varini.name === id){
                 return varini.value;
             }
         }
+    }else if(line.block === '$gInit'){
+        return {tag: 'none'};
     }else{
         for (let block of blocks) {
             if(block.label == line.block){
@@ -481,16 +483,16 @@ function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock
     return {...bb, stmts: bb.stmts.map(optimizeIRStmt)};
 }
 
-export function optimizeFuncDef(fun: IR.FunDef<[Type, SourceLocation]>, program: IR.Program<[Type, SourceLocation]>): IR.FunDef<[Type, SourceLocation]> {
+function optimizeFuncDef(gInits: Array<IR.VarInit<[Type, SourceLocation]>>, fun: IR.FunDef<[Type, SourceLocation]>, program: IR.Program<[Type, SourceLocation]>): IR.FunDef<[Type, SourceLocation]> {
     let newFunBody = fun.body.map(optBasicBlock);
     newFunBody = needednessDCE(newFunBody);
-    var cfa_fun: CFA = flow_wklist(fun.inits, newFunBody);
-    newFunBody = constantPropagation(fun.inits, newFunBody, cfa_fun);
+    var cfa_fun: CFA = flow_wklist(gInits, fun.inits, newFunBody);
+    newFunBody = constantPropagation(gInits, fun.inits, newFunBody, cfa_fun);
     return {...fun, body: newFunBody};
 }
 
 function optimizeClass(cls: IR.Class<[Type, SourceLocation]>, program: IR.Program<[Type, SourceLocation]>): IR.Class<[Type, SourceLocation]> {
-    return {...cls, methods: cls.methods.map(method => optimizeFuncDef(method, program))};
+    return {...cls, methods: cls.methods.map(method => optimizeFuncDef(cls.fields, method, program))};
 }
 
 function optimizeIRStmt(stmt: IR.Stmt<[Type, SourceLocation]>): IR.Stmt<[Type, SourceLocation]> {
@@ -753,10 +755,22 @@ function live_val(val: IR.Value<[Type, SourceLocation]>): Set<string> {
 }
 
 
-function flow_wklist(inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): CFA{
+function flow_wklist(gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): CFA{
     var result: CFA = new Array();
     var initialMap: Map<string, Set<Line>> = new Map();
     var line2num: Map<string, number> = new Map();
+
+    for(let i = 0; i < gInits.length; ++i){
+        var theSet: Set<Line> = new Set();
+        if(gInits[i].value.tag !== 'none'){
+            theSet.add({
+                block: '$gInit',
+                line: 0 
+            });
+        }
+        initialMap.set(gInits[i].name, theSet);
+    }
+
     for(let i = 0; i < inits.length; ++i){
         var theSet: Set<Line> = new Set();
         if(inits[i].value.tag !== 'none'){
