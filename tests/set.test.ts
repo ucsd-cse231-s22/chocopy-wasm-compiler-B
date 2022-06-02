@@ -20,6 +20,12 @@ describe("set-functionalities", () => {
     set_1.add(3)
     print(11 in set_1)`, [`True`]);
 
+    assertPrint("set-add-in", `
+    set_1 : set[int] = None
+    set_1 = {1,2}
+    set_1.add(3)
+    print(3 in set_1)`, [`True`]);
+
     assertPrint("set-add-not-in", `
     set_1 : set[int] = None
     set_1 = {1,2}

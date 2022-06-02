@@ -1,6 +1,32 @@
+import { TreeCursor } from "lezer-tree";
+import { parser } from "lezer-python";
 import { parse } from "./parser";
+import { tc } from "./type-check";
 import { BasicREPL } from "./repl";
-import { importObject, addLibs  } from "./tests/import-object.test";
+import { importObject, addLibs } from "./tests/import-object.test";
+import { augmentEnv, Config } from "./runner";
+import { lowerProgram } from "./lower";
+import { compile } from "./compiler";
+
+
+export function stringifyTree(t: TreeCursor, source: string, d: number) {
+  var str = "";
+  var spaces = " ".repeat(d * 2);
+  str += spaces + t.type.name;
+  if (["Number", "CallExpression", "BinaryExpression", "UnaryExpression"].includes(t.type.name)) {
+    str += "-->" + source.substring(t.from, t.to);
+  }
+  str += "\n";
+  if (t.firstChild()) {
+    do {
+      str += stringifyTree(t, source, d + 1);
+
+
+    } while (t.nextSibling());
+    t.parent();
+  }
+  return str;
+}
 
 // entry point for debugging
 async function debug() {
@@ -37,4 +63,3 @@ async function debug() {
 }
 
 debug();
-
