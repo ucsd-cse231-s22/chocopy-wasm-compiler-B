@@ -168,7 +168,7 @@ export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var listFields: Map<string, Type> = new Map();
   var listMethods: Map<string, [Array<Type>, Type]> = new Map();
   listMethods.set("length", [[{ tag: "class", name: "list" }], NUM])
-  listMethods.set("copy", [[{ tag: "class", name: "list", type: NONE }], { tag: "class", name: "list" }])
+  listMethods.set("copy", [[{ tag: "class", name: "list" }], { tag: "class", name: "list" }])
   // don't know how to check type here so I'll do type check in Expr method-call
   listMethods.set("append", [[], { tag: "class", name: "list" }]);
   listMethods.set("insert", [[{ tag: "class", name: "list" }, NUM], { tag: "class", name: "list" }]);
@@ -714,29 +714,29 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         if (env.classes.has(tObj.a[0].name)) {
           const [_, methods] = env.classes.get(tObj.a[0].name);
           if (methods.has(expr.method)) {
-            const [methodArgs, methodRet] = methods.get(expr.method);
+            var [methodArgs, methodRet] = methods.get(expr.method);
             const realArgs = [tObj].concat(tArgs);
             if (tObj.a[0].name === "list") {
               if (expr.method === "append") {
                 if (realArgs.length !== 2) {
-                  throw new TypeCheckError(`list.append() takes exactly one argument (${realArgs.length - 1} given)`, expr.a);
+                  throw new TypeCheckError(`List.append() takes exactly one argument (${realArgs.length - 1} given)`, expr.a);
                 }
                 if (!equalType(tObj.a[0].type, realArgs[1].a[0])) {
-                  throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
+                  throw new TypeCheckError(`Method call type mismatch: List.append() --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(tObj.a[0].type)}`, expr.a)
                 }
               } else if (expr.method === "insert") {
                 if (realArgs.length !== 3) {
-                  throw new TypeCheckError(`insert expected 2 argument, got (${realArgs.length - 1}`, expr.a);
+                  throw new TypeCheckError(`List.insert() expected 2 argument, got (${realArgs.length - 1}`, expr.a);
                 }
                 if (!equalType(NUM, realArgs[1].a[0])) {
                   throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
                 }
                 if (!equalType(tObj.a[0].type, realArgs[2].a[0])) {
-                  throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
+                  throw new TypeCheckError(`Method call type mismatch: List.insert() --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(tObj.a[0].type)}`, expr.a)
                 }
               } else if (expr.method === "pop") {
                 if (realArgs.length > 2) {
-                  throw new TypeCheckError(`pop expected at most 1 argument, got ${realArgs.length - 1}`, expr.a);
+                  throw new TypeCheckError(`List.pop() expected at most 1 argument, got ${realArgs.length - 1}`, expr.a);
                 }
                 if (realArgs.length == 1) {
                   // add -1 as pos
@@ -750,12 +750,11 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                 }
               } else if (expr.method === "copy") {
                 if (realArgs.length !== 1) {
-                  throw new TypeCheckError(`copy method expected no argument, got ${realArgs.length - 1}`);
+                  throw new TypeCheckError(`List.copy() expected no argument, got ${realArgs.length - 1}`, expr.a);
                 }
-                //@ts-ignore
-                methodRet.type = tObj.a[0].type;
+                methodRet = tObj.a[0];
               } else {
-                throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
+                throw new TypeCheckError(`Could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
               }
               
               return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };
@@ -767,10 +766,10 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a);
               }
           } else {
-            throw new TypeCheckError(`could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
+            throw new TypeCheckError(`Could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
           }
         } else {
-          throw new TypeCheckError("method call on an unknown class", expr.a);
+          throw new TypeCheckError("Method call on an unknown class", expr.a);
         }
       } else if (tObj.a[0].tag === 'set'){
         const set_method = ["add", "remove", "get", "contains", "length", "update", "clear", "firstItem", "hasnext", "next"]
