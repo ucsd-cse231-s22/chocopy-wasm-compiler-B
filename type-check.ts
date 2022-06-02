@@ -436,8 +436,19 @@ function tcDestructureIterables(tDestr: DestructureLHS<[Type, SourceLocation]>[]
       tDestr.forEach(r => {
         hasStarred = hasStarred || r.isStarred
   })
-  tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
-  return tRhs
+  if(tDestr.length == 1)
+    tcAssignTargets(env, locals, tDestr, [tRhs], hasStarred)
+  else {
+    switch(tRhs.tag) {
+    case "listliteral":
+      if(checkDestrLength(tDestr, tRhs.elements, hasStarred)) {
+        tcAssignTargets(env, locals, tDestr, tRhs.elements, hasStarred)
+        return tRhs
+      }
+      else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
+    }
+  }
+  return tRhs;
 }
 
 
@@ -529,7 +540,6 @@ function checkIterablePresence(values : Expr<[Type, SourceLocation]>[]): boolean
   })
   return isIterablePresent
 }
-
 
 /** Function to check types of destructure assignments */
 function tcAssignTargets(env: GlobalTypeEnv, locals: LocalTypeEnv, tDestr: DestructureLHS<[Type, SourceLocation]>[], tRhs: Expr<[Type, SourceLocation]>[], hasStarred: boolean) {

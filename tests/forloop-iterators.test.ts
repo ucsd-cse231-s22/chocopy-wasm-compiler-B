@@ -406,7 +406,7 @@ assertPrint('List Iterator Int' , rangeStr + `
 
 l : [int] = None
 i: int = 0
-l = [1,2,3,4,5,6,7,8,9,10]
+l = [1,2,3,4,5]
 for i in l:
     print(i)
 
@@ -518,12 +518,12 @@ for i in l:
 
 ` ,["1","2","3"]);
 
-assertPrint('enumerate() on list of integers' , rangeStr + `
+assertPrint('enumerate() on list of integers - destructuring' , rangeStr + `
 
 l : [int] = None
 i: int = 0
 j:int = 0
-l = [1,2,3,4,5]
+l = [1,2,3,4,5,6,7]
 for i, j in enumerate(l):
     print(i)
     print(j)
