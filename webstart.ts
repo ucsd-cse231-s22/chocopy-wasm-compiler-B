@@ -11,7 +11,7 @@ import { renderError, renderPrint, renderResult } from "./outputrender";
 import { BasicREPL } from './repl';
 import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import { BOOL, CLASS, NONE, NUM, PrintType } from './utils';
+import { PrintType } from './utils';
 
 function webStart() {
   var filecontent: string | ArrayBuffer;
