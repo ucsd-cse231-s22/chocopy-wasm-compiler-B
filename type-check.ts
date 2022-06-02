@@ -741,6 +741,12 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                     throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
                   }
                 }
+              } else if (expr.method === "copy") {
+                if (realArgs.length !== 1) {
+                  throw new TypeCheckError(`copy method expected no argument, got ${realArgs.length - 1}`);
+                }
+                //@ts-ignore
+                methodRet.type = tObj.a[0].type;
               } else {
                 throw new TypeCheckError(`could not find method ${expr.method} in class ${tObj.a[0].name}`, expr.a);
               }
