@@ -326,7 +326,7 @@ function lowerAllDestructureAssignments(blocks: { a: [AST.Type, AST.SourceLocati
   }
 }
 
-function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
+function destructAllAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[];}[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
   let lhs_index = 0
   let rhs_index = 0
   while (lhs_index < lhs.length && rhs_index < rhs_vals.length) {
@@ -336,7 +336,7 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
       var [valinits, valstmts, va] = flattenExprToExpr(r, blocks, env);
       allinits.push(...valinits);
       var iterableObject = generateName("$iterableobject")
-      var iterInit:IR.VarInit<[AST.Type, SourceLocation]> = {a:r.a, name:iterableObject, type:r.a[0], value:{tag:"none"}}
+      var iterInit:IR.VarInit<[AST.Type, SourceLocation]> = {a:r.a, name:iterableObject, type:r.a[0], value:{a:r.a, tag:"none"}}
       allinits.push(iterInit)
       var assignIterable:IR.Stmt<[AST.Type, SourceLocation]> = {a:[NONE, dummyLoc], tag: "assign", name: iterableObject, value: va}
       pushStmtsToLastBlock(blocks, ...valstmts, assignIterable);
@@ -384,16 +384,17 @@ function destructAllAssignments(blocks: { a?: [AST.Type, AST.SourceLocation]; la
   }
 }
 
-function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rhs_exprs: AST.Expr<[Type, SourceLocation]>[], blocks: { a?: [Type, SourceLocation]; label: string; stmts: IR.Stmt<[Type, SourceLocation]>[]; }[], 
+function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rhs_exprs: AST.Expr<[Type, SourceLocation]>[], blocks: { a: [Type, SourceLocation]; label: string; stmts: IR.Stmt<[Type, SourceLocation]>[]; }[], 
   env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[]) {
   const newListName = generateName("newList");
-  const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: rhs_exprs.length + 1 } };
+  const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: rhs_exprs.length + 1 ,a:rhs_exprs[0].a}, a:rhs_exprs[0].a };
   var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
   var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
   var storeLength : IR.Stmt<[Type, SourceLocation]> = {
+    a:rhs_exprs[0].a,
     tag: "store",
-    start: { tag: "id", name: newListName },
-    offset: { tag: "wasmint", value: 0 },
+    start: { a:rhs_exprs[0].a, tag: "id", name: newListName },
+    offset: { a:rhs_exprs[0].a, tag: "wasmint", value: 0 },
     value: { a: [{tag: "number"}, rhs_exprs[0].a[1]], tag: "num", value: BigInt(rhs_exprs.length) }
   }
   const assignsList : IR.Stmt<[Type, SourceLocation]>[] = rhs_exprs.map((e, i) => {
@@ -401,13 +402,14 @@ function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rh
     inits = [...inits, ...init];
     stmts = [...stmts, ...stmt];
     return {
+      a:e.a,
       tag: "store",
-      start: { tag: "id", name: newListName },
-      offset: { tag: "wasmint", value: i+1 },
+      start: { a:e.a, tag: "id", name: newListName },
+      offset: { a:e.a, tag: "wasmint", value: i+1 },
       value: val
     }
   })
-  allinits.push({ name: newListName, type: l.a[0], value: { tag: "none" } }, ...inits);
+  allinits.push({ name: newListName, type: l.a[0], value: { a:rhs_exprs[0].a, tag: "none" } , a:rhs_exprs[0].a}, ...inits);
   // var [valstmts, vale] = [
   //   [ { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
   //   { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName } }
