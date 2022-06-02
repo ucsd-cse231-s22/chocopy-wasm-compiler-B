@@ -19,6 +19,14 @@ export function division_by_zero(arg: number, line: number, col: number) : any {
     return arg;
   }
 
+  export function key_not_found(arg: number) : any {
+    if (arg === 0) {
+      var message = stackTrace() + "\nRUNTIME ERROR: key doesn't exist"// + line.toString() + " at column " + col.toString() + "\n" + splitString()[line-1].trim();
+      throw new RunTimeError(message);
+    }
+    return arg;
+  }
+  
   export function index_out_of_bounds(length: any, index: any, line: number, col: number): any {
     if (index < 0 || index >= length) {
       var message = stackTrace() + `\nRUNTIME ERROR: Index ${index} out of bounds in line ` + line.toString() + " at column " + col.toString() + "\n\t" + splitString()[line-1].trim() + "\n\t" + '^'.repeat(splitString()[line-1].trim().length);
