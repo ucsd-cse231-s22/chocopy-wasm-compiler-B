@@ -121,11 +121,6 @@ function last_print(typ: Type, arg : number, load : any) : any {
   return arg;
 }
 
-// printing within sets
-function set_print(type: Type, arg: number) : any {
-  return arg; 
-}
-
 function index_out_of_bounds(length: any, index: any): any {
   if (index < 0 || index >= length)
     throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
@@ -301,11 +296,11 @@ export function division_by_zero(arg: number, line: number, col: number, load: a
 export async function addLibs() {
   const memory = new WebAssembly.Memory({initial:10, maximum:100});
   const bytes = readFileSync("build/memory.wasm");
-  const setBytes = readFileSync("build/sets.wasm");
+  
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })
   importObject.libmemory = memoryModule.instance.exports;
-  const setModule = await WebAssembly.instantiate(setBytes, {...importObject, js: { mem: memory } })
-  importObject.libset = setModule.instance.exports;
+  
+  
   importObject.memory_values = memory;
   importObject.js = {memory};
 
@@ -362,6 +357,10 @@ export async function addLibs() {
   importObject.imports.stack_push = (line: number) => RUNTIME_ERROR.stack_push(line);
   importObject.imports.stack_clear = () => RUNTIME_ERROR.stack_clear();
 
+  const setBytes = readFileSync("build/sets.wasm");
+  const setModule = await WebAssembly.instantiate(setBytes, {...importObject, js: { mem: memory } })
+  importObject.libset = setModule.instance.exports;
+
   return importObject;
 }
 
@@ -380,7 +379,6 @@ export const importObject : any = {
     */ 
 
    // added so $print_num in sets won't crash testing due to an import in sets.wat 
-    print_num: (arg: number) => set_print(Type.Num, arg),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
   output: "",
