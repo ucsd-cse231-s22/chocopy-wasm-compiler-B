@@ -2,6 +2,14 @@ import { BasicREPL} from './repl';
 import { Type, Value } from './ast';
 import { defaultTypeEnv } from './type-check';
 import { NUM, BOOL, NONE } from './utils';
+import { fileObjectDefinition } from './io';
+
+declare global {
+  interface Window { 
+    duplicated: any,
+    fs: any
+  }
+}
 import * as RUNTIME_ERROR from './runtime_error'
 import { renderResult, renderError, renderPrint } from "./outputrender";
 import { log } from 'console';
@@ -19,6 +27,17 @@ import "./style.scss";
 import {BuiltinLib} from "./builtinlib"
 
 function webStart() {
+  // create the filesystem
+  window.duplicated = Object.create(window) // the overcome the __dirname problem
+  const BrowserFS = require("browserfs");
+  BrowserFS.install(window.duplicated);
+  BrowserFS.configure({ fs: "LocalStorage" }, (err: any) => {
+    if (err) {
+      alert(err);
+    } else {
+      window.fs =  window.duplicated.require('fs');
+    }
+  });
   var filecontent: string | ArrayBuffer;
   document.addEventListener("DOMContentLoaded", async function() {
 
@@ -118,7 +137,7 @@ function webStart() {
       repl = new BasicREPL(importObject);
       const source = document.getElementById("user-code") as HTMLTextAreaElement;
       resetRepl();
-      repl.run(source.value).then((r) => {
+      repl.run(fileObjectDefinition + source.value).then((r) => {
         var objectTrackList = repl.trackObject(r, repl.trackHeap());
         renderResult(r, objectTrackList);
         console.log("run finished")
