@@ -402,19 +402,19 @@ $whileend1
 **Reaching Definition**
 ```python
 $startProg1_0
-valname1: ()                i: ($varInit_0)                 a: ($varInit_0)  
+valname1: ()                i: ($varInit_0)                 a: ($varInit_1)  
 $whilestart1_0
-valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
 $whilestart1_1
-valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
 $whilebody1_0
-valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
 $whilebody1_1
-valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
 $whilebody1_2
-valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
 $whilebody1_3
-valname1: ($whilestart1_0)  i: ($whilebody1_2).             a: ($varInit_0)  
+valname1: ($whilestart1_0)  i: ($whilebody1_2).             a: ($varInit_1)  
 ```
 
 ### 5. Constant Propagation
