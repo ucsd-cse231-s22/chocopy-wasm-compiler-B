@@ -90,14 +90,14 @@ function literalToVal(lit: AST.Literal<[Type, SourceLocation]>) : IR.Value<[Type
 
 function lowerStr(lit: { tag: "str", value: string}, source:SourceLocation): [Array<IR.VarInit<[Type, SourceLocation]>>, Array<IR.Stmt<[Type, SourceLocation]>>, IR.Expr<[Type, SourceLocation]>]{
   const strName = generateName("newObj")
-  const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { a: [NUM, source],tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1 },  a: [NONE, source]};
+  const alloc : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: Math.ceil(lit.value.length / 4) + 1, a: [NUM, source] }, a: [CLASS("str"), source] };
   const assigns : IR.Stmt<[Type, SourceLocation]>[] = [];
   assigns.push({
     a: [NONE, source],
     tag: "store",
-    start: { a: [CLASS("str"), source], tag: "id", name: strName },
-    offset: { a: [NUM, source], tag: "wasmint", value: 0 },
-    value: { a: [NUM, source], tag: "wasmint", value: lit.value.length }
+    start: { tag: "id", name: strName, a: [CLASS("str"), source]},
+    offset: { tag: "wasmint", value: 0, a: [NUM, source]},
+    value: { tag: "wasmint", value: lit.value.length, a: [NUM, source] },
   });
 
   // var result = ( ( (bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF) ); charCodeAt(i)
@@ -112,9 +112,9 @@ function lowerStr(lit: { tag: "str", value: string}, source:SourceLocation): [Ar
     assigns.push({
       a: [NONE, source],
       tag: "store",
-      start: { a: [CLASS("str"), source], tag: "id", name: strName },
-      offset: { a: [NUM, source], tag: "wasmint", value: i+1 },
-      value: { a: [NUM, source], tag: "wasmint", value: result }
+      start: { tag: "id", name: strName, a: [CLASS("str"), source]},
+      offset: { tag: "wasmint", value: i+1, a: [NUM, source] },
+      value: { tag: "wasmint", value: result, a: [CLASS("str"), source] }
     });
   }
 
@@ -131,15 +131,15 @@ function lowerStr(lit: { tag: "str", value: string}, source:SourceLocation): [Ar
     assigns.push({
       a: [NONE, source],
       tag: "store",
-      start: { a: [CLASS("str"), source], tag: "id", name: strName },
-      offset: { a: [NUM, source], tag: "wasmint", value: offset+1 },
-      value: { a: [NUM, source], tag: "wasmint", value: result }
+      start: { tag: "id", name: strName, a: [CLASS("str"), source] },
+      offset: { tag: "wasmint", value: offset+1, a: [NUM, source] },
+      value: { tag: "wasmint", value: result, a: [CLASS("str"), source] },
     });
   }
 
   return [
-    [ { a: [CLASS("str"), source], name: strName, type: {tag: "class", name: "str"}, value: { a: [CLASS("str"), source], tag: "none" } }],
-    [ { a: [NONE, source], tag: "assign", name: strName, value: alloc }, ...assigns 
+    [ { name: strName, type: {tag: "class", name: "str"}, value: { tag: "none", a: [NONE, source]}, a: [CLASS("str"), source] }],
+    [ { tag: "assign", name: strName, value: alloc, a: [NONE, source] }, ...assigns 
     ],
     { a: [{tag:"class", name:"str"},source], tag: "value", value: { a: [{tag:"class", name:"str"}, source], tag: "id", name: strName } }
   ];
@@ -717,7 +717,12 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const [iinits, istmts, ival] = flattenExprToVal(e.index, blocks, env);
 
       if(equalType(e.a[0], CLASS("str"))){
-        return [[...oinits, ...iinits], [...ostmts, ...istmts], {a: e.a,tag: "call", name: "str$access", arguments: [oval, ival]} ]
+        if("end" in e){
+          const [end_inits, end_stmts, end_val] = flattenExprToVal(e.end, blocks, env);
+          const [step_inits, step_stmts, step_val] = flattenExprToVal(e.steps, blocks, env);
+          return [[...oinits, ...iinits, ...end_inits, ...step_inits], [...ostmts, ...istmts, ...end_stmts, ...step_stmts], {a: e.a,tag: "call", name: "str$slicing", arguments: [oval, ival, end_val, step_val]} ]
+        }
+        return [[...oinits, ...iinits], [...ostmts, ...istmts], {a: e.a,tag: "call", name: "str$access", arguments: [oval, ival, {a: ival.a, tag: "wasmint", value: ival.a[1].line}, {a: ival.a, tag: "wasmint", value: ival.a[1].column}]} ]
       }
       if (e.obj.a[0].tag === "list") { 
         const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);

@@ -1,3 +1,16 @@
+# Week 10
+We successfully implemented the methods we promised in last week. The methods we implemented included:
+    * Slicing (extending index access)
+    * Reverse (negative) indexing
+    * .lower() method
+    * .upper() method
+
+The main reason that the split() method could not be implemented was that we could not get the latest implementation from the lists group and we expect their memory layout to change from the last merge. For the same reason, we also expect conflicts with lists in term of slicing and reverse indexing.
+
+## BigInt issue
+We expected errors when merging BigInt implementatin. This should not be a big problem because BigInt group should have provided an function to cast `BigInt` back to `i32`.
+
+
 # Week 9 Update
 We are planning on adding more features and integrating our designs with other groups, especially with lists and bingnums.
 

@@ -337,7 +337,7 @@ describe("string test", () => {
   //27
   assertPrint("test case 27: upper method with only alpha characters",
     `
-    s: str = "abcdefg"
+    s:str = "abcdefg"
     print(s.upper())
     `,
     [`ABCDEFG`]);
@@ -345,7 +345,7 @@ describe("string test", () => {
   //28
   assertPrint("test case 28: upper method with number and special characters",
     `
-    s: str = "The answer is 42!"
+    s:str = "The answer is 42!"
     print(s.upper())
     `,
     [`THE ANSWER IS 42!`]);
@@ -353,7 +353,7 @@ describe("string test", () => {
   //29
   assertPrint("test case 29: lower method with only alpha characters",
     `
-    s: str = "ABCDEFG"
+    s:str = "ABCDEFG"
     print(s.lower())
     `,
     [`abcdefg`]);
@@ -361,7 +361,7 @@ describe("string test", () => {
   //30
   assertPrint("test case 30: lower method with number and special characters",
     `
-    s: str = "tHE ANSWER IS 42!"
+    s:str = "tHE ANSWER IS 42!"
     print(s.lower())
     `,
     [`the answer is 42!`]);
@@ -382,10 +382,105 @@ describe("string test", () => {
     `);
   
   //TODO reverse + slicing
+  
+  //33
+  assertPrint("test case 33: slicing with two parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:-2])
+    `,
+    [`bcde`]);
+  
+  //34
+  assertPrint("test case 34: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:-2:2])
+    `,
+    [`bd`]);
+
+  //34.1
+  // assertPrint("test case 34.1: slicing with three parameters",
+  //   `
+  //   s: str = "abcdefg"
+  //   print(s[1:-2:-2])
+  //   `,
+  //   [`bd`]);
+  
+  //34.2
+  assertPrint("test case 34.2: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[-10:-2:2])
+    `,
+    [`ace`]);
+  
+  //34.3
+  assertPrint("test case 34.3: slicing with three parameters",
+    `
+    s: str = "abcdefg"
+    print(s[1:1000:2])
+    `,
+    [`bdf`]);
+  
+  //35
+  assertPrint("test case 35: slicing with one parameters",
+    `
+    s: str = "abcdefg"
+    print(s[-5:])
+    `,
+    [`cdefg`]);
+  
+  //36
+  assertPrint("test case 36: slicing with second parameter",
+    `
+    s: str = "abcdefg"
+    print(s[:-5])
+    `,
+    [`ab`]);
+  
+
+  //37
+  assertPrint("test case 37: slicing with start > end",
+    `
+    s: str = "abcdefg"
+    print(s[-1:-2:2])
+    `,
+    [``]);
+  
   //TODO split
-
+  //38
+  // assertPrint("test case 38: split 1",
+  //   `
+  //   s: str = "abc def g"
+  //   s_split: [str] = None
+  //   s_split = s.split(' ')
+  //   print(s_split[0])
+  //   print(s_split[1])
+  //   print(s_split[2])
+  //   `,
+  //   [`abc`, `def`, `g`]);
+  
+  // //39
+  // assertPrint("test case 39: split 2",
+  //   `
+  //   s: str = "abc def   g"
+  //   s_split: [str] = None
+  //   s_split = s.split(' ')
+  //   print(s_split[0])
+  //   print(s_split[1])
+  //   print(s_split[2])
+  //   `,
+  //   [`abc`, `def`, `g`]);
+  
+  // //40
+  // assertPrint("test case 40: split 3",
+  //   `
+  //   s: str = "abc def    "
+  //   s_split: [str] = None
+  //   s_split = s.split(' ')
+  //   print(s_split[0])
+  //   print(s_split[1])
+  //   `,
+  //   [`abc`, `def`]);
 });
-
-
-
-

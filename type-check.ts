@@ -200,6 +200,8 @@ export function builtinStringClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var strMethods: Map<string, [Array<Type>, Type]> = new Map();
   strMethods.set("__init__", [[{ tag: "class", name: "str" }, { tag: "class", name: "str" }], NONE])
   strMethods.set("length", [[{ tag: "class", name: "str" }], NUM])
+  strMethods.set("lower", [[{ tag: "class", name: "str" }], CLASS("str")])
+  strMethods.set("upper", [[{ tag: "class", name: "str" }], CLASS("str")])
   //TODO add all string methods here
   strFields.set("length", { tag: "number" });
   env.classes.set("str", [strFields, strMethods]);
@@ -651,10 +653,10 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
       var t: Type = { tag: "set", valueType: tc_type[0] };
       var a: SourceLocation = expr.a;
       // return {...expr, a: [t, a]};
-      return { ...expr, a: [t, a], values: tc_val };
+      return {...expr, a: [t, a], values: tc_val};
     case "literal":
-      const tcVal: Literal<[Type, SourceLocation]> = tcLiteral(expr.value)
-      return { ...expr, a: [tcVal.a[0], expr.a], value: tcVal };
+      const tcVal : Literal<[Type, SourceLocation]> = tcLiteral(expr.value)
+      return {...expr, a: [tcVal.a[0], expr.a], value: tcVal};
     case "binop":
       const tLeft = tcExpr(env, locals, expr.left);
       const tRight = tcExpr(env, locals, expr.right);
@@ -770,10 +772,19 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, expr.a);
       }
       if (equalType(tObj.a[0], CLASS("str"))) {
+        if ("end" in expr){
+          var tEnd: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.end);
+          var tStep: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.steps);
+          if (tEnd.a[0].tag !== "number" || tStep.a[0].tag !== "number"){
+            throw new TypeCheckError(`Index is of non-integer type`, tObj.a[1]);
+          }
+          return { a: [CLASS("str"), expr.a], tag: "index", obj: tObj, index: tIndex, end: tEnd, steps: tStep };
+        }
         return { a: [CLASS("str"), expr.a], tag: "index", obj: tObj, index: tIndex };
       }
       if (tObj.a[0].tag === "list") {
-        return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
+        // return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
+        return { tag: "index", a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
       }
       // if (tObj.a[0].tag === "tuple") {
       //   ...
@@ -784,9 +795,9 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         if (expr.arguments.length===0)
           throw new TypeCheckError("print needs at least 1 argument", expr.a);
         const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
-        return { ...expr, a: [NONE, expr.a], arguments: tArgs };
+        return {...expr, a: [NONE, expr.a], arguments: tArgs};
       }
-      if (env.classes.has(expr.name)) {
+      if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor
 
         const tConstruct: Expr<[Type, SourceLocation]> = { a: [CLASS(expr.name), expr.a], tag: "construct", name: expr.name };
@@ -795,6 +806,11 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
             throw new TypeError("Initializing string with non string literal");
           }
           tConstruct.strarg = expr.arguments[0].value.value;
+        }
+
+        //To support range class for now
+        if (expr.name === "range") {
+          return tConstruct;
         }
 
         const [_, methods] = env.classes.get(expr.name);
@@ -860,7 +876,7 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
         if (!equalType(targs[0].a[0], CLASS("str"))) {
           throw new TypeCheckError("len() incorrect arugment type", expr.a);
         }
-        return { a: [{ tag: "number" }, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
+        return { a: [NUM, expr.a], tag: "method-call", obj: targs[0], method: "length", arguments: [] }
       } else {
         throw new TypeCheckError("Undefined function: " + expr.name, expr.a);
       }
@@ -1019,7 +1035,6 @@ export function tcExpr(env: GlobalTypeEnv, locals: LocalTypeEnv, expr: Expr<Sour
     default: throw new TypeCheckError(`unimplemented type checking for expr: ${expr}`, expr.a);
   }
 }
-
 export function tcLiteral(literal: Literal<SourceLocation>): Literal<[Type, SourceLocation]> {
   var typ: Type;
   switch (literal.tag) {
