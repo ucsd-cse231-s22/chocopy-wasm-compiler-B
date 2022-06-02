@@ -28,9 +28,9 @@ The overall front page looks like below:
 
 The dictionary and string implementations have not been merged into the repository before June 1st, thus we can't handle the rendering feature for either.
 
-For list, we tried to track list's elements on the heap and implement the nested printing of list and object. However, on the one hand, we found that list organizes the heap differently between the merged git repo and the unmerged git repo as the list team keep updating its implemention. On the other hand, the list team is also implementing its own list print function. Before merging, we cannot integrate list with our code.
+For List, we tried to track List's elements on the heap and implement the nested printing of List and object. However, on the one hand, we found that List organizes the heap differently between the merged git repo and the unmerged git repo as the List team keep updating its implementation. On the other hand, the List team is also implementing its own List print function. Before merging, we cannot integrate List with our code.
 
-For set, the set team has fully integrated its implementation into the wasm code, and also implemented its own set print function, which makes it more difficult for us to integrate set into front-end rendering.
+For Set, the Set team has fully integrated its implementation into the wasm code, and also implemented its own set print function, which makes it more difficult for us to integrate set into front-end rendering.
 
 After all conflicts of this merge have been solved, we could continue to deepen the implementation of list and set. One potential solution is to use their own print function and wrap them to achieve nested rendering.
 
