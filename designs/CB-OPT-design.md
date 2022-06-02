@@ -419,7 +419,7 @@ valname1: ($whilestart1_0)  i: ($whilebody1_2).             a: ($varInit_1)
 ```
 
 ### 5. Constant Propagation
-The constant propagation is implemented on the basis of reaching definition. We would propatate the constant value to an id only if it's reaching definition is unique. We performed constant propagation in Program, FunDef and Class's methods, and we would not propagate the global definitions (classes' fields or global variables) since they could be re-assigned in other function or methods' bodies. 
+The constant propagation is implemented on the basis of reaching definition. We would propagate the constant value to an id only if it's reaching definition is unique. We performed constant propagation in Program, FunDef and Classes' methods, and we would not propagate the global definitions (classes' fields or global variables) since they could be re-assigned in other function or methods' bodies. 
 
 ## B. Modification on AST and IR
 we have no modifications on ast.ts and ir.ts
