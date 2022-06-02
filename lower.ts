@@ -467,6 +467,11 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       //   return [[...oinits, ...iinits], [...ostmts, ...istmts], {tag: "call", name: "str$access", arguments: [oval, ival]} ]
       // }
       if (e.obj.a[0].tag === "class" && e.obj.a[0].name === "list") { 
+        if ("end" in e) {
+          const [end_inits, end_stmts, end_val] = flattenExprToVal(e.end, blocks, env);
+          const [step_inits, step_stmts, step_val] = flattenExprToVal(e.steps, blocks, env);
+          return [[...oinits, ...iinits, ...end_inits, ...step_inits], [...ostmts, ...istmts, ...end_stmts, ...step_stmts], {a: e.a, tag: "call", name: "list$slice", arguments: [oval, ival, end_val, step_val]} ]
+        }
         const offsetValues: IR.Value<[Type, SourceLocation]>[] = listIndexOffsets(blocks, iinits, istmts, ival, ostmts, oval, env);
         return [[...oinits, ...iinits], [...istmts], {
           a: e.a,

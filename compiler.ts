@@ -87,7 +87,7 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
-        `call $store`
+        `(call $store)`
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
@@ -210,14 +210,14 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`
+        `(call $alloc)`
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
         `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) (call $assert_not_none)`,
         ...codeGenValue(expr.offset, env),
-        `call $load`
+        `(call $load)`
       ]
   }
 }

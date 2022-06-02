@@ -607,7 +607,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           if (tEnd.a[0].tag !== "number" || tStep.a[0].tag !== "number"){
             throw new TypeCheckError(`Index is of non-integer type`, tObj.a[1]);
           }
-          return { a: [tObj.a[0].type, expr.a], tag: "index", obj: tObj, index: tIndex, end: tEnd, steps: tStep };
+          return { a: [tObj.a[0], expr.a], tag: "index", obj: tObj, index: tIndex, end: tEnd, steps: tStep };
         }
         return { a: [tObj.a[0].type, expr.a], tag: "index", obj: tObj, index: tIndex };
       }

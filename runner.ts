@@ -137,8 +137,9 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $set$contains (import "libset" "set$contains") (param $baseAddr i32) (param $key i32) (result i32))
     (func $set$length (import "libset" "set$length") (param $baseAddr i32) (result i32))
     (func $set$remove (import "libset" "set$remove") (param $baseAddr i32) (param $key i32) (result i32))
-    (func $list$length (import "liblist" "list$length") (param $self i32) (result i32))
     (func $list$append (import "liblist" "list$append") (param $self i32) (param $arg i32) (result i32))
+    (func $list$length (import "liblist" "list$length") (param $self i32) (result i32))
+    (func $list$slice (import "liblist" "list$slice") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
