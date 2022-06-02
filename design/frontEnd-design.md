@@ -66,7 +66,7 @@ The console right now is consist of textareas and the textarea will be mess if t
 To make our compiler more accepetable by users, we want to provide more themes so that the users can choose from.
 
 We provide multiple themes for users to choose. Users can also pick a random theme by clicking the theme button.
-![theme choosing](./theme.png)
+![theme choosing](./img/theme.png)
 
 ### 7. Support other object like list, string
 
@@ -75,7 +75,7 @@ We will implement the render to hanle other objects like list, string and dictio
 ### 8. highlight the error area
 
 shown in the picture below, CodeMirror is able to underline the error
-![underline error](./Screen%20Shot%202022-05-20%20at%2023.59.27.png)
+![underline error](./img/underline_error.png)
 
 ### 9. front end test
 
@@ -85,10 +85,10 @@ Our team have comunicated with team A and find that there is a tool called [phan
 
 To provide an option for the editor preferences of users, we add vim edit mode for users to choose, user can choose to change to vim mode and use default vim keymap to edit their code. And user can switch between normal mode and vim mode by clicking the mode button.
 
-![vim mode](./vim.png)
+![vim mode](./img/vim.png)
 
 The overall front page will looks like below:
-![week8 front end](./Screen%20Shot%202022-05-21%20at%2000.09.37.png)
+![week8 front end](./img/week8_front_end.png)
 
 ## Week 7 Update
 
