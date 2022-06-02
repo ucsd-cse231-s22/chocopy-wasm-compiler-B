@@ -1,6 +1,7 @@
 import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
 import { Pass } from "codemirror";
+import { NONE } from "./utils";
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -114,6 +115,7 @@ function renderObject(result: Value, objectTrackList: Array<ObjectField>, elt: H
 function renderNewLine(result: Value, elt: HTMLElement){
   switch (result.tag) {
     case "none":
+      elt.innerText = "success"
       break;
     case "num":
       elt.innerText = String(result.value);
@@ -131,6 +133,7 @@ function renderNewLine(result: Value, elt: HTMLElement){
 
 export function renderResult(result : Value, objectTrackList: Array<ObjectField>) : void {
   if(result === undefined) { return; }
+
   const elt = createNewPre("output");
   renderNewLine(result, elt);
   if (objectTrackList.length!=0){
@@ -156,7 +159,9 @@ export function renderPrint(typ: Type, arg : number) : any {
 
 export function renderError(result : any) : void {
   const elt = createNewPre("output");
-  elt.setAttribute("style", "color: black");
-  elt.setAttribute("style", "background-color: #e36d6d");
-  elt.innerText = String(result);
+  elt.style.backgroundColor = "red";
+  elt.style.color = "white";
+  elt.style.lineHeight = "15px"
+  //elt.setAttribute("style", "background-color: #d71d1d");
+  elt.innerText = String("⚠ "+result);
 }

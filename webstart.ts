@@ -18,8 +18,11 @@ import "codemirror/addon/dialog/dialog";
 import "codemirror/addon/edit/matchbrackets";
 import "codemirror/addon/search/searchcursor"
 import "codemirror/keymap/vim";
+import "codemirror/addon/scroll/simplescrollbars";
 
 import "./style.scss";
+import { autocompleteHint } from "./ac";
+import { default_keywords, default_functions } from "./default_ac";
 
 const breakpointLines = new Set<number>(); 
 var breakpointPrev: number = -1;
@@ -232,11 +235,16 @@ function webStart() {
       extraKeys: {
         "Ctrl": "autocomplete",
       },
-      lint: true,
-      // scrollbarStyle: "simple",
+      lint:true,
+      hintOptions: {
+        alignWithWord: false,
+        completeSingle: false,
+      },
+      scrollbarStyle: "simple",
     } as any);
     var commandDisplay = document.getElementById('command-display');
     var keys = '';
+    let isClassMethod = false;
     CodeMirror.on(editor, 'vim-keypress', function(key : string) {
       keys = keys + key;
       commandDisplay.innerText = keys;
@@ -266,13 +274,34 @@ function webStart() {
 
         textarea.value = editor.getValue();
     })
-    editor.on('inputRead', function onChange(editor, input) {
-        if (input.text[0] === ';' || input.text[0] === ' ' || input.text[0] === ":") {
-            return;
-        }
-        (editor as any).showHint({
+    editor.on("inputRead", function onChange(editor, input) {
+      if (input.text[0] === ";" || input.text[0] === " " || input.text[0] === ":") {
+        isClassMethod = false;
+        return;
+      } else if (input.text[0] === "." || isClassMethod) {
+        //autocomplete class methods
+        isClassMethod = true;
+        editor.showHint({
+          hint: () =>
+            autocompleteHint(editor, [], function (e: any, cur: any) {
+              return e.getTokenAt(cur);
+            }),
         });
+      } else {
+        //autocomplete variables, names, top-level functions
+        editor.showHint({
+          hint: () =>
+            autocompleteHint(
+              editor,
+              default_keywords.concat(default_functions),
+              function (e: any, cur: any) {
+                return e.getTokenAt(cur);
+              }
+            ),
+        });
+      }
     });
+
 
     dragbarFunction();
     promptTextArea();

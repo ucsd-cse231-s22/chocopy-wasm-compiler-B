@@ -276,7 +276,7 @@ html{
 
 
 .console-prompt{
-    color: #008AFF;
+    color: #1b964a;
     // font-family: monospace;
     // line-height: 1.2em;
     // font-size: 1.2em;
@@ -323,10 +323,10 @@ html{
     line-break: anywhere;
     word-wrap: break-word;
     white-space: break-spaces;
-    margin: 10px 10px;
-    padding:6px;
-    color: #f6efef;
-    background-color: #7ccd93;
+    margin: 10px 0px;
+    padding:12px;
+    color: #010000;
+    background-color: #55c474;
     border-radius: 3px; 
     -moz-border-radius: 3px; 
     -webkit-border-radius: 3px; 
@@ -358,8 +358,8 @@ html{
     white-space: break-spaces;
     margin: 10px 10px;
     padding:6px;
-    color: #010405;
-    background-color: #f07e7e;
+    color: #f1f5f7;
+    background-color: #d71d1d;
     border-radius: 3px; 
     -moz-border-radius: 3px; 
     -webkit-border-radius: 3px; 
@@ -399,7 +399,7 @@ html{
     width: 100%;
     padding: 0 0 0 5%;
     display: none;
-    background-color: LightCyan;
+    background-color: rgb(119, 231, 147);
     overflow: hidden;
     font-family: monospace;
 }
