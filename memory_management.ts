@@ -41,6 +41,12 @@ export function getTypeBits(type: Type): any {
         is_pointer = true;
     } else if(val.tag == "id"){
         const name = val.name;
+        if(name.includes("newObj")){
+          return true;
+        } 
+        // if(name.includes("valname")){
+        //   return false;
+        // }
         const type: Type = (env.local_type.has(name)) ? env.local_type.get(name) : env.global_type.get(name);
         is_pointer = typeIsPointer(type);
     }

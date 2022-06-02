@@ -117,7 +117,7 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
     case "return":
       var valStmts = codeGenValue(stmt.value, env);
       if(valueIsPointer(stmt.value, env)){ // if return a pointer, inc ref_count
-        valStmts.push(`;; inc ref count`);
+        valStmts.push(`;; inc ref count of the return value`);
         valStmts.push(`call $inc_refcount`);
       }
       valStmts.push("return");
@@ -282,12 +282,10 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   definedVars.forEach(env.locals.add, env.locals);
   def.inits.forEach(v => {
     env.local_type.set(v.name, v.type);
-    // assert(v.type !== undefined);
   })
   def.parameters.forEach(p => env.locals.add(p.name));
   def.parameters.forEach(p => {
     env.local_type.set(p.name, p.type);
-    // assert(p.type !== undefined);
   })
   env.labels = def.body.map(block => block.label);
   const localDefines = makeLocals(definedVars);
@@ -314,6 +312,7 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
         ...dec_refStmts,
         `(local.get $${p.name})`,
         `(call $dec_refcount) ;; dec ref_count of param $${p.name}`,
+        `(call $free_no_ref) ;; free it if no ref param`,
         `(drop)`
       ]
     }
@@ -324,12 +323,15 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
         ...dec_refStmts,
         `(local.get $${init.name})`,
         `(call $dec_refcount) ;; dec ref_count of field $${init.name}`,
+        `(call $free_no_ref) ;; free it if no ref param`,
         `(drop)`
       ]
     }
   })
   var bodyCommands = "(local.set $$selector (i32.const 0))\n"
-  bodyCommands += inc_params.join("\n");
+  if(!def.name.includes("__init__")){
+    bodyCommands += inc_params.join("\n");
+  }
   bodyCommands += "(loop $loop\n"
 
   var blockCommands = "(local.get $$selector)\n"
@@ -367,7 +369,9 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
   bodyCommands += blockCommands;
   bodyCommands += ") ;; end $loop"
   // add dec ref_count if there is no return
-  bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_refStmts.join("\n");
+  if(def.ret.tag == "none" && !def.name.includes("__init__")){
+    bodyCommands += "\n;; dec ref_count of params and fields before the end of function\n" + dec_refStmts.join("\n");
+  }
   env.locals.clear();
   env.local_type.clear();
   return [`(func $${def.name} ${params} (result i32)

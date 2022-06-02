@@ -26,6 +26,14 @@ function assert_not_none(arg: any) : any {
   return arg;
 }
 
+function print_obj_in_mem(){
+  print(Type.Num, importObject.memory_allocator.get_obj_num());
+}
+
+function print_mem_used(){
+  print(Type.Num, importObject.memory_allocator.get_mem_used());
+}
+
 export async function addLibs() {
   const bytes = readFileSync("build/memory.wasm");
   const max_mem_pages = 100;
@@ -69,6 +77,8 @@ export const importObject : any = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    print_obj_in_mem: print_obj_in_mem,
+    print_mem_used: print_mem_used,
   },
 
   output: "",

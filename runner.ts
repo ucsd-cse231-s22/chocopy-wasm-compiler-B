@@ -126,6 +126,8 @@ export async function run(source : string, config: Config) : Promise<[Value, Glo
     (func $get_refcount (import "libmemory" "get_refcount") (param i32) (result i32))
     (func $free_no_ref (import "libmemory" "free_no_ref") (param i32) (result i32))
     (func $test_refcount (import "libmemory" "test_refcount") (param i32) (param i32) (result i32))
+    (func $print_obj_in_mem (import "imports" "print_obj_in_mem") (result i32))
+    (func $print_mem_used (import "imports" "print_mem_used") (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

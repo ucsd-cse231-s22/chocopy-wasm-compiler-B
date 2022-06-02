@@ -28,6 +28,8 @@ defaultGlobalFunctions.set("get_size", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("get_type", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("get_refcount", [[CLASS("object")], NUM]);
 defaultGlobalFunctions.set("test_refcount", [[CLASS("object"), NUM], BOOL]);
+defaultGlobalFunctions.set("print_obj_in_mem", [[], NUM]);
+defaultGlobalFunctions.set("print_mem_used", [[], NUM]);
 
 export const defaultTypeEnv = {
   globals: new Map(),
@@ -321,6 +323,9 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
          expr.name === "get_refcount"){
           const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
           return {...expr, a: [NUM, expr.a], arguments: tArgs};
+      }
+      if(expr.name == "print_obj_in_mem" || expr.name == "print_mem_used"){
+        return {...expr, a: [NUM, expr.a], arguments: []};
       }
       if(env.classes.has(expr.name)) {
         // surprise surprise this is actually a constructor

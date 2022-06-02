@@ -143,6 +143,7 @@
     ;; dec the ref_count in previous val
     (local.get $pre_val)
     (call $dec_refcount)
+    (call $free_no_ref)
     (drop) ;; drop the ret val of dec_refcount
     
     ;; store the new value

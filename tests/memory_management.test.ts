@@ -128,4 +128,212 @@ print(test_refcount(node0, 3))
 print(test_refcount(node1, 3))
 print(test_refcount(node2, 3))
 `, ["True", "True", "True"]); // for node there are three pointers, node0.self, node1.prev, node2.next
+
+// ===========================
+// Memory Recycling!!!
+// ===========================
+/*
+* Basic Test
+*/
+assertPrint(
+  "Test memory basic",`
+class C(object):
+  x: int = 0
+  y: bool = False
+
+c: C = None
+c = C()
+print_obj_in_mem()
+print_mem_used()`, 
+  ["1", "20"] // only 1 object(c) in the memory, its size is 12(header) + 4(c.x) + 4(c.y) = 20
+); 
+/*
+* Recycle no ref object(field assign)
+*/
+assertPrint("Recycle no ref object(field assign)", `
+class C(object):
+  i: int = 0
+  
+c: C = None
+d: C = None
+c = C()
+d = c
+print_obj_in_mem() 
+print_mem_used()
+d = None
+print_obj_in_mem()
+print_mem_used()
+c = None
+print_obj_in_mem()
+print_mem_used()
+`, [
+  "1", "16", // At first, we create c, so there is 1 object in the memory and its size is 12(header) + 4(c.i) = 16
+  "1", "16", // Than, we set `d=None`, the ref count of c decrease to 1, so we cannot free it yet.
+  "0", "0" // After we set `c=None`, the ref count is 0, we will free it, so there is no obj in the memory.
+]
+);
+/*
+* Recycle no ref object(store)
+*/
+assertPrint("Recycle no ref object(store)", `
+class C(object):
+  c: C = None
+  
+c: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+c.c = C()
+print_obj_in_mem() 
+print_mem_used()
+c.c = None
+print_obj_in_mem() 
+print_mem_used()
+c = None
+print_obj_in_mem() 
+print_mem_used()
+`, [
+  "1", "16", // `c = C()` create 1 object on the memory, its size is 12(header) + 4(c.i) = 16
+  "2", "32", // `c.c = C()` create 1 more object on the memory, so there are 2 object, and they cost 32 bytes
+  "1", "16", // after `c.c = None`, we don't have ref for the 2nd C(), so we will free it. Hence, 1 object remained on the memory
+  "0", "0" // after `c = None`, we free the only object on the memory, it's clear.
+]);
+/*
+* Recycle no ref object(free object)
+*/
+assertPrint("Recycle no ref object(free object)", `
+class C(object):
+  c: C = None
+  
+c: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+c.c = C()
+print_obj_in_mem() 
+print_mem_used()
+c = None
+print_obj_in_mem() 
+print_mem_used()
+`, [
+  "1", "16", // `c = C()` create 1 object on the memory, its size is 12(header) + 4(c.i) = 16
+  "2", "32", // `c.c = C()` create 1 more object on the memory, so there are 2 object, and they cost 32 bytes
+  "0", "0" // after `c = None`, we will try to free the first C(), so the ref count of c.c will decrease to 0, we will free it too
+]);
+/*
+* Recycle local var at the end of the function
+*/
+assertPrint("Recycle local var at the end of the function", `
+class C(object):
+  i: int = 0
+  
+  def foo(self: C, x: int) -> int:
+    f: C = None
+    f = C()
+    print_obj_in_mem() 
+    print_mem_used()
+    return 1
+
+c: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+c.foo(10)
+print_obj_in_mem() 
+print_mem_used()`, [
+  "1", "16", // 1 object c
+  "2", "32", // 2 object c and f
+  "1", "16" // just to make sure the local var f is recycled
+]);
+/*
+* Dec ref count of param at the end of the function
+*/
+assertPrint("Dec ref count of param at the end of the function", `
+class C(object):
+  i: int = 0
+  
+  def foo(self: C, f: C) -> int:
+    print_obj_in_mem() 
+    print_mem_used()
+    return 1
+
+c: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+c.foo(C())
+print_obj_in_mem() 
+print_mem_used()`, [
+  "1", "16", // 1 object c
+  "2", "32", // 2 object c and C() in the param
+  "1", "16" // We will dec the ref count of params then free the 0-count params, in this case, C() in param is free
+]);
+/*
+* Do not recycle the return
+*/
+assertPrint("Do not recycle the return", `
+class C(object):
+  i: int = 0
+  
+  def foo(self: C, f: C) -> C:
+    print_obj_in_mem() 
+    print_mem_used()
+    return f
+
+c: C = None
+d: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+d = c.foo(C())
+print_obj_in_mem() 
+print_mem_used()`, [
+  "1", "16", // 1 object c
+  "2", "32", // 2 object c and C() in the param
+  "2", "32" // We will increase the ref count of the return val then decrease it(to make sure it's not recycle at the end of the function)
+]);
+/*
+* Allocate a lot
+*/
+assertPrint("Allocate a lot", `
+class C(object):
+  c: C = None
+    
+c: C = None
+d: C = None
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+d = C()
+print_obj_in_mem() 
+print_mem_used()
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+d = C()
+print_obj_in_mem() 
+print_mem_used()
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+d = C()
+print_obj_in_mem() 
+print_mem_used()
+c = C()
+print_obj_in_mem() 
+print_mem_used()
+d = C()
+print_obj_in_mem() 
+print_mem_used()`, [
+  "1", "16",
+  "2", "32",
+  "2", "32",
+  "2", "32",
+  "2", "32",
+  "2", "32",
+  "2", "32",
+  "2", "32", // we will log the memory alloc/free in console, please take a look if interested
+]);
+
+
 });

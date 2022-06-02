@@ -49,12 +49,16 @@ function getActualSize(size: number){
 export class FreeList {
     free_blocks: Array<Block>;
     max_size: number;
+    obj_num: number;
+    mem_used: number;
 
     constructor(max_page: number){
         this.free_blocks = [];
         const page_size = 64 * 1024; // 64 KB per page
         this.max_size = max_page * page_size
         this.free_blocks.push({start: 4, size: this.max_size - 4});
+        this.obj_num = 0;
+        this.mem_used = 0;
     }
 
     alloc(size: number): number{
@@ -79,6 +83,8 @@ export class FreeList {
         this.free_blocks.forEach(block =>{
             console.log(print_block(block));
         })
+        this.obj_num += 1;
+        this.mem_used += size;
         return addr;
     }
 
@@ -110,11 +116,21 @@ export class FreeList {
         console.log(`Free ${size} byte: ${addr}-${addr+size}`);
         this.free_blocks.forEach(block =>{
             console.log(print_block(block));
-        })
+        });
+        this.obj_num -= 1;
+        this.mem_used -= size;
     }
 
     clear(){
         this.free_blocks = [];
         this.free_blocks.push({start: 4, size: this.max_size - 4});
+    }
+
+    get_obj_num(){
+        return this.obj_num;
+    }
+
+    get_mem_used(){
+        return this.mem_used;
     }
 }
