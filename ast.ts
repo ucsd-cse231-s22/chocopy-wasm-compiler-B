@@ -73,4 +73,4 @@ export type DestructureLHS<A> = { a?: A, lhs: AssignTarget<A>, isStarred : boole
 export type AssignTarget<A> = 
 | {  a?: A,  tag : "id", name : string}
 | {  a?: A,  tag : "lookup", obj: Expr<A>, field: string }
-| {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+| {  a?: A,  tag: "index", obj: Expr<A>, index: Expr<A> }

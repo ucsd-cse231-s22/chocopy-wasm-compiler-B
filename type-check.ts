@@ -1,3 +1,4 @@
+import { equal } from 'assert';
 import { BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from './ast';
 import { BuiltinLib } from './builtinlib';
 import { TypeCheckError } from './error_reporting';
@@ -170,6 +171,7 @@ export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
   listMethods.set("copy", [[{ tag: "class", name: "list", type: NONE }], { tag: "class", name: "list" }])
   // don't know how to check type here so I'll do type check in Expr method-call
   listMethods.set("append", [[], { tag: "class", name: "list" }]);
+  listMethods.set("insert", [[{ tag: "class", name: "list" }, NUM], { tag: "class", name: "list" }]);
   //TODO add all list methods here
   env.classes.set("list", [listFields, listMethods]);
   return env;
@@ -714,10 +716,21 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                 if (!equalType(tObj.a[0].type, realArgs[1].a[0])) {
                   throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
                 }
-                return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };
+              } else if (expr.method === "insert") {
+                if (realArgs.length !== 3) {
+                  throw new TypeCheckError(`insert expected 2 argument, got (${realArgs.length - 1}`, expr.a);
+                }
+                if (!equalType(NUM, realArgs[1].a[0])) {
+                  throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
+                }
+                if (!equalType(tObj.a[0].type, realArgs[2].a[0])) {
+                  throw new TypeCheckError(`expected type ${tObj.a[0].type.tag} but got type ${realArgs[1].a[0].tag}`, expr.a)
+                }
               }
-            }
-            if (methodArgs.length === realArgs.length &&
+              
+              return { ...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs };
+            } 
+            if(methodArgs.length === realArgs.length &&
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
                 return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};
               } else {

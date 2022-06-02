@@ -6,10 +6,8 @@ import { importObject, addLibs  } from "./tests/import-object.test";
 async function debug() {
   var source = `
   a: [int] = None
-  set_x: set[int] = None
-  set_x = set([1,2,3])
-  set_x.update([2,3,4])
-  print(set_x)
+  a = [1, 2, 3]
+  a.insert(1, 6)
   `
 
   // set_1 : set[int] = None
