@@ -280,7 +280,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       if (dotOrBracket === "[") {
         var start_index: Expr<SourceLocation> = {
           tag: "literal",
-          value: { tag: "num", value: 0 }
+          value: { tag: "num", value: -2147483648 }
         };;
         var stop_index: Expr<SourceLocation> = {
           tag: "literal",
@@ -321,7 +321,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           }
         }
         
-        if(numItems === 0) {
+        if (!isSlice && numItems === 0) {
           throw new ParseError("Brackets empty at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
         }
         
