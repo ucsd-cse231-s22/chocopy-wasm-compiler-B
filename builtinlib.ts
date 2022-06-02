@@ -1,5 +1,6 @@
 import { Type } from './ast';
 import { RunTimeError } from './error_reporting';
+import { jsopen, jsclose, jsread, jswrite, jslength } from './io';
 import { BOOL, NONE, NUM } from './utils';
 
 type BuiltinFunc = {
@@ -83,6 +84,31 @@ export const BuiltinLib:BuiltinFunc[] = [
     name: "pow",
     body: Math.pow,
     typeSig: [[NUM, NUM], NUM]
+  },
+  {
+    name: "jsopen",
+    body: jsopen,
+    typeSig: [[NUM], NUM]
+  },
+  {
+    name: "jsclose",
+    body: jsclose,
+    typeSig: [[NUM], NUM]
+  },
+  {
+    name: "jsread",
+    body: jsread,
+    typeSig: [[NUM, NUM], NUM]
+  },
+  {
+    name: "jswrite",
+    body: jswrite,
+    typeSig: [[NUM, NUM, NUM], NUM]
+  },
+  {
+    name: "jslength",
+    body: jslength,
+    typeSig: [[NUM], NUM]
   }
 ]
 

@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import { jsopen, jsclose, jsread, jswrite, jslength } from '../io';
 import { BuiltinLib} from "../builtinlib";
 import * as RUNTIME_ERROR from '../runtime_error'
 
@@ -57,15 +56,6 @@ export const importObject : any = {
     print_num: (arg: number) => print(Type.Num, arg),
     print_bool: (arg: number) => print(Type.Bool, arg),
     print_none: (arg: number) => print(Type.None, arg),
-    abs: Math.abs,
-    min: Math.min,
-    max: Math.max,
-    pow: Math.pow,
-    jsopen: (arg: number) => jsopen(arg),
-    jsclose: (arg: number) => jsclose(arg),
-    jsread: (fd: number, ptr: number) => jsread(fd, ptr),
-    jswrite: (fd : number, content : number, ptr: number) => jswrite(fd, content, ptr),
-    jslength: (dummy: number) => jslength(dummy),
     ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
   },
 
