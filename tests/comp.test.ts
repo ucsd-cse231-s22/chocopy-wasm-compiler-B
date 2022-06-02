@@ -172,13 +172,37 @@ assertPrint("comprehension int set iterable test 4", builtinClasses + `
 ['1']);
 
 assertPrint("comprehension bool set iterable test 1", builtinClasses + `
-lst:[bool] = None
-lst = [True, False]
-(print(b) for b in lst)`,
-['True','False']);
+s:set[bool] = None
+s = {True, False}
+(print(b) for b in s)`,
+['False','True']);
 
 assertPrint("comprehension bool set iterable test 2", builtinClasses + `
-(print(b) for b in [False])`,
+(print(b) for b in {False})`,
 ['False']);
+
+assertPrint("set comprehension basic test", builtinClasses + `
+s:set[int] = None
+s = {num for num in {1, 2, 3, 4, 5}}
+print(s)`,
+['1','2','3','4','5']);
+
+assertPrint("set comprehension comprehensive test", builtinClasses + `
+s:set[int] = None
+s = {num + 1 if num % 4 != 0 else num + 100 for num in {1, 2, 3, 4, 5, 6, 7, 8} if num % 2 == 0}
+print(s)`,
+['3','104','7','108']);
+
+assertPrint("set comprehension unique element test 1", builtinClasses + `
+s:set[int] = None
+s = {num + 1 if num % 4 != 0 else 999 for num in {1, 2, 3, 4, 5, 6, 7, 8} if num % 2 == 0}
+print(s)`,
+['3','7','999']);
+
+assertPrint("set comprehension unique element test 2", builtinClasses + `
+s:set[int] = None
+s = {999 if num < 2 else 1000 for num in [0, 1, 2, 3]}
+print(s)`,
+['1000','999']);
 
 });

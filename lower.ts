@@ -553,14 +553,6 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       ];
 
     case "ternary":
-    case "comprehension":
-      return flattenExprToExprWithBlocks(e, blocks, env);
-  }
-}
-
-function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>, env : GlobalEnv) : [Array<IR.VarInit<[Type, SourceLocation]>>, Array<IR.Stmt<[Type, SourceLocation]>>, IR.Expr<[Type, SourceLocation]>] {
-  switch(e.tag) {
-    case "ternary":
       var [tinits, tstmts, tval] = flattenExprToExpr(e.exprIfTrue, blocks, env);
       var [finits, fstmts, fval] = flattenExprToExpr(e.exprIfFalse, blocks, env);
       var [condinits, condstmts, condval] = flattenExprToVal(e.ifcond, blocks, env);
@@ -596,6 +588,13 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: resultName } }
       ];
     case "comprehension":
+      // comprehension type
+      // currently only support set comprehension because set provides add() API
+      // other comprehension types (list/generator) are *fake* comprehensions -- need to print out lhs to visualize
+      const isSetComp = e.type.tag === "set" ? true : false;
+      const resultSet : AST.Expr<[Type, SourceLocation]> = { a: [e.type, e.a[1]], tag: "set", values: []};
+      var [scinits, scstmts, scval] = flattenExprToVal(resultSet, blocks, env);
+
       // few notes here regarding the iterable object:
       // 1. list group doesn't provide an API to traverse lists (next and hasnext),
       //    so we create an built-in class ListIterable (initialized with an list and
@@ -668,16 +667,16 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
           };
           objClassName = "ListIterable";
           objval = { a: [{ tag: "class", name: "ListIterable" }, e.a[1]], tag: "id", name: listIterable }; // update iterable to this newly created ListIterable
-          pushStmtsToLastBlock(blocks, ...objstmts, ...listmts, listLengthAssign, listIterableAssign);
+          pushStmtsToLastBlock(blocks, ...(isSetComp ? scstmts : []), ...objstmts, ...listmts, listLengthAssign, listIterableAssign);
           break;
         case "set":
           objClassName = "set";
           isSetIterable = true;
-          pushStmtsToLastBlock(blocks, ...objstmts);
+          pushStmtsToLastBlock(blocks, ...(isSetComp ? scstmts : []), ...objstmts);
           break;
         case "class":
           objClassName = objTyp.name;
-          pushStmtsToLastBlock(blocks, ...objstmts);
+          pushStmtsToLastBlock(blocks, ...(isSetComp ? scstmts : []), ...objstmts);
           break;
         default:
           throw new Error(`${objTyp.tag} as an iterable is not currently supported`);
@@ -708,8 +707,8 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const next = e.item;
       // method calls
       const nextArgs : IR.Value<[Type, SourceLocation]>[] = isSetIterable ? [objval, { tag: "id", name: next }] : [objval];
-      const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$hasnext`, arguments: nextArgs };
-      const callNext : IR.Expr<[Type, SourceLocation]> = { a: e.a, tag: "call", name: `${objClassName}$next`, arguments: nextArgs }
+      const callHasnext : IR.Expr<[Type, SourceLocation]> = { a: [{ tag: "bool" }, e.a[1]], tag: "call", name: `${objClassName}$hasnext`, arguments: nextArgs };
+      const callNext : IR.Expr<[Type, SourceLocation]> = { a: [nextValType, e.a[1]], tag: "call", name: `${objClassName}$next`, arguments: nextArgs }
 
       const nextVarInit : IR.VarInit<[Type, SourceLocation]> = { name: next, type: nextValType, value: { tag: "none" } };
       const nextAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: next, value: callNext };
@@ -724,13 +723,43 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
 
       // jump to start
       if (isSetIterable) {
+        // handle first item
+        // if condition
+        const condThenLblSet = generateName("$then");
+        const condEndLblSet = generateName("$end");
+        const condElseLblSet = generateName("$else");
+        var ccinits : IR.VarInit<[Type, SourceLocation]>[] = []
+        var ccstmts : IR.Stmt<[Type, SourceLocation]>[] = []
+        var ccval : IR.Value<[Type, SourceLocation]> = { tag: "bool", value: true };
+        if (e.ifcond != undefined) {
+          [ccinits, ccstmts, ccval] = flattenExprToVal(e.ifcond, blocks, env);
+        }
+
+        const condJmpSet : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: ccval, thn: condThenLblSet, els: condElseLblSet };
+        const endJmpSet : IR.Stmt<[Type, SourceLocation]> = { tag: "jmp", lbl: condEndLblSet };
+
         var ffstmts;
         var ffval;
         [ffinits, ffstmts, ffval] = flattenExprToExpr(e.lhs, blocks, env);
         const firstYield = generateName("firstYield");
         firstYieldVarInit = { name: firstYield, type: ffval.a[0], value: { tag: "none" } };
         const firstYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: firstYield, value: ffval };
-        pushStmtsToLastBlock(blocks, checkObj, firstItemAssign, ...ffstmts, firstYieldAssign, { tag: "jmp", lbl: whileStartLbl });
+        const addFirstYieldToSet : IR.Stmt<[Type, SourceLocation]> = {
+          a: [{ tag: "number" }, e.a[1]],
+          tag: "expr",
+          expr: { a: [{ tag: "number" }, e.a[1]], tag: "call", name: "set$add", arguments: [scval, { tag: "id", name: firstYield }] }
+        };
+
+        const thenStmtsSet = isSetComp ? [firstYieldAssign, addFirstYieldToSet] : [firstYieldAssign];
+
+        pushStmtsToLastBlock(blocks, checkObj, firstItemAssign, ...ffstmts)
+        pushStmtsToLastBlock(blocks, ...ccstmts, condJmpSet);
+        blocks.push({ a: e.a, label: condThenLblSet, stmts: thenStmtsSet });
+        pushStmtsToLastBlock(blocks, endJmpSet);
+        blocks.push({ a: e.a, label: condElseLblSet, stmts: [] });
+        pushStmtsToLastBlock(blocks, endJmpSet);
+        blocks.push({ a: e.a, label: condEndLblSet, stmts: [] });
+        pushStmtsToLastBlock(blocks, { tag: "jmp", lbl: whileStartLbl });
       } else {
         pushStmtsToLastBlock(blocks, checkObj, { tag: "jmp", lbl: whileStartLbl });
       }
@@ -747,12 +776,17 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       // push call to next to blocks before lhs statements get pushed on the next line
       pushStmtsToLastBlock(blocks, nextAssign);
 
-      // TODO: assign-destructure (need support for tuple)
       // evaluate lhs
-      const [linits, lstmts, lval] = flattenExprToExpr(e.lhs, blocks, env);
+      const [lhsinits, lhsstmts, lhsval] = flattenExprToExpr(e.lhs, blocks, env);
       const nextYield = generateName("nextYield");
-      const nextYieldVarInit : IR.VarInit<[Type, SourceLocation]> = { name: nextYield, type: lval.a[0], value: { tag: "none" } };
-      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYield, value: lval };
+      const nextYieldVarInit : IR.VarInit<[Type, SourceLocation]> = { name: nextYield, type: lhsval.a[0], value: { tag: "none" } };
+      const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYield, value: lhsval };
+
+      const addToSet : IR.Stmt<[Type, SourceLocation]> = {
+        a: [{ tag: "number" }, e.a[1]],
+        tag: "expr",
+        expr: { a: [{ tag: "number" }, e.a[1]], tag: "call", name: "set$add", arguments: [scval, { tag: "id", name: nextYield }] }
+      };
       
       // if condition
       const condThenLbl = generateName("$then");
@@ -768,8 +802,10 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const condJmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: cval, thn: condThenLbl, els: condElseLbl };
       const endJmp : IR.Stmt<[Type, SourceLocation]> = { tag: "jmp", lbl: condEndLbl };
 
-      pushStmtsToLastBlock(blocks, ...lstmts, ...cstmts, condJmp);
-      blocks.push({ a: e.a, label: condThenLbl, stmts: [nextYieldAssign] });
+      const thenStmts = isSetComp ? [nextYieldAssign, addToSet] : [nextYieldAssign];
+
+      pushStmtsToLastBlock(blocks, ...lhsstmts, ...cstmts, condJmp);
+      blocks.push({ a: e.a, label: condThenLbl, stmts: thenStmts });
       pushStmtsToLastBlock(blocks, endJmp);
       blocks.push({ a: e.a, label: condElseLbl, stmts: [] });
       pushStmtsToLastBlock(blocks, endJmp);
@@ -777,23 +813,25 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
 
       blocks.push({  a: e.a, label: whileEndLbl, stmts: [] });
 
+      const toRetExpr : IR.Expr<[Type, SourceLocation]> = { tag: "value", value: isSetComp ? scval : { tag: "none" } };
+
       if (isListIterable) {
         return [
-          [...objinits, ...liinits, listLengthVarInit, listIterableVarInit, ...cinits, ...linits, hasnextVarInit, nextVarInit, nextYieldVarInit],
+          [...(isSetComp ? scinits : []), ...objinits, ...liinits, listLengthVarInit, listIterableVarInit, ...cinits, ...lhsinits, hasnextVarInit, nextVarInit, nextYieldVarInit],
           [],
-          { tag: "value", value: { tag: "none" } }
+          toRetExpr
         ];
       } else if (isSetIterable) {
         return [
-          [...objinits, ...cinits, ...ffinits, ...linits, hasnextVarInit, nextVarInit, firstYieldVarInit, nextYieldVarInit],
+          [...(isSetComp ? scinits : []), ...objinits, ...ccinits, ...cinits, ...ffinits, ...lhsinits, hasnextVarInit, nextVarInit, firstYieldVarInit, nextYieldVarInit],
           [],
-          { tag: "value", value: { tag: "none" } }
+          toRetExpr
         ];
       } else {
         return [
-          [...objinits, ...cinits, ...linits, hasnextVarInit, nextVarInit, nextYieldVarInit],
+          [...(isSetComp ? scinits : []), ...objinits, ...cinits, ...lhsinits, hasnextVarInit, nextVarInit, nextYieldVarInit],
           [],
-          { tag: "value", value: { tag: "none" } }
+          toRetExpr
         ];
       }
   }
