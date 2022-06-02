@@ -15,7 +15,11 @@ export class CompileTimeError extends Error {
 // I ❤️ TypeScript: https://github.com/microsoft/TypeScript/issues/13965
 export class TypeCheckError extends CompileTimeError {
     constructor(message?: string, location?: SourceLocation) {
-     super("TYPE ERROR: " + message + " in line " + location.line.toString()+" at column " + location.column.toString() + "\n" + location.srcCode.trim());
+     if (location === undefined) {
+      super("TYPE ERROR: " + message);
+     } else {
+      super("TYPE ERROR: " + message + " in line " + location.line.toString()+" at column " + location.column.toString() + "\n" + location.srcCode.trim());
+     }
    } 
  }
 

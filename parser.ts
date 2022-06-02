@@ -443,6 +443,22 @@ export function traverseArguments(c : TreeCursor, s : string) : Array<Expr<Sourc
   return args;
 }
 
+export function traverseSupers(c : TreeCursor, s : string) : Array<Expr<SourceLocation>> {
+  c.firstChild();  // Focuses on open paren
+  const args = [];
+  c.nextSibling();
+  while(c.type.name !== ")") {
+    if (!s.substring(c.from, c.to).includes("Generic")) {
+      let expr = traverseExpr(c, s);
+      args.push(expr);
+    }
+    c.nextSibling(); // Focuses on either "," or ")"
+    c.nextSibling(); // Focuses on a VariableName
+  } 
+  c.parent();       // Pop to ArgList
+  return args;
+}
+
 export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> {
   var location = getSourceLocation(c, s);
   switch(c.node.type.name) {
@@ -895,7 +911,23 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
   c.nextSibling(); // Focus on class name
   const className = s.substring(c.from, c.to);
   c.nextSibling(); // Focus on arglist/superclass
-  const generics = traverseGenerics(c, s);
+  var generics = traverseGenerics(c,s);
+  var superExpr = traverseSupers(c,s);
+  if (superExpr.length == 0 && generics.length == 0) {
+    throw new Error(`Class must have at least one super class: ${className}`);
+  }
+  var supers:Array<string> = [];
+  
+  superExpr.forEach((e)=>{
+    if(e.tag==="id"){
+      if(e.name!=="object"){
+        supers.push(e.name);
+      }
+      
+    } else {
+      throw new Error(`Parse TYPE ERROR: near token ${s.substring(c.from, c.to)}`);
+    }
+  })
   c.nextSibling(); // Focus on body
   c.firstChild();  // Focus colon
   while(c.nextSibling()) { // Focuses first field
@@ -914,18 +946,19 @@ export function traverseClass(c : TreeCursor, s : string) : Class<SourceLocation
     if(generics.length > 0) {
       const genericTypes = generics.map(g => CLASS(g));
       methods.push({ a: location, name: "__init__", parameters: 
-        [{ name: "self", type: CLASS(className, genericTypes) }], ret: NONE, inits: [], body: [] 
+        [{ name: "self", type: CLASS(className, genericTypes) }], ret: NONE, inits: [], body: []
       });
     } else {
       methods.push({ a: location, name: "__init__", parameters: [{ name: "self", type: CLASS(className) }], ret: NONE, inits: [], body: [] });
     }
-  }
+  } 
   return {
     a: location,
     name: className,
+    supers,
     generics,
     fields,
-    methods
+    methods,
   };
 }
 

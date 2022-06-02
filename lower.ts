@@ -431,8 +431,15 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
         throw new Error("Report this as a bug to the compiler developer, this shouldn't happen " + objTyp.tag);
       }
       const className = objTyp.name;
-      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}}
-      const callMethod : IR.Expr<[Type, SourceLocation]> = { a:e.a, tag: "call", name: `${className}$${e.method}`, arguments: [objval, ...argvals] }
+      const checkObj : IR.Stmt<[Type, SourceLocation]> = { a:e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `assert_not_none`, arguments: [objval]}}
+      const callMethod : IR.Expr<[Type, SourceLocation]> = {
+        a:e.a,
+        tag: "call_indirect",
+        method_offset: env.classesMethods.get(className).get(e.method)[0],
+        name: `${className}$${e.method}`,
+        arguments: [objval, ...argvals],
+        ret: env.classesMethods.get(className).get(e.method)[1],
+      }
       return [
         [...objinits, ...arginits],
         [...objstmts, checkObj, ...argstmts],
@@ -488,11 +495,11 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           value: value
         }
       });
-
+      const initVals = e.parameters.map(a => flattenExprToVal(a, blocks, env)).map(cp => cp[2]).flat();
       return [
         [ { name: newName, type: e.a[0], value: { a: e.a, tag: "none" } }],
         [ { a: e.a, tag: "assign", name: newName, value: alloc }, ...assigns,
-          { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }] } }
+          { a: e.a, tag: "expr", expr: { a: e.a, tag: "call", name: `${e.name}$__init__`, arguments: [{ a: e.a, tag: "id", name: newName }, ...initVals] } }
         ],
         { a: e.a, tag: "value", value: { a: e.a, tag: "id", name: newName } }
       ];
