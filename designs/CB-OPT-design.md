@@ -170,3 +170,18 @@ Among these two options, a majority of optimizations will be implemented in the 
 
 ## D. Value Rep and Memory Layout
 Dynamic optimizations that happen at runtime or may rely on runtime informations are beyond our scope, so we may not introduce new modifications to the runtime environment. Overall, we aim to optimize the program without imposing restrictions or new assumptions on other groups.
+
+# Compiler B - Optimization - Implementation Update In Week 9
+
+## A. Implemented Passes And Scenarios
+
+### 1. Liveness Analysis
+### 2. Neededness Analysis
+### 3. Dead-Code-Elimination
+### 4. Reaching Analysis
+### 5. Constant Propagation
+
+
+## B. Modification on AST and IR
+## C. Test
+## E. Value Representation and Memory Layout
