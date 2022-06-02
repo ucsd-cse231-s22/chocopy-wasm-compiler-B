@@ -524,6 +524,14 @@ export function traverseStmt(c : TreeCursor, s : string) : Stmt<SourceLocation> 
       } 
       //Destructure return
       else {
+        if(rhsargs.length==1){
+          return {
+            a : location,
+            tag : "assign-destr", 
+            destr : target, 
+            rhs : rhsargs[0]
+          };
+        }
         return {
           a : location,
           tag : "assign-destr", 
@@ -686,21 +694,47 @@ function traverseDestructureTargets(c: TreeCursor, s: string):DestructureLHS<Sou
   var location = getSourceLocation(c, s);
   var hasStarred = 0;
 
-  do{
-    if(c.name === "AssignOp") 
-      break;
-    else if (c.type.name === ",") 
-      continue;
-    else {
-      var lhs = traverseDestructureLHS(c,s);
-      if(lhs.isStarred){
-        hasStarred = hasStarred + 1
-        if (hasStarred > 1)
-          throw new ParseError("Multiple starred expressions.", location)
-      }
-      lhsargs.push(lhs)
-    } 
-  } while(c.nextSibling())
+  if(c.type.name == "ArrayExpression" || c.type.name == "SetExpression" || c.type.name == "TupleExpression"){
+    c.firstChild();
+    c.nextSibling();
+    do{
+      //@ts-ignore
+      if(c.type.name === "]" || c.type.name === "}" || c.type.name === ")") 
+        break;
+      //@ts-ignore
+      else if (c.type.name === ",") 
+        continue;
+      else {
+        var lhs = traverseDestructureLHS(c,s);
+        if(lhs.isStarred){
+          hasStarred = hasStarred + 1
+          if (hasStarred > 1)
+            throw new ParseError("Multiple starred expressions.", location)
+        }
+        lhsargs.push(lhs)
+      } 
+    } while(c.nextSibling()) 
+    c.parent();  
+    c.nextSibling();
+  }
+  else {
+    do{
+      if(c.name === "AssignOp") 
+        break;
+      else if (c.type.name === ",") 
+        continue;
+      else {
+        var lhs = traverseDestructureLHS(c,s);
+        if(lhs.isStarred){
+          hasStarred = hasStarred + 1
+          if (hasStarred > 1)
+            throw new ParseError("Multiple starred expressions.", location)
+        }
+        lhsargs.push(lhs)
+      } 
+    } while(c.nextSibling())
+  }
+
   // check if we want normal assignment expressions to have * or not
 
   return lhsargs;

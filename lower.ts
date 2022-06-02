@@ -285,48 +285,158 @@ function flattenStmt(s : AST.Stmt<[Type, SourceLocation]>, blocks: Array<IR.Basi
 function lowerAllDestructureAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[]; }[], lhs: AST.DestructureLHS<[AST.Type, AST.SourceLocation]>[], rhs: AST.Expr<[AST.Type, AST.SourceLocation]>, env: GlobalEnv, allinits: Array<IR.VarInit<[Type, SourceLocation]>>, dummyLoc:SourceLocation) {
   switch(rhs.tag){
     case "non-paren-vals":
-      let lhs_index = 0
-      let rhs_index = 0
-      while (lhs_index < lhs.length && rhs_index < rhs.values.length) {
-        let l = lhs[lhs_index].lhs
-        let r = rhs.values[rhs_index]
-        if(r.a[0].tag==="class"){ //for all iterable classes
-          var [valinits, valstmts, va] = flattenExprToVal(r, blocks, env);
-          allinits.push(...valinits);
-          pushStmtsToLastBlock(blocks, ...valstmts);
-          const iterClassName = r.a[0].name;
-          if(va.tag==="id"){
-            var dummyNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$next`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-            var dummyHasNext: AST.Expr<[Type, SourceLocation]> = { tag: "call", name: `${iterClassName}$hasNext`, arguments: [va] , a:[{ tag: "none" }, dummyLoc]}
-          
-            //will probably fail for cases like 'a,b,c = range(1,3),5
-            while(lhs_index < lhs.length){
-              l = lhs[lhs_index].lhs
-              var [inits, stmts, val] = flattenExprToVal(dummyHasNext, blocks, env);
-              pushStmtsToLastBlock(blocks, ...stmts);
-              allinits.push(...inits);
-              lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
-              lhs_index++;
-            }
-            rhs_index++;
-          }
-
-        }
-        if(lhs_index < lhs.length && rhs_index < rhs.values.length){
-          l = lhs[lhs_index].lhs
-          r = rhs.values[rhs_index]
-          lowerDestructAssignment(blocks, l, r, env, allinits);
-          rhs_index++;
+    case "set":
+      var rhs_vals = rhs.values
+      destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      break;
+    case "listliteral":
+      var rhs_vals = rhs.elements
+      destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      break;
+    case "id": 
+      if(rhs.a[0].tag==="list"){ //TODO set on rhs, for starred exprs? how to check length..can add a length check in tc
+        //1. open rhs as index asign==> a,b = c ==> a,b = c[0], c[1]
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"id", name:rhs.name}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
           lhs_index++;
-        }else break;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
       }
       break;
-      default:
-        throw new Error("Not supported rhs for destructuring!")
+    case "call":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"call", name:rhs.name, arguments:rhs.arguments}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } else if(rhs.a[0].tag==="class"){
+        destructAllAssignments(blocks, lhs, [rhs], env, allinits, dummyLoc)
+      }
+      break;
+    case "lookup":
+      if(rhs.a[0].tag==="list"){
+        let lhs_index = 0
+        var rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[] = []
+        while(lhs_index < lhs.length){
+          rhs_vals.push({a:rhs.a, tag:"index", 
+          obj:{a:rhs.a, tag:"lookup", obj:rhs.obj, field:rhs.field}, 
+          index:{a:[rhs.a[0].type, rhs.a[1]],tag:"literal", value:{a:[rhs.a[0].type, rhs.a[1]], tag:"num", value:lhs_index}}})
+          lhs_index++;
+        }
+        destructAllAssignments(blocks, lhs, rhs_vals, env, allinits, dummyLoc)
+      } 
+      break;
+    default:
+      throw new Error("Not supported rhs for destructuring!")
 
   }
 }
 
+function destructAllAssignments(blocks: { a: [AST.Type, AST.SourceLocation]; label: string; stmts: IR.Stmt<[AST.Type, AST.SourceLocation]>[];}[], lhs: AST.DestructureLHS<[Type, SourceLocation]>[], rhs_vals: AST.Expr<[AST.Type, AST.SourceLocation]>[], env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[], dummyLoc: AST.SourceLocation) {
+  let lhs_index = 0
+  let rhs_index = 0
+  while (lhs_index < lhs.length && rhs_index < rhs_vals.length) {
+    let l = lhs[lhs_index].lhs
+    let r = rhs_vals[rhs_index]
+    if(r.a[0].tag==="class"){ //for all iterable classes
+      var [valinits, valstmts, va] = flattenExprToExpr(r, blocks, env);
+      allinits.push(...valinits);
+      var iterableObject = generateName("$iterableobject")
+      var iterInit:IR.VarInit<[AST.Type, SourceLocation]> = {a:r.a, name:iterableObject, type:r.a[0], value:{a:r.a, tag:"none"}}
+      allinits.push(iterInit)
+      var assignIterable:IR.Stmt<[AST.Type, SourceLocation]> = {a:[NONE, dummyLoc], tag: "assign", name: iterableObject, value: va}
+      pushStmtsToLastBlock(blocks, ...valstmts, assignIterable);
+      const iterClassName = r.a[0].name;
+        let dummyHasNext:AST.Expr<[AST.Type, SourceLocation]>  = { a:[BOOL, dummyLoc],tag: "method-call", obj: {a:r.a, tag: "id", name: iterableObject} , method: "hasnext", arguments: []}
+        let dummyNext: AST.Expr<[AST.Type, SourceLocation]> = {a: [NUM, dummyLoc], tag: "method-call", obj: {a:r.a, tag: "id", name: iterableObject} , method: "next", arguments: []}
+        
+        while(lhs_index < lhs.length){
+          l = lhs[lhs_index].lhs
+          var [inits, stmts, val] = flattenExprToExpr(dummyHasNext, blocks, env);
+          pushStmtsToLastBlock(blocks, ...stmts);
+          allinits.push(...inits);
+          lowerDestructAssignment(blocks, l, dummyNext, env, allinits);
+          lhs_index++;
+        }
+        rhs_index++;
+
+    }
+    if(lhs_index < lhs.length && rhs_index < rhs_vals.length){
+      l = lhs[lhs_index].lhs
+      r = rhs_vals[rhs_index]
+      if(lhs[lhs_index].isStarred){
+        var rev_lhs_index = lhs.length-1
+        var rev_rhs_index = rhs_vals.length - 1
+        while(rev_lhs_index > lhs_index){
+          l = lhs[rev_lhs_index].lhs
+          r = rhs_vals[rev_rhs_index]
+          lowerDestructAssignment(blocks, l, r, env, allinits);
+          rev_rhs_index--;
+          rev_lhs_index--;
+        }
+        const rhs_exprs = rhs_vals.slice(lhs_index, rev_rhs_index+1);
+        l = lhs[lhs_index].lhs
+        if(rhs_exprs.length!==0){
+          lowerStarredAssignments(l, rhs_exprs, blocks, env, allinits);
+          console.log(lhs_index, rhs_index)
+          break;
+        }
+      } else {
+        lowerDestructAssignment(blocks, l, r, env, allinits);
+        rhs_index++;
+        lhs_index++;
+      }
+    }else break;
+  }
+}
+
+function lowerStarredAssignments(l: AST.AssignTarget<[Type, SourceLocation]>, rhs_exprs: AST.Expr<[Type, SourceLocation]>[], blocks: { a: [Type, SourceLocation]; label: string; stmts: IR.Stmt<[Type, SourceLocation]>[]; }[], 
+  env: GlobalEnv, allinits: IR.VarInit<[AST.Type, AST.SourceLocation]>[]) {
+  const newListName = generateName("newList");
+  const allocList : IR.Expr<[Type, SourceLocation]> = { tag: "alloc", amount: { tag: "wasmint", value: rhs_exprs.length + 1 ,a:rhs_exprs[0].a}, a:rhs_exprs[0].a };
+  var inits : Array<IR.VarInit<[Type, SourceLocation]>> = [];
+  var stmts : Array<IR.Stmt<[Type, SourceLocation]>> = [];
+  var storeLength : IR.Stmt<[Type, SourceLocation]> = {
+    a:rhs_exprs[0].a,
+    tag: "store",
+    start: { a:rhs_exprs[0].a, tag: "id", name: newListName },
+    offset: { a:rhs_exprs[0].a, tag: "wasmint", value: 0 },
+    value: { a: [{tag: "number"}, rhs_exprs[0].a[1]], tag: "num", value: BigInt(rhs_exprs.length) }
+  }
+  const assignsList : IR.Stmt<[Type, SourceLocation]>[] = rhs_exprs.map((e, i) => {
+    const [init, stmt, val] = flattenExprToVal(e, blocks, env);
+    inits = [...inits, ...init];
+    stmts = [...stmts, ...stmt];
+    return {
+      a:e.a,
+      tag: "store",
+      start: { a:e.a, tag: "id", name: newListName },
+      offset: { a:e.a, tag: "wasmint", value: i+1 },
+      value: val
+    }
+  })
+  allinits.push({ name: newListName, type: l.a[0], value: { a:rhs_exprs[0].a, tag: "none" } , a:rhs_exprs[0].a}, ...inits);
+  // var [valstmts, vale] = [
+  //   [ { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList ],
+  //   { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName } }
+  // ];
+  //blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
+  //console.log({ a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+  //@ts-ignore
+  pushStmtsToLastBlock(blocks, { a: l.a, tag: "assign", name: newListName, value: allocList }, ...stmts, storeLength, ...assignsList,{ a: l.a, tag: "assign", name: l.name, value: { a: l.a, tag: "value", value: { a: l.a, tag: "id", name: newListName }}})
+
+}
 
 function lowerDestructAssignment(blocks: {
   a: [AST.Type, AST.SourceLocation]; label: string;
@@ -357,6 +467,31 @@ function lowerDestructAssignment(blocks: {
     //name always in id cases
     blocks[blocks.length - 1].stmts.push(...valstmts, { a: l.a, tag: "assign", name: l.name, value: vale});
     allinits.push(...valinits);
+  } 
+  else if (l.tag === "index"){
+    var [oinits, ostmts, oval] = flattenExprToVal(l.obj, blocks, env);
+    const [iinits, istmts, ival] = flattenExprToVal(l.index, blocks, env);
+    var [ninits, nstmts, nval] = flattenExprToVal(r, blocks, env);
+
+    const offsetValue: IR.Value<[Type, SourceLocation]> = listIndexOffsets(iinits, istmts, ival, oval);
+
+    if (l.obj.a[0].tag === "list") {
+      pushStmtsToLastBlock(blocks,
+        ...ostmts, ...istmts, ...nstmts, {
+          tag: "store",
+          a: l.a,
+          start: oval,
+          offset: offsetValue,
+          value: nval
+        });
+      allinits.push(...oinits, ...iinits, ...ninits);
+    }
+    // if (s.obj.a[0].tag === "dict") {
+    //   ...
+    // }
+
+    else { throw new Error("Compiler's cursed, go home."); }
+
   }
 }
 
