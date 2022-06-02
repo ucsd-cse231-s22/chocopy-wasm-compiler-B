@@ -3,6 +3,7 @@ import * as IR from './ir';
 import { Type, SourceLocation } from './ast';
 import { GlobalEnv } from './compiler';
 import { NUM, BOOL, NONE, CLASS } from "./utils";
+import {allClosures} from './closure';
 
 const nameCounters : Map<string, number> = new Map();
 function generateName(base : string) : string {
@@ -391,6 +392,23 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           arguments: callvals
         }
       ];
+    case "closure-call": {
+      const callpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
+      const callinits = callpairs.map(cp => cp[0]).flat();
+      const callstmts = callpairs.map(cp => cp[1]).flat();
+      const callvals = callpairs.map(cp => cp[2]).flat();
+      return [ callinits, callstmts,
+        {
+          tag: "closure-call",
+          closure: {
+            a: e.a, // TODO arbitrary?
+            tag: "id", 
+            name: e.name
+          },
+          arguments: callvals
+        }
+      ];
+    }
     case "method-call": {
       const [objinits, objstmts, objval] = flattenExprToVal(e.obj, blocks, env);
       const argpairs = e.arguments.map(a => flattenExprToVal(a, blocks, env));
@@ -477,7 +495,7 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
       const classdata = env.classes.get(e.name);
       const fields = [...classdata.entries()];
       const newName = generateName("newObj");
-      const alloc : IR.Expr<[Type, SourceLocation]> = { a:e.a, tag: "alloc", amount: { a:e.a, tag: "wasmint", value: fields.length } };
+      const alloc : IR.Expr<[Type, SourceLocation]> = { a:e.a, tag: "alloc", amount: { a:e.a, tag: "wasmint", value: fields.length + 1} }; // for vtable index
       const assigns : IR.Stmt<[Type, SourceLocation]>[] = fields.map(f => {
         const [_, [index, value]] = f;
         return {
@@ -488,6 +506,15 @@ function flattenExprToExpr(e : AST.Expr<[Type, SourceLocation]>, blocks: Array<I
           value: value
         }
       });
+
+      // vtable offset of the current class
+      assigns.push({
+        a: e.a,
+        tag: "store",
+        start: { tag: "id", name: newName },
+        offset: { tag: "wasmint", value: 0 }, 
+        value: { tag: "wasmint", value: allClosures.indexOf(e.name) }
+      })
 
       return [
         [ { name: newName, type: e.a[0], value: { a: e.a, tag: "none" } }],

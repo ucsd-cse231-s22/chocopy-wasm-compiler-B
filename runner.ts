@@ -15,6 +15,7 @@ import { lowerProgram } from './lower';
 import { BuiltinLib } from './builtinlib';
 import { BlobOptions } from 'buffer';
 import { removeGenerics } from './remove-generics';
+import {allClosures, closureNargs} from './closure';
 
 export type Config = {
   importObject: any;
@@ -60,7 +61,7 @@ export function augmentEnv(env: GlobalEnv, prog: Program<[Type, SourceLocation]>
   });
   prog.classes.forEach(cls => {
     const classFields = new Map();
-    cls.fields.forEach((field, i) => classFields.set(field.name, [i, field.value]));
+    cls.fields.forEach((field, i) => classFields.set(field.name, [i+1, field.value]));
     newClasses.set(cls.name, classFields);
   });
   return {
@@ -144,6 +145,13 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $set$hasnext (import "libset" "set$hasnext") (param i32) (param i32) (result i32))
     (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
     ${globalImports}
+
+    (table ${allClosures.length} funcref)
+    (elem (i32.const 0) 
+${allClosures.map(c => `        $${c}$__call__`).join("\n")}
+    )
+${Array.from(closureNargs).map(n => `(type $$clo${n+1} (func ${'(param i32) '.repeat(n+1)}(result i32)))`).join('\n')}
+
     ${globalDecls}
     ${config.functions}
     ${compiled.functions}

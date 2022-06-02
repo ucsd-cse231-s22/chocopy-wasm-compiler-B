@@ -4,6 +4,7 @@ import { Stmt, Expr, Type, UniOp, BinOp, Literal, Program, FunDef, VarInit, Clas
 import { NUM, BOOL, NONE, CLASS } from './utils';
 import { emptyEnv } from './compiler';
 import { TypeCheckError } from './error_reporting'
+import { translateClosuresToClasses } from './closure'
 import { BuiltinLib } from './builtinlib';
 import exp from 'constants';
 import { listenerCount } from 'process';
@@ -96,18 +97,33 @@ export function isNoneOrClass(t: Type) : boolean {
   return t.tag === "none" || t.tag === "class" || t.tag === "generator";
 }
 
-export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type) : boolean {
-  return (
-    equalType(t1, t2) ||
-    (t1.tag === "none" && t2.tag === "class") ||
-    (t1.tag === "none" && t2.tag === "list") ||
-    (t1.tag === "none" && t2.tag === "set") ||
-    (t1.tag === "none" && t2.tag === "generator") ||
-    // can assign generator created with comprehension to generator class object
-    (t1.tag === "generator" && t2.tag === "class" && t2.name === "generator") ||
-    // for generator<A> and generator<B>, A needs to be subtype of B
-    (t1.tag === "generator" && t2.tag === "generator" && isSubtype(env, t1.type, t2.type))
-  );
+export function isSubtype(env: GlobalTypeEnv, t1: Type, t2: Type): boolean {
+  if (t1.tag === "func" && t2.tag === "func") {
+    // subtying rule for function: arguments are contravariant, return type is covariant
+    return (
+      t1.args.length === t2.args.length &&
+        isAssignable(env, t1.ret, t2.ret) &&
+        t1.args.every((_, i) => isAssignable(env, t2.args[i], t1.args[i]))
+    );
+  } else if (t1.tag === "class" && t2.tag === "func") {
+    // allow assigning callable classes to func
+    const methods = env.classes.get(t1.name)[1];
+    if (!methods.has("__call__")) {
+      // not a callable class
+      return false;
+    }
+    const [callarg, callret] = methods.get("__call__");
+    return isAssignable(env, { tag:"func", args: callarg.slice(1), ret: callret }, t2);
+  } else {
+    return (
+      equalType(t1, t2) ||
+      t1.tag === "none" && (["class", "func", "list", "set", "generator"].includes(t2.tag)) ||
+      // can assign generator created with comprehension to generator class object
+      (t1.tag === "generator" && t2.tag === "class" && t2.name === "generator") ||
+      // for generator<A> and generator<B>, A needs to be subtype of B
+      (t1.tag === "generator" && t2.tag === "generator" && isSubtype(env, t1.type, t2.type))
+    )
+  }
 }
 // t1: assignment value type, t2: expected type
 export function isAssignable(env : GlobalTypeEnv, t1 : Type, t2 : Type) : boolean {
@@ -186,6 +202,7 @@ export function augmentTEnv(env : GlobalTypeEnv, program : Program<SourceLocatio
 }
 
 export function tc(env : GlobalTypeEnv, program : Program<SourceLocation>) : [Program<[Type, SourceLocation]>, GlobalTypeEnv] {
+  program = translateClosuresToClasses(program);
   const locals = emptyLocalTypeEnv();
   const newEnv = augmentTEnv(env, program);
   const tInits = program.inits.map(init => tcInit(env, init));
@@ -526,7 +543,8 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
           if(equalType(tLeft.a[0], BOOL) && equalType(tRight.a[0], BOOL)) { return {...tBin, a: [BOOL, expr.a]} ; }
           else { throw new TypeCheckError("Type mismatch for boolean op" + expr.op, expr.a); }
         case BinOp.Is:
-          if(!isNoneOrClass(tLeft.a[0]) || !isNoneOrClass(tRight.a[0]))
+          if(   !(isNoneOrClass(tLeft.a[0])  || tLeft.a[0].tag === "func") 
+             || !(isNoneOrClass(tRight.a[0]) || tRight.a[0].tag === "func" ))
             throw new TypeCheckError("is operands must be objects", expr.a);
           return {...tBin, a: [BOOL, expr.a]};
       }
@@ -639,6 +657,42 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
            } else {
             throw new TypeCheckError("Function call type mismatch: " + expr.name, expr.a);
            }
+      } else if(env.globals.has(expr.name)) { 
+        const t = env.globals.get(expr.name)
+        if (t.tag !== "func") {
+          throw new TypeCheckError(`${expr.name} is not callable`);
+        }
+        console.log(`calling a closure ${expr.name}`)
+        const actuals = expr.arguments.map(arg => tcExpr(env, locals, arg))
+        const formals = t.args
+        if (formals.length !== actuals.length || actuals.some((actual, i) => !isAssignable(env, actual.a[0], formals[i]))) {
+          throw new TypeCheckError("closure call type mismatch: " + expr.name, expr.a);
+        }
+        return {
+          ...expr,
+          a: [t.ret, expr.a],
+          tag: "closure-call",
+          name: expr.name,
+          arguments: expr.arguments.map(arg => tcExpr(env, locals, arg))
+        }
+      } else if (locals.vars.has(expr.name)) {
+        const t = locals.vars.get(expr.name)
+        if (t.tag !== "func") {
+          throw new TypeCheckError(`${expr.name} is not callable`);
+        }
+        console.log(`calling a closure ${expr.name}`)
+        const actuals = expr.arguments.map(arg => tcExpr(env, locals, arg))
+        const formals = t.args
+        if (formals.length !== actuals.length || actuals.some((actual, i) => !isAssignable(env, actual.a[0], formals[i]))) {
+          throw new TypeCheckError("closure call type mismatch: " + expr.name, expr.a);
+        }
+        return {
+          ...expr,
+          a: [t.ret, expr.a],
+          tag: "closure-call",
+          name: expr.name,
+          arguments: expr.arguments.map(arg => tcExpr(env, locals, arg))
+        }
       } else if (expr.name === "set") {
         if (expr.arguments.length > 1){
           throw new TypeCheckError("Set constructor can only accept one argument", expr.a);

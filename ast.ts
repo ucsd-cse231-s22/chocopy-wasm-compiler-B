@@ -5,6 +5,7 @@ export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
+  | {tag: "func"; args: Type[]; ret: Type }
   | {tag: "list", type: Type}
   | {tag: "class", name: string, genericArgs?: Array<Type>}
   | {tag: "either", left: Type, right: Type }
@@ -34,6 +35,9 @@ export type Stmt<A> =
   | {  a?: A, tag: "index-assign", obj: Expr<A>, index: Expr<A>, value: Expr<A> }
   | {  a?: A, tag: "if", cond: Expr<A>, thn: Array<Stmt<A>>, els: Array<Stmt<A>> }
   | {  a?: A, tag: "while", cond: Expr<A>, body: Array<Stmt<A>> }
+  | {  a?: A, tag: "closure", func: FunDef<A> }
+  | {  a?: A, tag: "nonlocal", vars: string[] }
+  | {  a?: A, tag: "global", vars: string[] }
   | {  a?: A, tag: "for", vars: Expr<A>, iterable: Expr<A>, body: Array<Stmt<A>>, elseBody?: Array<Stmt<A>> }
   | {  a?: A, tag: "break", loopCounter?: number }
   | {  a?: A, tag: "continue", loopCounter?: number }
@@ -49,10 +53,12 @@ export type Expr<A> =
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "lambda", args: string[], body: Expr<A> }
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression
   | {  a?: A, tag: "non-paren-vals", values: Array<Expr<A>> }
+  | {  a?: A, tag: "closure-call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
 
 export type Literal<A> = 
     { a?: A, tag: "num", value: number }
