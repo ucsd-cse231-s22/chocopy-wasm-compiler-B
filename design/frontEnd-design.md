@@ -22,9 +22,11 @@ With the power of CodeMirror, we introduce other fancy features in the editor fi
 - **Autocompletion and hint**: When the user presses the Ctrl key, code before the cursor can be automatically completed based on the rules of the config file we add.
 
 The overall front page looks like below:
-![final front end](./final_preview.png)
-![breakpoint demo](./bp1.png)
-![breakpoint demo](./bp2.png)
+![final front end](./img/final_preview.png)
+
+And the overall error display and breakpoing functionalities are like below
+![breakpoint demo](./img/bp1.png)
+![breakpoint demo](./img/bp2.png)
 
 
 ### Future work
