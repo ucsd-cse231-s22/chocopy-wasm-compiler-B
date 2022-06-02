@@ -442,6 +442,7 @@ i = i+1
 jmp $whilestart1
 ---------------------------------
 $whileend1
+---------------------------------
 ```
 As we can see, only a = 2 could be propagated because a's value is only coming from line $varInits_2.
 
