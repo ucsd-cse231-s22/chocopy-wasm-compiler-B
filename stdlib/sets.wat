@@ -9,6 +9,7 @@
         (local $nodePtr i32)
         (local $tagHitFlag i32)
         (local $$allocPointer i32)
+        (local.set $baseAddr (i32.add (i32.const 12) (local.get $baseAddr))) ;; MM
         (i32.const 0)
         (local.set $tagHitFlag)
         (local.get $baseAddr)
@@ -25,6 +26,7 @@
                 (i32.const 2)   ;; size in bytes
                 (i32.const 0)   ;; type information
                 (call $alloc)
+                (i32.add (i32.const 12)) ;; MM
                 (local.tee $$allocPointer)
                 (local.get $key)
                 (i32.store)
@@ -112,6 +114,7 @@
                         (i32.const 2)   ;; size in bytes
                         (i32.const 0)   ;; type info
                         (call $alloc)
+                        (i32.add (i32.const 12)) ;; MM
                         (local.tee $$allocPointer)
                         (local.get $key)
                         (i32.store)
@@ -136,6 +139,8 @@
         (local $nodePtr i32)
         (local $tagHitFlag i32)
         (local $$allocPointer i32)
+        ;; MM
+        ;; (local.set $baseAddr (i32.add (i32.const 12) (local.get $baseAddr)))
         (i32.const 0)
         (local.set $tagHitFlag)
         (local.get $baseAddr)
@@ -283,6 +288,8 @@
         (local $prevPtr i32)
         (local $currPtr i32)
 
+        (local.set $baseAddr (i32.add (i32.const 12) (local.get $baseAddr))) ;; MM
+
         (local.get $baseAddr)
         (local.get $key)
         (i32.const 10)
@@ -421,14 +428,15 @@
 
     (func (export "set$clear") (param $baseAddr i32) (result i32)
         (local $i i32)
+        (local.set $baseAddr (i32.add (i32.const 12) (local.get $baseAddr))) ;; MM
         (loop $my_loop
             ;; *(baseAddr + 4*i) = 0
             (local.get $baseAddr)
             (local.get $i)
             (i32.mul (i32.const 4))
+            (i32.add)
             (i32.const 0)
-            (i32.const 0)   ;; is_pointer false
-            (call $store)
+            (i32.store)
             ;; i++
             (local.get $i)
             (i32.const 1)
