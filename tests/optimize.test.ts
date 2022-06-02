@@ -523,6 +523,15 @@ def f() -> int:
     z = z + 1
     x = x - 1
   return p
+`),
+// 46
+  assertOptimize("Optimization (Constant Propagation)",
+`
+a:bool = True
+b:bool = False
+b = a and False
+print(a)
+print(b)
 `)
 
  //46

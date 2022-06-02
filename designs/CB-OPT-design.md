@@ -36,7 +36,7 @@ while True:
 ```
 **Dot-plot**
 
-![plot](./graphviz.svg)
+![plot](./example.svg)
 
 > Modifications on the ast / IR to improve efficiency 
 ### 3. Eliminate Unreachable Instructions After Return
@@ -361,10 +361,65 @@ whileend1
 ```
 
 ### 4. Reaching Analysis
-We implemented reaching analysis to get reaching definitions of each variable in each line. We traversed every line in every blocks to propagate the definitions that begin at global or local `inits` , or the assignment statement in `BasicBlock`s. After running the reaching analysis algorithm, an array of maps is generated where each map contains current line's variables' reaching definitions.
-We also differentiate the global variable inits and local variable inits when generating reaching definition as 
+
+We implemented reaching analysis to get reaching definitions of each variable in each line. We traversed every line in every blocks to propagate the definitions that begin at global or local `inits` , or the assignment statement in `BasicBlock`s. After running the reaching analysis algorithm, an array of maps is generated where each map contains current line's variables' reaching definitions. 
+An example of reaching analysis is as follows:
+
+**Python**
+```python
+i: int = 3
+a: int = 2
+while i > 0:
+  print(i)
+  print(a)
+  i = i-1
+```
+
+**Pseudo-IR**
+```python
+---------------------------------
+$varInits:
+valname1 = none
+i = 3
+a = 2
+---------------------------------
+$startProg1
+jmp $whilestart1
+---------------------------------
+$whilestart1
+valname1 = (i > 0)
+ifjmp valname1 then $whilebody1 else $whileend1
+---------------------------------
+whilebody1
+print(i)
+print(a)
+i = i+1
+jmp $whilestart1
+---------------------------------
+$whileend1
+---------------------------------
+```
+
+**Reaching Definition**
+```python
+$startProg1_0
+valname1: ()                i: ($varInit_0)                 a: ($varInit_1)  
+$whilestart1_0
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
+$whilestart1_1
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
+$whilebody1_0
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
+$whilebody1_1
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
+$whilebody1_2
+valname1: ($whilestart1_0)  i: ($varInit_0, $whilebody1_2)  a: ($varInit_1)  
+$whilebody1_3
+valname1: ($whilestart1_0)  i: ($whilebody1_2).             a: ($varInit_1)  
+```
+
 ### 5. Constant Propagation
-The constant propagation is implemented on the basis of reaching definition. We would propatate the constant value to an id only if it's reaching definition is unique. We performed constant propagation in Program, FunDef and Class's methods, and we would not propagate the global definitions (classes' fields or global variables) since they could be re-assigned in other function or methods' bodies. 
+The constant propagation is implemented on the basis of reaching definition. We would propagate the constant value to an id only if it's reaching definition is unique. We performed constant propagation in Program, FunDef and Classes' methods, and we would not propagate the global definitions (classes' fields or global variables) since they could be re-assigned in other function or methods' bodies. 
 
 ## B. Modification on AST and IR
 we have no modifications on ast.ts and ir.ts
@@ -396,7 +451,7 @@ We added 47 test cases in `optimize.test.ts` to test the optimization effect, wh
 * Constant propagation for programs with different kinds of branches 
 * A few programs that combine the optimizations above
 
-We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimization hasn't introduced new bugs into other group's implementation, which only checks the consistency of programs' running result before and after optimizing. Those test cases cover:
+We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimization hasn't introduced new bugs into other group's implementation, where we only checks the consistency of programs' running result before and after optimizing. Those test cases cover:
 * Destructuring
 * Comprehension
 * Builtin
@@ -405,5 +460,5 @@ We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimi
 * List
 * Set
 
-## E. Value Representation and Memory Layout
+## D. Value Representation and Memory Layout
 Dynamic optimizations that happen at runtime or may rely on runtime informations are beyond our scope, so we have not introduce new modifications to the runtime environment.
