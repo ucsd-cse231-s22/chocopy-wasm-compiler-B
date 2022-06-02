@@ -735,7 +735,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                   // add -1 as pos
                   var pos : Literal<SourceLocation> = { a: expr.a, tag: "num", value: -1 };
                   var typedPos = tcExpr(env, locals, { tag: "literal", value: pos });
-                  realArgs.push(typedPos)
+                  tArgs.push(typedPos)
                 } else {
                   if (!equalType(NUM, realArgs[1].a[0])) {
                     throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
