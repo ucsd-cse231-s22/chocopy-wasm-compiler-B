@@ -615,6 +615,8 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       var liinits : IR.VarInit<[Type, SourceLocation]>[] = [];
       var isListIterable = false;
       // for set iterable only
+      var firstYieldVarInit : IR.VarInit<[Type, SourceLocation]>;
+      var ffinits : IR.VarInit<[Type, SourceLocation]>[] = [];
       var isSetIterable = false;
 
       switch (objTyp.tag) {
@@ -721,13 +723,10 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const whileEndLbl = generateName("$whileend");
 
       // jump to start
-      var firstYieldVarInit : IR.VarInit<[Type, SourceLocation]>;
-      var ffinits : IR.VarInit<[Type, SourceLocation]>[] = [];
       if (isSetIterable) {
-        // evaluate lhs
         var ffstmts;
         var ffval;
-        [ffinits, ffstmts, ffval] = flattenExprToExpr(e.lhs, blocks, env); // careful with ternary case
+        [ffinits, ffstmts, ffval] = flattenExprToExpr(e.lhs, blocks, env);
         const firstYield = generateName("firstYield");
         firstYieldVarInit = { name: firstYield, type: ffval.a[0], value: { tag: "none" } };
         const firstYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: firstYield, value: ffval };
@@ -743,15 +742,14 @@ function flattenExprToExprWithBlocks(e : AST.Expr<[Type, SourceLocation]>, block
       const hasnextjmp : IR.Stmt<[Type, SourceLocation]> = { tag: "ifjmp", cond: { tag: "id", name: hasnext }, thn: whilebodyLbl, els: whileEndLbl };
       pushStmtsToLastBlock(blocks, hasnextAssign, hasnextjmp);
 
-      // body: call next and print result
       blocks.push({  a: e.a, label: whilebodyLbl, stmts: [] })
       
       // push call to next to blocks before lhs statements get pushed on the next line
       pushStmtsToLastBlock(blocks, nextAssign);
 
-      // TODO: assign-destructure
+      // TODO: assign-destructure (need support for tuple)
       // evaluate lhs
-      const [linits, lstmts, lval] = flattenExprToExpr(e.lhs, blocks, env); // careful with ternary case
+      const [linits, lstmts, lval] = flattenExprToExpr(e.lhs, blocks, env);
       const nextYield = generateName("nextYield");
       const nextYieldVarInit : IR.VarInit<[Type, SourceLocation]> = { name: nextYield, type: lval.a[0], value: { tag: "none" } };
       const nextYieldAssign : IR.Stmt<[Type, SourceLocation]> =  { tag: "assign", name: nextYield, value: lval };
