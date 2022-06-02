@@ -460,5 +460,5 @@ We also added 39 test cases in `optimize-sanity.test.ts` to make sure our optimi
 * List
 * Set
 
-## E. Value Representation and Memory Layout
+## D. Value Representation and Memory Layout
 Dynamic optimizations that happen at runtime or may rely on runtime informations are beyond our scope, so we have not introduce new modifications to the runtime environment.
