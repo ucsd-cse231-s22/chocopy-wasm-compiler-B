@@ -22,7 +22,7 @@ With the power of codemirror, we introduce other fancy features in the editor fi
 - Autocompletion: When the user presses the ctrl key, code before the cursor can be automatically completed based on the rules of the config file.
 
 The overall front page looks like below:
-![final front end](./Screen%Shot%2022-06-01%192613.png)
+![final front end](./final_preview.png)
 
 ### Future work
 
