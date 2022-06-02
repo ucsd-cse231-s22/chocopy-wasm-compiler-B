@@ -456,7 +456,7 @@ export function findReachingDef(cfa: CFA, id: string, line: Line, gInits: Array<
             }
         } 
     }
-    return {tag: "none"};
+    return {tag: "none", a: null};
 }
 
 function getDefFromLine(id: string, line: Line, gInits: Array<IR.VarInit<[Type, SourceLocation]>>, inits: Array<IR.VarInit<[Type, SourceLocation]>>, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>>): IR.Value<[Type, SourceLocation]>{
@@ -467,7 +467,7 @@ function getDefFromLine(id: string, line: Line, gInits: Array<IR.VarInit<[Type, 
             }
         }
     }else if(line.block === '$gInit'){
-        return {tag: 'none'};
+        return {tag: 'none', a: null};
     }else{
         for (let block of blocks) {
             if(block.label == line.block){
@@ -478,7 +478,7 @@ function getDefFromLine(id: string, line: Line, gInits: Array<IR.VarInit<[Type, 
             }
         }
     }
-    return {tag: 'none'};
+    return {tag: 'none', a: null};
 }
 
 function optBasicBlock(bb: IR.BasicBlock<[Type, SourceLocation]>): IR.BasicBlock<[Type, SourceLocation]> {
@@ -881,7 +881,7 @@ function getStmt(line: Line, blocks: Array<IR.BasicBlock<[Type, SourceLocation]>
             }
         }
     }
-    return {tag:'pass'};
+    return {tag:'pass', a: null};
 }
 
 function getNexts(stmt: IR.Stmt<[Type, SourceLocation]>, line2num: Map<string, number>): Array<number> {
