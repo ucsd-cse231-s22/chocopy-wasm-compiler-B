@@ -18,7 +18,7 @@ export type Parameter<A> = { name: string, type: Type }
 
 export type Program<A> = { a?: A, funs: Array<FunDef<A>>, inits: Array<VarInit<A>>, classes: Array<Class<A>>, stmts: Array<Stmt<A>> }
 
-export type Class<A> = { a?: A, name: string, generics?: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
+export type Class<A> = { a?: A, name: string, generics?: Array<string>, supers: Array<string>, fields: Array<VarInit<A>>, methods: Array<FunDef<A>>}
 
 export type VarInit<A> = { a?: A, name: string, type: Type, value: Literal<A> }
 
@@ -48,7 +48,7 @@ export type Expr<A> =
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
   | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
-  | {  a?: A, tag: "construct", name: string }
+  | {  a?: A, tag: "construct", name: string, parameters?: Array<Expr<A>> }
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
   | {  a?: A, tag: "comprehension", type: Type, lhs: Expr<A>, item: string, iterable: Expr<A>, ifcond?: Expr<A> } // comprehension expression
   | {  a?: A, tag: "ternary", exprIfTrue: Expr<A>, ifcond: Expr<A>, exprIfFalse: Expr<A> } // ternary expression

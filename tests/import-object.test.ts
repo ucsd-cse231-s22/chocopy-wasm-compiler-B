@@ -29,7 +29,7 @@ function index_out_of_bounds(length: any, index: any): any {
 
 
 export async function addLibs() {
-  const memory = new WebAssembly.Memory({initial:10, maximum:100});
+  const memory = new WebAssembly.Memory({initial:2000, maximum:2000});
   const bytes = readFileSync("build/memory.wasm");
   const setBytes = readFileSync("build/sets.wasm");
   const memoryModule = await WebAssembly.instantiate(bytes, { js: { mem: memory } })

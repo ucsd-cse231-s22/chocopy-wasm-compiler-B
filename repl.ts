@@ -70,7 +70,7 @@ export class BasicREPL {
 
     // list.push({field: "address", value: {tag:"num", value: result.address}}); //what if a real field named address?
     //get the field of object
-    const fields = this.currentTypeEnv.classes.get(result.name)[0];
+    const fields = this.currentTypeEnv.classes.get(result.name)[1];
     let index = result.address / 4;
     fields.forEach((value: Type, key: string) => {
       switch(value.tag){

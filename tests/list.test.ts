@@ -79,7 +79,7 @@ describe("List tests", () => {
     a = [-0, -0, -0, -0]`);
 
     assertPrint("list-of-snek-objects", `
-    class Snake(obj):
+    class Snake(object):
       num_teeth: int = 100
 
     snek1: Snake = None
@@ -100,7 +100,7 @@ describe("List tests", () => {
     `, [`300`, `0`, `100`])
 
     assertPrint("list-of-objects-has-None", `
-    class Snake(obj):
+    class Snake(object):
       num_teeth: int = 100
     snek_list: [Snake] = None
     snek_list = [Snake(), None, None]

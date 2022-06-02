@@ -5,7 +5,9 @@ import { RunTimeError } from "./error_reporting";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
-  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;  
+  classes: Map<string, Map<string, [number, Value<[Type, SourceLocation]>]>>;
+  classesMethods?: Map<string, Map<string, [number, Type]>>; // class -> {method -> [offset, return type]}
+  classVTableOffsets?: Map<string, number>;
   locals: Set<string>;
   labels: Array<string>;
   offset: number;
@@ -14,6 +16,7 @@ export type GlobalEnv = {
 export const emptyEnv : GlobalEnv = { 
   globals: new Map(), 
   classes: new Map(),
+  classesMethods: new Map(),
   locals: new Set(),
   labels: [],
   offset: 0 
@@ -23,11 +26,13 @@ type CompileResult = {
   globals: string[],
   functions: string,
   mainSource: string,
-  newEnv: GlobalEnv
+  newEnv: GlobalEnv,
+  methodsVTable? : string
 };
 
 export function makeLocals(locals: Set<string>) : Array<string> {
   const localDefines : Array<string> = [];
+  localDefines.push(`(local $scratch i32)`);
   locals.forEach(v => {
     localDefines.push(`(local $${v} i32)`);
   });
@@ -50,6 +55,26 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
   });
   const classes : Array<string> = ast.classes.map(cls => codeGenClass(cls, withDefines)).flat();
   const allFuns = funs.concat(classes).join("\n\n");
+
+  // set up vtable
+  var tableOffset = 0;
+  ast.classes.forEach(cls => {
+    tableOffset += cls.methods.length;
+  });
+  const vTable : Array<string> = [
+    `(table ${tableOffset} funcref)`,
+    `(elem (i32.const 0) `,
+  ];
+  let orderedMethods : Array<string> = [];
+  ast.classes.forEach(cls => {
+    cls.methods.forEach(methodDef => {
+      orderedMethods.push(`$${methodDef.name}`);
+    });
+  });
+  vTable.push(orderedMethods.join(" "));
+  vTable.push(`)`);
+  console.log("vtable:", vTable);
+
   // const stmts = ast.filter((stmt) => stmt.tag !== "fun");
   const inits = ast.inits.map(init => codeGenInit(init, withDefines)).flat();
   withDefines.labels = ast.body.map(block => block.label);
@@ -75,7 +100,8 @@ export function compile(ast: Program<[Type, SourceLocation]>, env: GlobalEnv) : 
     globals: globalNames,
     functions: allFuns,
     mainSource: allCommands.join("\n"),
-    newEnv: withDefines
+    newEnv: withDefines,
+    methodsVTable: vTable.join("\n")
   };
 }
 
@@ -174,7 +200,7 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
               break;
             case NONE:
               argCode.push("(call $print_none)");
-              break;
+              break;  
             default:
               throw new RunTimeError("not implemented object print")
           }
@@ -192,6 +218,54 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
+    case "call_indirect":
+    /*
+    e.g. obj.foo(1, 2), returns a bool
+    (type $C$foo (func (param i32) (param i32) (result f32)) <-- do this as part of codeGenClass
+    say that obj is of type C, which has offset 0 into the vtable
+    say that foo has method offset 1, so the overall offset is 0+1 = 1
+
+    <2 is on the stack>
+    <1 is on the stack>
+    <address to obj is on the stack>
+    <put address to obj on the stack again>
+    (i32.load) <-- loads the class offset, which is 0
+    (i32.add 1) <-- add the method offset
+    (call_indirect (type $C$foo))
+    */
+      var valStmts : Array<string> = [];
+      const firstArg = expr.arguments[0];
+      if (firstArg.tag == "id" && env.classVTableOffsets.has(firstArg.name)) {
+        valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat(); // load arguments onto stack except for the class name, which gets turned into a no-op basically
+        valStmts.push(`(i32.const ${env.classVTableOffsets.get(firstArg.name)})`); // class offset
+      } else {
+        valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat(); // load arguments onto stack
+        // duplicate the address
+        valStmts.push(...codeGenValue(expr.arguments[0], env));
+        valStmts.push(`(i32.load)`); // load the class offset
+      }
+
+      /*
+      class A(object):
+          x : int = 0
+          def foo(self : A):
+              print(self.A)
+      class B(A):
+          def foo(self : B):
+              self.x = 3
+              A.foo(self) ==> the arglist is [A, self]
+      b : B = None
+      b = B()
+      b.foo()
+      # we expect this to print 3
+      */
+
+      valStmts.push(`(i32.add (i32.const ${expr.method_offset}))`); // add the method offset
+
+      valStmts.push(`(call_indirect (type $${expr.name}))`); // expr.name already includes the class name
+      
+      return valStmts;
+    
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
@@ -219,7 +293,9 @@ function codeGenValue(val: Value<[Type, SourceLocation]>, env: GlobalEnv): Array
     case "none":
       return [`(i32.const 0)`];
     case "id":
-      if (env.locals.has(val.name)) {
+      if (env.classVTableOffsets.has(val.name)) {
+        return [];
+      } else if (env.locals.has(val.name)) {
         return [`(local.get $${val.name})`];
       } else {
         return [`(global.get $${val.name})`];
@@ -268,7 +344,8 @@ function codeGenInit(init : VarInit<[Type, SourceLocation]>, env : GlobalEnv) : 
     return [...value, `(global.set $${init.name})`]; 
   }
 }
-
+// super().show()
+// A.show() -> A -> id -> call_indirect A$show
 function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   var definedVars : Set<string> = new Set();
   def.inits.forEach(v => definedVars.add(v.name));
@@ -305,9 +382,21 @@ function codeGenDef(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Arr
     (return))`];
 }
 
+// Generate method type signatures
+function codeGenSig(def : FunDef<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
+  var params = def.parameters.map(p => `(param i32)`).join(" "); // at some point we should actually make sure we use the correct type for params
+  var ret = 'i32'
+  switch(def.ret) {
+    default:
+      ret = 'i32'
+  }
+  return [`(type $${def.name} (func ${params} (result ${ret})))`];
+}
+
 function codeGenClass(cls : Class<[Type, SourceLocation]>, env : GlobalEnv) : Array<string> {
   const methods = [...cls.methods];
   methods.forEach(method => method.name = `${cls.name}$${method.name}`);
   const result = methods.map(method => codeGenDef(method, env));
-  return result.flat();
+  const methodTypes = methods.map(method => codeGenSig(method, env));
+  return [...result.flat(), ...methodTypes.flat()];
 }
