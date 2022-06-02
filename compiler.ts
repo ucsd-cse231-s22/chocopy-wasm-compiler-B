@@ -163,25 +163,31 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
           argCode.push("(call $set$print)");
           return argCode;
         }
-        var valStmts = expr.arguments.map(arg=>{
-          let argCode = codeGenValue(arg, env);
-          switch (arg.a[0]){
-            case NUM:
-              argCode.push("(call $print_num)");
-              break;
-            case BOOL:
-              argCode.push("(call $print_bool)");
-              break;
-            case NONE:
-              argCode.push("(call $print_none)");
-              break;
-            default:
-              throw new RunTimeError("not implemented object print")
-          }
-          argCode.push("drop");
-          return argCode;
-        }).flat();
-        return valStmts.slice(0,-1);
+        let argCode = codeGenValue(expr.arguments[0], env);
+        switch (expr.arguments[0].a[0].tag){
+          case "number":
+            argCode.push("(call $print_num)");
+            break;
+          case "bool":
+            argCode.push("(call $print_bool)");
+            break;
+          case "none":
+            argCode.push("(call $print_none)");
+            break;
+          case "list":
+            let index = ["number", "bool", "none", "list", "class", "either", "generator", "set", "type-var"].indexOf(expr.arguments[0].a[0].type.tag)
+            argCode.push(`(i32.const ${index})`)
+            argCode.push("(call $print_shallow_list)");
+            break;
+          default:
+            throw new RunTimeError(` ${expr.arguments[0].a[0].tag} print not implemented yet`)
+        }
+        return argCode;
+      }
+      if(expr.name=="len" && expr.arguments[0].a[0].tag=="set"){
+        let argCode = codeGenValue(expr.arguments[0], env);
+        argCode.push("(call $set$length)")
+        return argCode
       }
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);

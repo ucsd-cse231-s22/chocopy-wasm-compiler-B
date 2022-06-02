@@ -17,6 +17,7 @@ import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
 import "./style.scss";
 import {BuiltinLib} from "./builtinlib"
+import { RunTimeError } from './error_reporting';
 
 function webStart() {
   var filecontent: string | ArrayBuffer;
@@ -24,6 +25,7 @@ function webStart() {
 
     // https://github.com/mdn/webassembly-examples/issues/5
     const memory = new WebAssembly.Memory({ initial: 10, maximum: 100 });
+    const IntBuffer = new Int32Array(memory.buffer);
     const memoryModule = await fetch('memory.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes =>
@@ -41,10 +43,16 @@ function webStart() {
         print_num: (arg: number) => renderPrint(NUM, arg),
         print_bool: (arg: number) => renderPrint(BOOL, arg),
         print_none: (arg: number) => renderPrint(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
+        len: (arg:number)=>IntBuffer[Math.floor(arg/4)],
+        print_shallow_list: (arg:number, typeIndex:number)=>{
+          const length = IntBuffer[Math.floor(arg/4)];
+          if(typeIndex>2)
+            throw new RunTimeError("print list now only supports [ int | bool | none ]")
+          const funcForPrint = [importObject.imports.print_num, importObject.imports.print_bool, importObject.imports.print_none][typeIndex]
+          for(let i=1;i<=length;i++)
+            funcForPrint(IntBuffer[Math.floor(arg/4 + i)]);
+          return 0;
+        }
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory, //it is kind of pointer pointing to heap
@@ -122,7 +130,6 @@ function webStart() {
         var objectTrackList = repl.trackObject(r, repl.trackHeap());
         renderResult(r, objectTrackList);
         console.log("run finished")
-
       })
         .catch((e) => { renderError(e); console.log("run failed", e) });;
     });
