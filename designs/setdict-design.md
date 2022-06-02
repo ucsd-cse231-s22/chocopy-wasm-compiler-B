@@ -1,5 +1,21 @@
 # Set/Tuple/Dictionary: Project Design
 
+## Week 10 Update
+For our milestone 2, we managed to achieve the following:
+
+### Set Functionalities
+In the past week, we moved all of our set related code into sets.wat under the /stdlib library. So before running "npm test" or "npm run build-web", don't forget to run "make" first to build the file into sets.wasm.
+We implemented the print_set() function. Utilizing this function, we could print out the elements in the set, and therefore we were able to write more rigorous tests instead of just using len() and "in" to perform tests.
+We implemented the set() constructor and set.update(). These two functions each takes in an iterable as the argument. 
+We also modified our implementation of set.remove(). Now when trying to remove an element that does not exist in the set, a RunTimeError will be thrown, notifying that this key does not exist. 
+
+### Interaction with other groups
+We modified our implementation to work with lists. A list is an iterable, so we could pass in a list as an argument of the set() constructor and set.update() function. 
+We also provided three functions: set.next(), set.hasnext() and set.firstItem() in order to make the set an iterable object for the for-loop team.
+Unfortunately, we are facing trouble when trying to merge with the Bignums team. In their implementation, they changed all the numbers so they are now stored on the heap. So any functions/methods that take in numerical input will now receive a memory address instead of a value. We didn't have enough time to figure out how to modify our implementation to adapt to their changes.
+
+
+
 ## Week 8 Update
 There are two main goals we want to achieve in the remaining work:
 1. Finish all basic set functionalities.
