@@ -552,4 +552,92 @@
         (local.get $newList)
         (return)
     )
+
+    (func (export "list$concat") (param $self i32) (param $right i32) (result i32)
+        (local $selfLen i32)
+        (local $rightLen i32)
+        (local $newLen i32)
+        (local $newList i32)
+        (local $newListEl i32)
+        (local $selfElOldAddr i32)
+        (local $rightElOldAddr i32)
+        (local $rightElAddr i32)
+        (local $i i32)
+        (local $val i32)
+
+        ;; list lengths
+        (call $load (local.get $self) (i32.const 0))
+        (local.set $selfLen)
+        (call $load (local.get $right) (i32.const 0))
+        (local.set $rightLen)
+        (i32.add (local.get $selfLen) (local.get $rightLen))
+        (local.set $newLen)
+
+        ;; allocate space for new list
+        (i32.const 2)
+        (call $alloc)
+        (local.set $newList)
+
+        ;; store length of new list
+        (local.get $newList)
+        (i32.const 0)
+        (local.get $newLen)
+        (call $store)
+
+        ;; allocate space for new list elements
+        (local.get $newLen)
+        (call $alloc)
+        (local.set $newListEl)
+
+        ;; store reference to new elements
+        (local.get $newList)
+        (i32.const 1)
+        (local.get $newListEl)
+        (call $store)
+
+        ;; source address of self elements and right elements
+        (call $load (local.get $self) (i32.const 1))
+        (local.set $selfElOldAddr)
+        (call $load (local.get $right) (i32.const 1))
+        (local.set $rightElOldAddr)
+
+        ;; copy self elements
+        (local.set $i (i32.const 0))
+        (loop $loop1
+            (call $load (local.get $selfElOldAddr) (local.get $i))
+            (local.set $val)
+
+            (local.get $newListEl)
+            (local.get $i)
+            (local.get $val)
+            (call $store)
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (i32.lt_s (local.get $i) (local.get $selfLen))
+            br_if $loop1
+        )
+
+        ;; new starting address for right side elements
+        (i32.mul (local.get $selfLen) (i32.const 4))
+        (local.get $newListEl)
+        (i32.add)
+        (local.set $rightElAddr)
+
+        ;; copy right side elements
+        (local.set $i (i32.const 0))
+        (loop $loop2
+            (call $load (local.get $rightElOldAddr) (local.get $i))
+            (local.set $val)
+
+            (local.get $rightElAddr)
+            (local.get $i)
+            (local.get $val)
+            (call $store)
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (i32.lt_s (local.get $i) (local.get $rightLen))
+            br_if $loop2
+        )
+
+        (local.get $newList)
+        (return)
+    )
 )

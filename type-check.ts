@@ -515,6 +515,13 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       const tBin = {...expr, left: tLeft, right: tRight};
       switch(expr.op) {
         case BinOp.Plus:
+          if (equalType(tLeft.a[0], CLASS("str")) &&
+            equalType(tRight.a[0], CLASS("str"))) {
+            return { a: [{ tag: "class", name: "str" }, expr.a], tag: "method-call", obj: tLeft, method: "concat", arguments: [tRight] }
+          }
+          else if(tLeft.a[0].tag === "class" && tLeft.a[0].name === "list" && equalType(tLeft.a[0], tRight.a[0])) { //list concatenation
+            return { a: [{ tag: "class", name: "list", type: tLeft.a[0].type}, expr.a], tag: "method-call", obj: tLeft, method: "concat", arguments: [tRight] }
+          }
         case BinOp.Minus:
         case BinOp.Mul:
         case BinOp.IDiv:

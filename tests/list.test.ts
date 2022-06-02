@@ -145,6 +145,68 @@ describe("Extra list tests", () => {
     a: [[[bool]]] = None
     a = [[[True], [False, True]]]
     print(a)`, [`[[[True], [False, True]]]`])
+
+    assertPrint("list-concat-don't-modify", `
+    a: [int] = None
+    b: [int] = None
+    c: [int] = None
+
+    a = [100, -7, 9]
+    b = [25, 4]
+    c = a + b
+    c[1] = 55555
+    c[4] = 112
+
+    print(a)
+    print(b)
+    print(c)`, [`[100, -7, 9]`, `[25, 4]`, `[100, 55555, 9, 25, 112]`])
+
+    assertPrint("list-concat-in-function", `
+    a: [int] = None
+    b: [int] = None
+    c: [int] = None
+
+    def concat_lists(p: [int], q: [int]) -> [int]:
+      return p + q
+
+    a = [100, -7, 9]
+    b = [25, 4]
+    c = concat_lists(a, b)
+    print(c)
+`, [`[100, -7, 9, 25, 4]`])
+
+    assertPrint("concat-lists-of-lists", `
+    a: [[int]] = None
+    b: [[int]] = None
+    c: [[int]] = None
+
+    a = [[-2, -1, 0], [9]]
+    b = [[25, 4]]
+    c = a + b
+    print(c)
+`, [`[[-2, -1, 0], [9], [25, 4]]`])
+
+   assertPrint("concat-empty-list-left", `
+   a: [int] = None
+   b: [int] = None
+   c: [int] = None
+
+   a = []
+   b = [25, 4]
+   c = a + b
+   print(c)
+   `, [`[25, 4]`])
+
+   assertPrint("concat-empty-list-right", `
+   a: [int] = None
+   b: [int] = None
+   c: [int] = None
+
+   a = [100]
+   b = []
+   c = a + b
+   print(c)
+   `, [`[100]`])
 });
 
 describe("Milestone 2 list tests", () => {
@@ -198,13 +260,13 @@ describe("Milestone 2 list tests", () => {
     print(a)`, [`[1, 2, 3, 4]`])
 
     // 8
-    assertPrint("list-copy", `
-    a: [int] = None
-    b: [int] = None
-    a = [1, 2, 3]
-    b = a.copy()
-    a.append(4)
-    print(b)`, [`[1, 2, 3]`])
+    // assertPrint("list-copy", `
+    // a: [int] = None
+    // b: [int] = None
+    // a = [1, 2, 3]
+    // b = a.copy()
+    // a.append(4)
+    // print(b)`, [`[1, 2, 3]`])
 
     // 9
     assertPrint("list-insert", `
