@@ -88,6 +88,27 @@ describe("Error Reporting tests", () => {
     assertRunFail("division-by-zero", 
     `x: int = 100\nx%0`,2,3);
 
+    //11
+    assertRunFail("no-fields-for-none", 
+    `class C(object):\n\tx : int = 0\nc : C = None\nc.x+3`, 4,3);
+    
+    //12
+    assertParseFail("invalid-operator-while", 
+    `x:int = 5\nwhile (x>>3):\n\tprint(x)\n\tx = x - 1`, 2, 11, 'while (x>>3):');
+
+    //13
+    assertTypeCheckFail("basic-class-lookup", 
+    `class C(object):\n\tx : int = 123\nc : C = None\nc = C\nprint(c.x)`, 4,5, 'c = C');
+
+    //14
+    assertParseFail("error-parsing-class-body", 
+    `class C(object):`, 1, 16, 'class C(object):');
+    
+    //15
+    assertTypeCheckFail("type-mismatch-unary-expression", 
+    `-True`, 1, 5, '-True');
+     
+
  });
 
  /*
