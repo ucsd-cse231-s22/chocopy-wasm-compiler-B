@@ -402,9 +402,6 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
     case "id":
     case "method-call":
     case "binop":
-    case "index":
-        /*if only one index expr as RHS, need to check that it is of list type
-        and each LHS type is same as it's contents*/
       checkArbitraryTypes(locals, tDestr, tRhs.a[0], hasStarred, stmtLoc)
       return tRhs;
 
@@ -432,7 +429,7 @@ function tcDestructureValues(tDestr: DestructureLHS<[Type, SourceLocation]>[], r
         return tRhs
       }
       else throw new TypeCheckError("length mismatch left and right hand side of assignment expression.", stmtLoc)
-
+      
     default:
       throw new Error("not supported expr type for destructuring")
   }
@@ -691,15 +688,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
       // }
       if (tObj.a[0].tag === "list") {
-        if ("end" in expr){
-          var tEnd: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.end);
-          var tStep: Expr<[Type, SourceLocation]> = tcExpr(env, locals, expr.step);
-          if (tEnd.a[0].tag !== "number" || tStep.a[0].tag !== "number"){
-            throw new TypeCheckError(`Index is of non-integer type`, tObj.a[1]);
-          }
-          return { a: [tObj.a[0], expr.a], tag: "index", obj: tObj, index: tIndex, end: tEnd, step: tStep };
-        }
-        return { a: [tObj.a[0].type, expr.a], tag: "index", obj: tObj, index: tIndex };
+        return { ...expr, a: [tObj.a[0].type, expr.a], obj: tObj, index: tIndex };
       }
       // if (tObj.a[0].tag === "tuple") {
       //   ...

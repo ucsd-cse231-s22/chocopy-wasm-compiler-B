@@ -143,7 +143,6 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $set$firstItem (import "libset" "set$firstItem") (param i32) (result i32))
     (func $set$hasnext (import "libset" "set$hasnext") (param i32) (param i32) (result i32))
     (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
-    (func $list$slice (import "libset" "list$slice") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}
