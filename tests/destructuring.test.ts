@@ -1042,4 +1042,37 @@ print(x[0])
 print(x[1])
 print(x[2])
 print(y)`, ["66", "-5", "10", "6"]);
+
+
+assertPrint("list-slicing-step", `
+c:int = 2
+a: [int] = None
+b: [int] = None
+a = [2, 4, 6, 8]
+c, b = 3, a[0:3:2]
+print(b[0], b[1])`, [`2`, `6`])
+
+assertPrint("list-slicing-step2", `
+c:int = 2
+b:int = 4
+a: [int] = None
+a = [2, 4, 6, 8]
+c, b = a[0:3:2]
+print(c, b)`, [`2`, `6`])
+
+assertPrint("slicing-negative-step", `
+a: [int] = None
+b: int = 0
+c:int = 0
+a = [2, 4, 6, 8]
+b,c = a[::-1]
+print(b, c)`, [`8`, `6`])
+
+assertPrint("list-slicing-step3", `
+c:int = 0
+a: [int] = None
+a = [2, 4, 6, 8]
+a[0:2],c = [10,11],12
+print(a[0], a[1])`, [`10`, `11`])
+
 });
