@@ -17,12 +17,16 @@ With the power of CodeMirror, we introduce other fancy features in the editor fi
 
 - **Themes selection**: A simple select menu to change the editor style with many options.
 - **Edit mode**: Users could switch between normal mode and vim mode of the editor and write code like in vim.
-- **Breakpoint**: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible.
-- **Error highlight**: The code location returned by the error reporting module will be displayed in the editor.
-- **Autocompletion**: When the user presses the Ctrl key, code before the cursor can be automatically completed based on the rules of the config file.
+- **Breakpoint**: With breakpoints, users could control the scope of the code running. We are currently unable to add watchers as the stack is inaccessible. However we can still make multiple brekapoints and achieve similar functionalities.
+- **Error highlight**: The code location returned by the error reporting module will be displayed in the editor and will be marked as well as underline the word casuign errors.
+- **Autocompletion and hint**: When the user presses the Ctrl key, code before the cursor can be automatically completed based on the rules of the config file we add.
 
 The overall front page looks like below:
-![final front end](./final_preview.png)
+![final front end](./img/final_preview.png)
+
+And the overall error display and breakpoing functionalities are like below:
+![breakpoint demo1](./img/bp1.png)
+![breakpoint demo2](./img/bp2.png)
 
 ### Future work
 
@@ -61,7 +65,7 @@ The console right now is consist of textareas and the textarea will be mess if t
 To make our compiler more accepetable by users, we want to provide more themes so that the users can choose from.
 
 We provide multiple themes for users to choose. Users can also pick a random theme by clicking the theme button.
-![theme choosing](./theme.png)
+![theme choosing](./img/theme.png)
 
 ### 7. Support other object like list, string
 
@@ -70,7 +74,7 @@ We will implement the render to hanle other objects like list, string and dictio
 ### 8. highlight the error area
 
 shown in the picture below, CodeMirror is able to underline the error
-![underline error](./Screen%20Shot%202022-05-20%20at%2023.59.27.png)
+![underline error](./img/underline_error.png)
 
 ### 9. front end test
 
@@ -80,10 +84,10 @@ Our team have comunicated with team A and find that there is a tool called [phan
 
 To provide an option for the editor preferences of users, we add vim edit mode for users to choose, user can choose to change to vim mode and use default vim keymap to edit their code. And user can switch between normal mode and vim mode by clicking the mode button.
 
-![vim mode](./vim.png)
+![vim mode](./img/vim.png)
 
 The overall front page will looks like below:
-![week8 front end](./Screen%20Shot%202022-05-21%20at%2000.09.37.png)
+![week8 front end](./img/week8_front_end.png)
 
 ## Week 7 Update
 

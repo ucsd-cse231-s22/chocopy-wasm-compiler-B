@@ -21,11 +21,6 @@ function print(typ: Type, arg: any): any {
   return arg;
 }
 
-function index_out_of_bounds(length: any, index: any): any {
-  if (index < 0 || index >= length)
-    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
-  return index;
-}
 
 
 export async function addLibs() {
@@ -47,7 +42,7 @@ export const importObject : any = {
     // the compiler easier, we define print so it logs to a string object.
     //  We can then examine output to see what would have been printed in the
     //  console.
-    index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
+    index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
     division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
     assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
     stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),

@@ -28,12 +28,6 @@ import { default_keywords, default_functions } from "./default_ac";
 const breakpointLines = new Set<number>(); 
 var breakpointPrev: number = -1;
 
-function index_out_of_bounds(length: any, index: any): any {
-  if (index < 0 || index >= length)
-    throw new Error(`RUNTIME ERROR: Index ${index} out of bounds`);
-  return index;
-}
-
 function webStart() {
   var editMode = "default";
   var filecontent: string | ArrayBuffer;
@@ -50,7 +44,7 @@ function webStart() {
     var importObject:any = {
       imports: {
         ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
-        index_out_of_bounds: (length: any, index: any) => index_out_of_bounds(length, index),
+        index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
         division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
         stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
         stack_clear: () => RUNTIME_ERROR.stack_clear(),
