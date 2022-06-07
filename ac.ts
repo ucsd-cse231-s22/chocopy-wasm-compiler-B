@@ -1,4 +1,5 @@
 import CodeMirror from "codemirror";
+import { BasicREPL } from "./repl";
 
 function getCompletions(wordList: string[], token: any, context: any[]) {
     var completions: any[] = [];
@@ -6,9 +7,6 @@ function getCompletions(wordList: string[], token: any, context: any[]) {
     if (context) {
         var object = context.pop(),base;
         switch(object.type){
-            case "variable":
-                base = object.string;
-                break;
             case "variable":
                 base = object.string;
                 break;
@@ -97,3 +95,76 @@ export function autocompleteHint(editor: any, keywords: string[], getToken: any)
     };
 }
 
+
+export function completeMethod(repl: BasicREPL): Array<any> {
+  var defList: string[] = [];
+  var classMethodList: string[] = [];
+  //get variable names for autocomplete
+  repl.currentTypeEnv.globals.forEach((val, key) => {
+    //don't add functions into variable list
+    defList.push(key);
+  });
+  //get class names for autocomplete
+  repl.currentTypeEnv.classes.forEach((val, key) => {
+    if (val.length > 1) {
+      val[1].forEach((v, k) => {
+        console.log(classMethodList)
+        classMethodList.push(k + "()");
+      });
+    }
+  });
+  //get function names for autocomplete
+  repl.currentTypeEnv.functions.forEach((val, key) => {
+    defList.push(key + "()");
+  });
+  return [defList, classMethodList];
+}
+
+
+class E(object):
+    a : int = 1
+    f : int = 2
+    get1 : int = 1
+class C(E):
+    a : int = 2
+    e : E = None
+    def __init__(self: C):
+        self.e = E()
+    def get1(self: C) -> int:
+        return 1
+class F(E):
+    a : int = 2
+    e : E = None
+    def __init__(self: F):
+        self.e = E()
+    def get2(self: F) -> int:
+        return 2
+
+c : C = None
+c = C()
+
+
+class C(Object):
+      a : int = 1
+      b : int = 2
+      def get1(self:C) ->int:
+          return 1
+      def get1(self:C) ->int:
+          return 1
+c : C = None
+c = C()
+
+
+class E(object):
+    a : int = 1
+    f : int = 2
+    d : int = 1
+class C(E):
+    a : int = 2
+    e : E = None
+    def __init__(self: C):
+        self.e = E()
+    def d(self: C) -> int:
+        return 1
+c : C = None
+c = C()

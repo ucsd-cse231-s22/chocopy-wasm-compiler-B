@@ -22,7 +22,7 @@ import "codemirror/addon/scroll/simplescrollbars";
 import "codemirror/addon/lint/lint";
 
 import "./style.scss";
-import { autocompleteHint } from "./ac";
+import { autocompleteHint, completeMethod } from "./ac";
 import { default_keywords, default_functions } from "./default_ac";
 
 const breakpointLines = new Set<number>(); 
@@ -245,7 +245,9 @@ function webStart() {
     } as any);
     var commandDisplay = document.getElementById('command-display');
     var keys = '';
-    let isClassMethod = false;
+    let isMethod = false;
+    var classMethodList: string[] = [];
+    var defList: string[] = [];
     CodeMirror.on(editor, 'vim-keypress', function(key : string) {
       keys = keys + key;
       commandDisplay.innerText = keys;
@@ -275,16 +277,17 @@ function webStart() {
 
         textarea.value = editor.getValue();
     })
+
     editor.on("inputRead", function onChange(editor, input) {
       if (input.text[0] === ";" || input.text[0] === " " || input.text[0] === ":") {
-        isClassMethod = false;
+        isMethod = false;
         return;
-      } else if (input.text[0] === "." || isClassMethod) {
+      } else if (input.text[0] === "." || isMethod) {
         //autocomplete class methods
-        isClassMethod = true;
+        isMethod = true;
         editor.showHint({
           hint: () =>
-            autocompleteHint(editor, [], function (e: any, cur: any) {
+            autocompleteHint(editor, classMethodList, function (e: any, cur: any) {
               return e.getTokenAt(cur);
             }),
         });
@@ -294,7 +297,7 @@ function webStart() {
           hint: () =>
             autocompleteHint(
               editor,
-              default_keywords.concat(default_functions),
+              default_keywords.concat(default_functions).concat(defList),
               function (e: any, cur: any) {
                 return e.getTokenAt(cur);
               }
@@ -303,17 +306,23 @@ function webStart() {
       }
     });
 
-    editor.on("keydown", (cm, input) => {
-      switch (input.code) {
+
+    editor.on("keydown", (cm, event) => {
+      switch (event.code) {
         //reset isClassMethod variable based on enter or space or backspace
-        case "Enter":
-          isClassMethod = false;
-          return;
         case "Space":
-          isClassMethod = false;
+          isMethod = false;
           return;
         case "Backspace":
-          isClassMethod = false;
+          isMethod = false;
+          return;
+        case "Enter":
+          isMethod = false;
+          const repl = new BasicREPL(importObject);
+          const source = document.getElementById("user-code") as HTMLTextAreaElement;
+          repl.run(source.value).then((r) => {
+            [defList, classMethodList] = completeMethod(repl);
+          });
           return;
       }
     });
