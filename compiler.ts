@@ -1,7 +1,8 @@
-import { Program, Stmt, Expr, Value, Class, VarInit, FunDef } from "./ir"
-import { BinOp, Type, UniOp, SourceLocation } from "./ast"
-import { BOOL, NONE, NUM } from "./utils";
+import { BinOp, SourceLocation, Type, UniOp } from "./ast";
 import { RunTimeError } from "./error_reporting";
+import { Class, Expr, FunDef, Program, Stmt, Value, VarInit } from "./ir";
+import { equalType } from "./type-check";
+import { BOOL, CLASS, PrintType, NONE, NUM } from "./utils";
 
 export type GlobalEnv = {
   globals: Map<string, boolean>;
@@ -86,7 +87,7 @@ function codeGenStmt(stmt: Stmt<[Type, SourceLocation]>, env: GlobalEnv): Array<
         ...codeGenValue(stmt.start, env),
         ...codeGenValue(stmt.offset, env),
         ...codeGenValue(stmt.value, env),
-        `call $store`
+        `(call $store)`
       ]
     case "assign":
       var valStmts = codeGenExpr(stmt.value, env);
@@ -165,18 +166,35 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
         }
         var valStmts = expr.arguments.map(arg=>{
           let argCode = codeGenValue(arg, env);
-          switch (arg.a[0]){
-            case NUM:
-              argCode.push("(call $print_num)");
-              break;
-            case BOOL:
-              argCode.push("(call $print_bool)");
-              break;
-            case NONE:
-              argCode.push("(call $print_none)");
-              break;
-            default:
-              throw new RunTimeError("not implemented object print")
+          if (arg.a[0].tag === "class" && arg.a[0].name === "list") {
+            var typeToPrint = 0;
+            var listType = arg.a[0].type;
+            while (listType.tag === "class" && listType.name === "list") {
+              typeToPrint += PrintType["list"];
+              listType = listType.type;
+            }
+            if (listType.tag in PrintType) {
+              typeToPrint += PrintType[listType.tag as keyof typeof PrintType];
+            }
+            else {
+              throw new RunTimeError("List print type not supported: " + listType.tag);
+            }
+            argCode.push(`(i32.const ${typeToPrint})`);
+            argCode.push("(call $print_list)");
+          } else {
+            switch (arg.a[0]){
+              case NUM:
+                argCode.push("(call $print_num)");
+                break;
+              case BOOL:
+                argCode.push("(call $print_bool)");
+                break;
+              case NONE:
+                argCode.push("(call $print_none)");
+                break;
+              default:
+                throw new RunTimeError("not implemented object print")
+            }
           }
           argCode.push("drop");
           return argCode;
@@ -186,24 +204,20 @@ function codeGenExpr(expr: Expr<[Type, SourceLocation]>, env: GlobalEnv): Array<
       var valStmts = expr.arguments.map((arg) => codeGenValue(arg, env)).flat();
       valStmts.push(`(i32.const ${expr.a[1].line})`);
       valStmts.push(`(call $stack_push)`);
-      if(expr.name === 'assert_not_none'){
-        valStmts.push(`(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) `);
-      }
       valStmts.push(`(call $${expr.name})`);
       return valStmts;
 
     case "alloc":
       return [
         ...codeGenValue(expr.amount, env),
-        `call $alloc`
+        `(call $alloc)`
       ];
     case "load":
       return [
         ...codeGenValue(expr.start, env),
         `(i32.const ${expr.a[1].line})(i32.const ${expr.a[1].column}) (call $assert_not_none)`,
-        // `call $assert_not_none`,
         ...codeGenValue(expr.offset, env),
-        `call $load`
+        `(call $load)`
       ]
   }
 }

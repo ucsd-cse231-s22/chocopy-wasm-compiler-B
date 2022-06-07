@@ -1,4 +1,5 @@
-stdlib: build/memory.wasm build/sets.wasm
+
+stdlib: build/memory.wasm build/sets.wasm build/list.wasm
 
 build/%.wasm: stdlib/%.wat
 	mkdir -p build/

@@ -1,5 +1,4 @@
-import { assertPrint, assertFail, assertTCFail, assertTC, assertOptimize, assertPass } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS } from "./helpers.test"
+import { assertOptimize, assertPass } from "./asserts.test";
 
 xdescribe("Optimization tests", () => {
   // 1

@@ -1,4 +1,4 @@
-import { Type, Program, SourceLocation, FunDef, Expr, Stmt, Literal, BinOp, UniOp, Class} from './ast';
+import { BinOp, SourceLocation, Type, UniOp } from './ast';
 import * as IR from './ir';
 
 export function optimizeIr(program: IR.Program<[Type, SourceLocation]>) : IR.Program<[Type, SourceLocation]> {

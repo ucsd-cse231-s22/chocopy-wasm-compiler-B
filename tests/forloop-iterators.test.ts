@@ -1,9 +1,7 @@
 import { expect } from "chai";
-import { parse } from "../parser";
-import { assert, assertPrint, assertTC, assertFail } from "./asserts.test";
-import { NUM, BOOL, NONE, CLASS, typeCheck } from "./helpers.test";
-import { TypeCheckError } from '../error_reporting'
-import { PyInt, PyBool, PyNone, PyObj } from '../utils';
+import { TypeCheckError } from '../error_reporting';
+import { assertPrint } from "./asserts.test";
+import { typeCheck } from "./helpers.test";
 
 var rangeStr = `
 class __range__(object):

@@ -1,22 +1,17 @@
-import { BasicREPL} from './repl';
-import { Type, Value } from './ast';
-import { defaultTypeEnv } from './type-check';
-import { NUM, BOOL, NONE } from './utils';
-import * as RUNTIME_ERROR from './runtime_error'
-import { renderResult, renderError, renderPrint } from "./outputrender";
-import { log } from 'console';
-import { sources } from 'webpack';
-
 import CodeMirror from "codemirror";
 import "codemirror/addon/edit/closebrackets";
-import "codemirror/mode/python/python";
-import "codemirror/addon/hint/show-hint";
-import "codemirror/addon/fold/foldcode";
-import "codemirror/addon/fold/foldgutter";
 import "codemirror/addon/fold/brace-fold";
 import "codemirror/addon/fold/comment-fold";
+import "codemirror/addon/fold/foldcode";
+import "codemirror/addon/fold/foldgutter";
+import "codemirror/addon/hint/show-hint";
+import "codemirror/mode/python/python";
+import { renderError, renderPrint, renderResult } from "./outputrender";
+import { BasicREPL } from './repl';
+import { BuiltinLib } from "./builtinlib";
+import * as RUNTIME_ERROR from './runtime_error';
 import "./style.scss";
-import {BuiltinLib} from "./builtinlib"
+import { PrintType } from './utils';
 
 function webStart() {
   var filecontent: string | ArrayBuffer;
@@ -29,22 +24,20 @@ function webStart() {
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { js: { mem: memory } })
     );
-
+    
+    var load = memoryModule.instance.exports.load;
     var importObject:any = {
       imports: {
-        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {}),
-        index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
-        division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
-        stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
-        stack_clear: () => RUNTIME_ERROR.stack_clear(),
         assert_not_none: (arg: any, line: number, col: number) => RUNTIME_ERROR.assert_not_none(arg, line, col),
-        print_num: (arg: number) => renderPrint(NUM, arg),
-        print_bool: (arg: number) => renderPrint(BOOL, arg),
-        print_none: (arg: number) => renderPrint(NONE, arg),
-        abs: Math.abs,
-        min: Math.min,
-        max: Math.max,
-        pow: Math.pow
+        division_by_zero: (arg: number, line: number, col: number) => RUNTIME_ERROR.division_by_zero(arg, line, col),
+        index_out_of_bounds: (length: any, index: any, line: number, col: number) => RUNTIME_ERROR.index_out_of_bounds(length, index, line, col),
+        stack_clear: () => RUNTIME_ERROR.stack_clear(),
+        stack_push: (line: number) => RUNTIME_ERROR.stack_push(line),
+        print_num: (arg: number) => renderPrint(PrintType.number, arg),
+        print_bool: (arg: number) => renderPrint(PrintType.bool, arg),
+        print_none: (arg: number) => renderPrint(PrintType.none, arg),
+        print_list: (arg: number, typeNum: number) => renderPrint(PrintType.list, arg, memory, typeNum),
+        ...BuiltinLib.reduce((o:Record<string, Function>, key)=>Object.assign(o, {[key.name]:key.body}), {})
       },
       libmemory: memoryModule.instance.exports,
       memory_values: memory, //it is kind of pointer pointing to heap
@@ -58,6 +51,14 @@ function webStart() {
     );
 
     importObject.libset = setModule.instance.exports;
+
+    const listModule = await fetch('list.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, {...importObject, js: { mem: memory } })
+    );
+
+    importObject.liblist = listModule.instance.exports;
     
     var repl = new BasicREPL(importObject);
 

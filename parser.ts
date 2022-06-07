@@ -1,9 +1,9 @@
-import {parser} from "lezer-python";
-import { TreeCursor} from "lezer-tree";
-import { Program, Expr, Stmt, UniOp, BinOp, Parameter, Type, FunDef, VarInit, Class, Literal, SourceLocation, DestructureLHS, AssignTarget } from "./ast";
-import { NUM, BOOL, NONE, CLASS, TYPE_VAR } from "./utils";
+import { TreeCursor } from "@lezer/common";
+import { parser } from "@lezer/python";
+import { AssignTarget, BinOp, Class, DestructureLHS, Expr, FunDef, Literal, Parameter, Program, SourceLocation, Stmt, Type, UniOp, VarInit } from "./ast";
+import { ParseError } from "./error_reporting";
 import { stringifyTree } from "./treeprinter";
-import { ParseError} from "./error_reporting";
+import { BOOL, CLASS, NONE, NUM, TYPE_VAR } from "./utils";
 
 // To get the line number from lezer tree to report errors
 function getSourceLocation(c : TreeCursor, s : string) : SourceLocation {
@@ -73,6 +73,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
     case "CallExpression":
       const callStr = s.substring(c.from, c.to);
       const genericRegex = /\[[A-Za-z]*\]/g;
+      const genericCheckRegex = /\[[A-Za-z]*\].*\(.*?\)/g;
       const genericArgs = callStr.match(genericRegex);
 
       c.firstChild();
@@ -81,7 +82,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       const args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
-      if(genericArgs) {
+      if(callStr.match(genericCheckRegex)) {
         const genArgsStr = genericArgs.toString();
         const commaSepArgs = genArgsStr.substring(1, genArgsStr.length - 1);
         const genTypes = commaSepArgs.split(',').map(s => typeFromString(s));
@@ -150,7 +151,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           if(firstIteration) { break; } //empty list
           else {
             c.parent();
-            throw new Error("Parse error at " + s.substring(c.from, c.to));
+            throw new ParseError("No ending bracket found at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
           }
         }
         elements.push(traverseExpr(c, s));
@@ -160,7 +161,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
 
       if(s.substring(c.from, c.to) !== "]") { //list doesn't have a closing bracket
         c.parent();
-        throw new Error("Parse error after " + s.substring(c.from, c.to));
+        throw new ParseError("List literal does not have a closing bracket at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
       }
 
       console.log(elements)
@@ -283,37 +284,70 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       var objExpr = traverseExpr(c, s);
       c.nextSibling(); // Focus on . or [
       var dotOrBracket = s.substring(c.from, c.to);
-      if( dotOrBracket === "[") {
-        var start_index: Expr<any>;
-        var stop_index: Expr<any>;
-        var step: Expr<any> = {
+      if (dotOrBracket === "[") {
+        var start_index: Expr<SourceLocation> = {
+          tag: "literal",
+          value: { tag: "num", value: -2147483648 }
+        };;
+        var stop_index: Expr<SourceLocation> = {
+          tag: "literal",
+          value: { tag: "num", value: 2147483647 }
+        };;
+        var step: Expr<SourceLocation> = {
           tag: "literal",
           value: { a: location,tag: "num", value: 1 }
         };
 
-        var indexItems = "";
+        var isSlice = false; 
+        var numItems = 0;
         c.nextSibling();
-        while (s.substring(c.from, c.to) != "]") {
-          indexItems += s.substring(c.from, c.to);
-          c.nextSibling();
+        
+        for (let i = 0; i < 3; i++) {
+          if(s.substring(c.from, c.to) != "]" && s.substring(c.from, c.to) != ":"){
+            numItems++;
+            switch (i){
+              case 0:
+                start_index = traverseExpr(c, s);
+                break;
+              case 1:
+                stop_index = traverseExpr(c, s);
+                break;
+              case 2:
+                step = traverseExpr(c, s);
+                break;
+            }
+            c.nextSibling(); 
+          }
+          
+          if (s.substring(c.from, c.to) === ":"){
+            isSlice = true;
+            c.nextSibling();
+          }
+          else if (s.substring(c.from, c.to) !== "]"){
+            throw new ParseError("Could not parse index expression at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
+          }
         }
+        
+        if (!isSlice && numItems === 0) {
+          throw new ParseError("Brackets empty at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
+        }
+        
         c.parent();
         c.firstChild(); // str object name
         c.nextSibling(); // "[""
         c.nextSibling(); // start index
 
-        if(indexItems.length === 0) {
-          throw new Error("Error: there should have at least one value inside the brackets");
-        }
-
-        var sliced_indices = indexItems.split(":");
-        if(sliced_indices.length > 3){
-          throw new Error("Too much indices, maximum is three");
-        }
-
-        start_index = traverseExpr(c, s)
-
         c.parent();
+        if (isSlice){
+          return {
+            a: location,
+            tag: "index",
+            obj: objExpr,
+            index: start_index,
+            end: stop_index,
+            steps: step
+          }
+        }
         return {
           a: location,
           tag: "index",
@@ -381,7 +415,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
           compTyp = { tag: "generator", type: NONE };
           break;
         case "[":
-          compTyp = { tag: "list", type: NONE };
+          compTyp = { tag: "class", name: "list", type: NONE };
           break;
         case "{":
           compTyp = { tag: "set", valueType: NONE }; // need to add dictionary case in the future
@@ -735,6 +769,7 @@ function traverseAssignTarget(c: TreeCursor, s: string):AssignTarget<SourceLocat
 }
 
 export function traverseType(c : TreeCursor, s : string) : Type {
+  var location = getSourceLocation(c, s);
   // For now, always a VariableName
   if (c.firstChild()) {
     if (s.substring(c.from, c.to) === "set") {
@@ -760,11 +795,11 @@ export function traverseType(c : TreeCursor, s : string) : Type {
         c.nextSibling(); 
         if(s.substring(c.from, c.to) !== "]") { //missing closing square bracket
           c.parent();
-          throw new Error("Parse error at " + s.substring(c.from, c.to));
+          throw new ParseError("Error " + s.substring(c.from, c.to), location);
         }
         c.parent(); //up from ArrayExpression
 
-        return {tag: "list", type};
+        return { tag: "class", name: "list", type: type };
     } else {
       //object
       const genericRegex = /\[[A-Za-z]*\]/g;
@@ -870,6 +905,7 @@ export function traverseFunDef(c : TreeCursor, s : string) : FunDef<SourceLocati
 }
 
 function traverseGenerics(c: TreeCursor, s: string): Array<string> {
+  var location = getSourceLocation(c, s);
   let typeVars: Array<string> = [];
 
   c.firstChild(); // focus on (
@@ -881,7 +917,7 @@ function traverseGenerics(c: TreeCursor, s: string): Array<string> {
         if(ga.tag=="class") {
           typeVars.push(ga.name);
         } else {
-          throw new Error("Expected TypeVar in Generic[] args");
+          throw new ParseError("Expected TypeVar in Generic[] args at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to), location);
         }
       });
     }

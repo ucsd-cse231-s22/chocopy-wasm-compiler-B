@@ -30,8 +30,19 @@ export function PyNone(): Value {
   return { tag: "none" };
 }
 
+export enum PrintType {
+  number = 1,
+  bool,
+  none,
+  class,
+  set,
+  dict,
+  str,
+  list
+}
+
 export const NUM : Type = {tag: "number"};
 export const BOOL : Type = {tag: "bool"};
 export const NONE : Type = {tag: "none"};
 export const TYPE_VAR : Type = {tag: "type-var"};
-export function CLASS(name : string, genericArgs: Array<Type> = null) : Type {return {tag: "class", name, genericArgs}};
+export function CLASS(name : string, genericArgs: Array<Type> = null, type: Type = NONE) : Type {return {tag: "class", name, genericArgs, type}};

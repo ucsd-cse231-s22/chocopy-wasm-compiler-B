@@ -1,16 +1,43 @@
-import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
+import { ObjectField } from "./repl";
+import { PrintType } from "./utils";
 
-function stringify(typ: Type, arg: any) : string {
-  switch(typ.tag) {
+function stringify(typ: PrintType, arg: any, mem?: WebAssembly.Memory, typeNum?: number) : string {
+  switch(PrintType[typ]) {
     case "number":
       return (arg as number).toString();
     case "bool":
       return (arg as boolean)? "True" : "False";
     case "none":
       return "None";
-    case "class":
-      return typ.name;
+    // case "class":
+    //   return typ.name;
+    // case "set":
+    //   return "Set";
+    // case "dict":
+    //   return "Dict";
+    // case "str":
+    //   return (arg as string);
+    case "list":
+      var bytes = new Uint8Array(mem.buffer, arg, 4);
+      var length = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
+      bytes = new Uint8Array(mem.buffer, arg + 4, 4);
+      var address = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
+      var elementArray = new Int32Array(mem.buffer, address, length);
+      var string = "[";
+      for (let i = 0; i < length; i++) {
+        if (typeNum > PrintType.list) {
+          string += stringify(typ, elementArray[i], mem, typeNum - PrintType.list);
+        }
+        else {
+          string += stringify(typeNum, elementArray[i], mem);
+        }
+        if (i < length - 1) {
+          string += ", ";
+        }
+      }
+      string += "]";
+      return string;
   }
 }
 
@@ -131,11 +158,11 @@ export function renderResult(result : Value, objectTrackList: Array<ObjectField>
   }
 }
 
-export function renderPrint(typ: Type, arg : number) : any {
+export function renderPrint(typ: PrintType, arg : number, mem?: WebAssembly.Memory, typeNum?: number) : any {
   // console.log("Logging from WASM: ", arg);
   const elt = document.createElement("pre");
   document.getElementById("output").appendChild(elt);
-  elt.innerText = stringify(typ, arg);
+  elt.innerText = stringify(typ, arg, mem, typeNum);
   return arg;
 }
 

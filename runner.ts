@@ -4,17 +4,16 @@
 // - https://developer.mozilla.org/en-US/docs/WebAssembly/Using_the_JavaScript_API
 
 import wabt from 'wabt';
+import { Program, SourceLocation, Type, Value } from './ast';
+import { BuiltinLib } from './builtinlib';
 import { compile, GlobalEnv } from './compiler';
-import {parse} from './parser';
-import {emptyLocalTypeEnv, GlobalTypeEnv, tc, tcStmt} from  './type-check';
-import { Program, Type, Value, SourceLocation } from './ast';
+import { lowerProgram } from './lower';
 import { optimizeAst } from './optimize_ast';
 import { optimizeIr } from './optimize_ir';
-import { PyValue, NONE, BOOL, NUM, CLASS } from "./utils";
-import { lowerProgram } from './lower';
-import { BuiltinLib } from './builtinlib';
-import { BlobOptions } from 'buffer';
+import { parse } from './parser';
 import { removeGenerics } from './remove-generics';
+import { GlobalTypeEnv, tc } from './type-check';
+import { NONE, PyValue } from "./utils";
 
 export type Config = {
   importObject: any;
@@ -128,6 +127,7 @@ export async function run(source : string, config: Config, astOpt: boolean = fal
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $print_list (import "imports" "print_list") (param i32) (param i32) (result i32))
 ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(param i32)".repeat(x.typeSig[0].length)} (result i32))`).join("\n")}
 
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
@@ -143,6 +143,14 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $set$firstItem (import "libset" "set$firstItem") (param i32) (result i32))
     (func $set$hasnext (import "libset" "set$hasnext") (param i32) (param i32) (result i32))
     (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
+    (func $list$append (import "liblist" "list$append") (param i32) (param i32) (result i32))
+    (func $list$concat (import "liblist" "list$concat") (param i32) (param i32) (result i32))
+    (func $list$copy (import "liblist" "list$copy") (param i32) (result i32))
+    (func $list$insert (import "liblist" "list$insert") (param i32) (param  i32) (param i32) (result i32))
+    (func $list$length (import "liblist" "list$length") (param i32) (result i32))
+    (func $list$pop (import "liblist" "list$pop") (param i32) (param i32) (result i32))
+    (func $list$set_init (import "liblist" "list$set_init") (param i32) (result i32))
+    (func $list$slice (import "liblist" "list$slice") (param i32) (param i32) (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

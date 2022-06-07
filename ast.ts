@@ -5,8 +5,7 @@ export type Type =
   | {tag: "number"}
   | {tag: "bool"}
   | {tag: "none"}
-  | {tag: "list", type: Type}
-  | {tag: "class", name: string, genericArgs?: Array<Type>}
+  | {tag: "class", name: string, genericArgs?: Array<Type>, type?: Type}
   | {tag: "either", left: Type, right: Type }
   | {tag: "generator", type: Type } // generator type
   | {tag: "set", valueType: Type }
@@ -46,7 +45,7 @@ export type Expr<A> =
   | {  a?: A, tag: "call", name: string, arguments: Array<Expr<A>>, genericArgs?: Array<Type>} 
   | {  a?: A, tag: "lookup", obj: Expr<A>, field: string }
   | {  a?: A, tag: "listliteral", elements: Array<Expr<A>> }
-  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+  | {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A>, end?: Expr<A>, steps?: Expr<A> }
   | {  a?: A, tag: "method-call", obj: Expr<A>, method: string, arguments: Array<Expr<A>> }
   | {  a?: A, tag: "construct", name: string }
   | {  a?: A, tag: "set", values: Array<Expr<A>>}
@@ -74,4 +73,4 @@ export type DestructureLHS<A> = { a?: A, lhs: AssignTarget<A>, isStarred : boole
 export type AssignTarget<A> = 
 | {  a?: A,  tag : "id", name : string}
 | {  a?: A,  tag : "lookup", obj: Expr<A>, field: string }
-| {  a?: A, tag: "index", obj: Expr<A>, index: Expr<A> }
+| {  a?: A,  tag: "index", obj: Expr<A>, index: Expr<A> }

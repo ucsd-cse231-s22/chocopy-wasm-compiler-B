@@ -1,5 +1,4 @@
 import { SourceLocation } from "./ast";
-import { stackTrace } from "./runtime_error";
 
 export class CompileTimeError extends Error {
     __proto__: Error
