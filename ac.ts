@@ -121,50 +121,50 @@ export function completeMethod(repl: BasicREPL): Array<any> {
 }
 
 
-class E(object):
-    a : int = 1
-    f : int = 2
-    get1 : int = 1
-class C(E):
-    a : int = 2
-    e : E = None
-    def __init__(self: C):
-        self.e = E()
-    def get1(self: C) -> int:
-        return 1
-class F(E):
-    a : int = 2
-    e : E = None
-    def __init__(self: F):
-        self.e = E()
-    def get2(self: F) -> int:
-        return 2
+// class E(object):
+//     a : int = 1
+//     f : int = 2
+//     get1 : int = 1
+// class C(E):
+//     a : int = 2
+//     e : E = None
+//     def __init__(self: C):
+//         self.e = E()
+//     def get1(self: C) -> int:
+//         return 1
+// class F(E):
+//     a : int = 2
+//     e : E = None
+//     def __init__(self: F):
+//         self.e = E()
+//     def get2(self: F) -> int:
+//         return 2
 
-c : C = None
-c = C()
-
-
-class C(Object):
-      a : int = 1
-      b : int = 2
-      def get1(self:C) ->int:
-          return 1
-      def get1(self:C) ->int:
-          return 1
-c : C = None
-c = C()
+// c : C = None
+// c = C()
 
 
-class E(object):
-    a : int = 1
-    f : int = 2
-    d : int = 1
-class C(E):
-    a : int = 2
-    e : E = None
-    def __init__(self: C):
-        self.e = E()
-    def d(self: C) -> int:
-        return 1
-c : C = None
-c = C()
+// class C(Object):
+//       a : int = 1
+//       b : int = 2
+//       def get1(self:C) ->int:
+//           return 1
+//       def get1(self:C) ->int:
+//           return 1
+// c : C = None
+// c = C()
+
+
+// class E(object):
+//     a : int = 1
+//     f : int = 2
+//     d : int = 1
+// class C(E):
+//     a : int = 2
+//     e : E = None
+//     def __init__(self: C):
+//         self.e = E()
+//     def d(self: C) -> int:
+//         return 1
+// c : C = None
+// c = C()
