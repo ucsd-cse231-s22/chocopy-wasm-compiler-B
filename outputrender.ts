@@ -1,5 +1,7 @@
 import { BasicREPL, ObjectField } from "./repl";
 import { Type, Value } from "./ast";
+import { Pass } from "codemirror";
+import { NONE } from "./utils";
 
 function stringify(typ: Type, arg: any) : string {
   switch(typ.tag) {
@@ -45,7 +47,8 @@ function renderConstField(key: string, value: Value, elt: HTMLElement){
       elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + String(value.value) + "</p>";
       break;
     case "bool":
-      elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + (value.value) ? "True" : "False" + "</p>";
+      const boolString = (value.value) ? "True" : "False";
+      elt.innerHTML = "<b class='tag'>" + key + ": </b><p class='val'>" + boolString + "</p>";
       break;
     default:
       throw new Error(`This is not a const field: ${value}`);
@@ -72,7 +75,7 @@ function renderClassObject(result: Value, objectTrackList: Array<ObjectField>, e
       case "object":
         fele.innerHTML = "<b class='tag'>" + field.fieldName + ": </b>";
         if (field.objectTrackList.length === 0) {
-          fele.innerHTML += "<p class='val'>none</p>";
+          fele.innerHTML += "<p class='val'>None</p>";
         } else {
           const objEle = document.createElement("pre"); //pre or div?
           fele.appendChild(objEle);
@@ -90,6 +93,15 @@ function renderClassObject(result: Value, objectTrackList: Array<ObjectField>, e
   elt.appendChild(panEle); // append panel
 }
 
+function createNewPre(parentElementId: string):HTMLElement{
+  var elt = document.getElementById(parentElementId).lastElementChild as HTMLElement;
+  if(elt==null || elt.tagName != "PRE"){
+    elt = document.createElement("pre");
+    document.getElementById(parentElementId).appendChild(elt);
+  } 
+  return elt
+}
+
 function renderObject(result: Value, objectTrackList: Array<ObjectField>, elt: HTMLElement){
   switch (result.tag){
     case "object":
@@ -103,25 +115,40 @@ function renderObject(result: Value, objectTrackList: Array<ObjectField>, elt: H
 function renderNewLine(result: Value, elt: HTMLElement){
   switch (result.tag) {
     case "none":
+      if (elt.innerHTML === ""){
+          elt.innerHTML = "None";
+      }
       break;
     case "num":
-      elt.innerText = String(result.value);
+      if (elt.innerHTML === ""){
+        elt.innerHTML = String(result.value);
+      } else {
+        elt.innerHTML += "<br>" + String(result.value);
+      }
       break;
     case "bool":
-      elt.innerHTML = (result.value) ? "True" : "False";
+      if (elt.innerHTML === ""){
+        elt.innerHTML = (result.value) ? "True" : "False";
+      } else {
+        elt.innerHTML += "<br>" + (result.value) ? "True" : "False";
+      }
       break;
     case "object":
-      elt.innerHTML = `Object: ${result.name}`
-      break
-    default: 
+      if (elt.innerHTML === ""){
+        elt.innerHTML = `Object: ${result.name} at ${result.address}`;
+      } else {
+        elt.innerHTML += "<br>" + `Object: ${result.name} at ${result.address}`;
+      }
+      break;
+    default:
       throw new Error(`Could not render value: ${result}`);
   }
 }
 
 export function renderResult(result : Value, objectTrackList: Array<ObjectField>) : void {
   if(result === undefined) { return; }
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
+
+  const elt = createNewPre("output");
   renderNewLine(result, elt);
   if (objectTrackList.length!=0){
     const objEle = document.createElement("pre");
@@ -131,17 +158,24 @@ export function renderResult(result : Value, objectTrackList: Array<ObjectField>
   }
 }
 
+export function renderDebug(result: Value, objectTrackList: Array<ObjectField>) : void{
+  if(result === undefined) {return; }
+  const elt = createNewPre("debug");
+  renderNewLine(result, elt);
+}
+
 export function renderPrint(typ: Type, arg : number) : any {
   // console.log("Logging from WASM: ", arg);
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
+  const elt = createNewPre("output");
   elt.innerText = stringify(typ, arg);
   return arg;
 }
 
 export function renderError(result : any) : void {
-  const elt = document.createElement("pre");
-  document.getElementById("output").appendChild(elt);
-  elt.setAttribute("style", "color: red");
-  elt.innerText = String(result);
+  const elt = createNewPre("output");
+  elt.style.backgroundColor = "red";
+  elt.style.color = "white";
+  elt.style.lineHeight = "15px"
+  //elt.setAttribute("style", "background-color: #d71d1d");
+  elt.innerText = String("⚠ "+result);
 }

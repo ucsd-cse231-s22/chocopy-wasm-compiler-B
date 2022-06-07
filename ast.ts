@@ -68,6 +68,7 @@ export enum UniOp { Neg, Not };
 export type Value =
     Literal<null>
   | { tag: "object", name: string, address: number}
+  | { tag: "list", type: Type, address: number}
 
 export type DestructureLHS<A> = { a?: A, lhs: AssignTarget<A>, isStarred : boolean, isIgnore : boolean}
 

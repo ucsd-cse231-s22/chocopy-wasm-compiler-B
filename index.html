@@ -7,6 +7,7 @@
     <!-- <link rel="stylesheet" href="./node_modules/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="./node_modules/codemirror/theme/blackboard.css">  -->
     <script src="https://cdn.jsdelivr.net/gh/AssemblyScript/wabt.js@1.0.20/index.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
     <script>const wabt = WabtModule;</script>
     <script src="webstart.js"></script>
 </head>
@@ -29,11 +30,18 @@
                     <a class="left label-left" id="save">Save</a>
                     <a class="left label-left" id="import">Load</a>
                     <input style="display: none;" type="file" id="choose_file" accept=".txt,.py">
-                    <a class="left label-left" id="share">Debug</a> 
+                    <a class="left label-left" id="refresh">Refresh</a> 
                 </div>
                 <div class="right">
-                    <select class="right label-left left-button-shadow" id="config">
+                    <a class="right label-left left-button-shadow button-compact" id="random-theme">Theme</a>
+                    <select class="right label-left left-button-shadow button-compact" id="config-theme">
                         <option value="blackboard">Theme</option>
+                    </select>
+                </div>
+                <div class="right">
+                    <a class="right label-left left-button-shadow button-compact" id="change-mode">Mode</a>
+                    <select class="right label-left left-button-shadow button-compact" id="config-mode">
+                        <option value="default">Normal</option>
                     </select>
                 </div> 
                 <div class="right label-title-margin left-button-shadow">
@@ -48,11 +56,13 @@
                     <div class="absolute-content-border" id = "background">
                         <div>
                             <textarea class="user-code" id="user-code"></textarea>
+                            <div style="visibility: hidden;">Key buffer: <span id="command-display"></span></div>
+                            <div style="visibility: hidden;">Vim mode: <span id="vim-mode"></span></div>
                         </div>
                     </div>
                     <div id="dragbar" class= "dragbar" style="font-size: 1em;"></div>  
                     <div class="interection-content-border">
-                        <div style="inset: 0; overflow: auto; height: 100%;">
+                        <div id = "scoll", style="inset: 0; overflow: none; height: 100%;">
                             <div class="interactions" id="interactions">
                             
                                 <div class="output" id="output">
@@ -64,8 +74,8 @@
                                         <span class="left prompt-cursor" style="color: transparent; display: inline; z-index: 0; position: absolute;">&nbsp;</span>
                                         <span id = "prompt-text-after" style="position: relative;"></span>
                                     </div>
-                                    <div id="promt-textcode" style="position: absulote; overflow:hidden; width: 0px; height: 0px;">
-                                        <textarea type="text" id="next-code" class="repl-code" wrap="off" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" style="position: absolute;width: 0px;"></textarea>
+                                    <div id="promt-textcode" style="position: absolute; overflow:hidden; width: 0px; height: 0px;">
+                                        <textarea type="text" id="next-code" class="repl-code" wrap="off" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" style="position: absolute; height: 11px; width: 0px;"></textarea>
                                         <!-- <textarea type="text" id="next-code" class="repl-code"></textarea> -->
                                     </div>
                                 </div>
@@ -75,6 +85,10 @@
                 </div>
             </div>
             
+        </div>
+
+        <div id = "debug">
+
         </div>
         
     </div>

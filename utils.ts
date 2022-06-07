@@ -8,6 +8,8 @@ export function PyValue(typ: Type, result: number): Value {
       return PyBool(Boolean(result));
     case "class":
       return PyObj(typ.name, result);
+    case "list":
+      return PyList(typ.type, result);
     case "none":
       return PyNone();
   }
@@ -24,6 +26,11 @@ export function PyBool(b: boolean): Value {
 export function PyObj(name: string, address: number): Value {
   if (address === 0) return PyNone();
   else return { tag: "object", name, address };
+}
+
+export function PyList(type: Type, address: number): Value {
+  if (address === 0) return PyNone();
+  else return { tag: "list", type, address };
 }
 
 export function PyNone(): Value {
