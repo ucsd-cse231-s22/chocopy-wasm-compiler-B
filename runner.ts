@@ -143,13 +143,14 @@ ${BuiltinLib.map(x=>`    (func $${x.name} (import "imports" "${x.name}") ${"(par
     (func $set$firstItem (import "libset" "set$firstItem") (param i32) (result i32))
     (func $set$hasnext (import "libset" "set$hasnext") (param i32) (param i32) (result i32))
     (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
-    (func $list$append (import "liblist" "list$append") (param $self i32) (param $arg i32) (result i32))
-    (func $list$copy (import "liblist" "list$length") (param $self i32) (result i32))
-    (func $list$length (import "liblist" "list$length") (param $self i32) (result i32))
-    (func $list$slice (import "liblist" "list$slice") (param $self i32) (param $start i32) (param $end i32) (param $steps i32) (result i32))
-    (func $list$insert (import "liblist" "list$insert") (param $self i32) (param $pos i32) (param $arg i32) (result i32))
-    (func $list$pop (import "liblist" "list$pop") (param $self i32) (param $pos i32) (result i32))
-    (func $list$concat (import "liblist" "list$concat") (param $self i32) (param $arg i32) (result i32))
+    (func $list$append (import "liblist" "list$append") (param i32) (param i32) (result i32))
+    (func $list$concat (import "liblist" "list$concat") (param i32) (param i32) (result i32))
+    (func $list$copy (import "liblist" "list$copy") (param i32) (result i32))
+    (func $list$insert (import "liblist" "list$insert") (param i32) (param  i32) (param i32) (result i32))
+    (func $list$length (import "liblist" "list$length") (param i32) (result i32))
+    (func $list$pop (import "liblist" "list$pop") (param i32) (param i32) (result i32))
+    (func $list$set_init (import "liblist" "list$set_init") (param i32) (result i32))
+    (func $list$slice (import "liblist" "list$slice") (param i32) (param i32) (param i32) (param i32) (result i32))
     ${globalImports}
     ${globalDecls}
     ${config.functions}

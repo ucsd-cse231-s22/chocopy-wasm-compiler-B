@@ -73,6 +73,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
     case "CallExpression":
       const callStr = s.substring(c.from, c.to);
       const genericRegex = /\[[A-Za-z]*\]/g;
+      const genericCheckRegex = /\[[A-Za-z]*\].*\(.*?\)/g;
       const genericArgs = callStr.match(genericRegex);
 
       c.firstChild();
@@ -81,7 +82,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<SourceLocation> 
       const args = traverseArguments(c, s);
       c.parent(); // pop CallExpression
 
-      if(genericArgs) {
+      if(callStr.match(genericCheckRegex)) {
         const genArgsStr = genericArgs.toString();
         const commaSepArgs = genArgsStr.substring(1, genArgsStr.length - 1);
         const genTypes = commaSepArgs.split(',').map(s => typeFromString(s));

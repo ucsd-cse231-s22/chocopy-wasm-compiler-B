@@ -153,8 +153,14 @@ export function join(env : GlobalTypeEnv, t1 : Type, t2 : Type) : Type {
 }
 
 export function isIterableObject(env : GlobalTypeEnv, t1 : Type) : boolean {
+  if (t1.tag === "set") {
+    return true;
+  }
   if(t1.tag !== "class")
     return false;
+  if (t1.name === "list") {
+    return true;
+  }
   var classMethods = env.classes.get(t1.name)[1];
   if(!(classMethods.has("next") && classMethods.has("hasnext")))
     return false;
@@ -168,11 +174,9 @@ export function builtinListClass(env: GlobalTypeEnv): GlobalTypeEnv {
   var listMethods: Map<string, [Array<Type>, Type]> = new Map();
   listMethods.set("length", [[{ tag: "class", name: "list" }], NUM])
   listMethods.set("copy", [[{ tag: "class", name: "list" }], { tag: "class", name: "list" }])
-  // don't know how to check type here so I'll do type check in Expr method-call
   listMethods.set("append", [[], { tag: "class", name: "list" }]);
   listMethods.set("insert", [[{ tag: "class", name: "list" }, NUM], { tag: "class", name: "list" }]);
-  listMethods.set("pop", [[NUM], NUM])
-  //TODO add all list methods here
+  listMethods.set("pop", [[{ tag: "class", name: "list" }, NUM], NUM]);
   env.classes.set("list", [listFields, listMethods]);
   return env;
 }
@@ -244,7 +248,7 @@ export function tcDef(env : GlobalTypeEnv, fun : FunDef<SourceLocation>) : FunDe
 
   const tBody = tcBlock(env, locals, fun.body);
   if (!isAssignable(env, locals.actualRet, locals.expectedRet))
-    throw new TypeCheckError(`expected return type of block: ${JSON.stringify(locals.expectedRet.tag)} does not match actual return type: ${JSON.stringify(locals.actualRet.tag)}`, fun.a);
+    throw new TypeCheckError(`expected return type of block: ${unwrapType(locals.expectedRet)} does not match actual return type: ${unwrapType(locals.actualRet)}`, fun.a);
   return {...fun, a:[NONE, fun.a], body: tBody, inits: tcinits};
 }
 
@@ -265,6 +269,20 @@ export function tcBlock(env : GlobalTypeEnv, locals : LocalTypeEnv, stmts : Arra
   return tStmts;
 }
 
+function unwrapType(t : Type) : string {
+  if (t.tag === "class") {
+    if (t.name === "list") {
+      return `[${unwrapType(t.type)}]`;
+    }
+    return t.name;
+  }
+  return t.tag;
+}
+
+function printArgs(args : Array<Type>) : string {
+  return "[" + args.map(t => unwrapType(t)).join(", ") + "]";
+}
+
 export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<SourceLocation>) : Stmt<[Type, SourceLocation]> {
   switch(stmt.tag) {
     case "assign":
@@ -280,7 +298,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       console.log("nameTyp: ", nameTyp);
       console.log("left: ", tValExpr.a[0] );
       if(!isAssignable(env, tValExpr.a[0], nameTyp))
-        throw new TypeCheckError("`" + tValExpr.a[0].tag + "` cannot be assigned to `" + nameTyp.tag + "` type", stmt.a);
+        throw new TypeCheckError("`" + unwrapType(tValExpr.a[0]) + "` cannot be assigned to `" + unwrapType(nameTyp) + "` type", stmt.a);
       return {a: [NONE, stmt.a], tag: stmt.tag, name: stmt.name, value: tValExpr};
     case "assign-destr":
       var tDestr: DestructureLHS<[Type, SourceLocation]>[] = tcDestructureTargets(stmt.destr, env, locals);
@@ -308,7 +326,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         throw new TypeCheckError("cannot return outside of functions", stmt.a);
       const tRet = tcExpr(env, locals, stmt.value);
       if (!isAssignable(env, tRet.a[0], locals.expectedRet))
-        throw new TypeCheckError("expected return type `" + (locals.expectedRet as any).tag + "`; got type `" + (tRet.a[0] as any).tag + "`", stmt.a);
+        throw new TypeCheckError("expected return type `" + unwrapType(locals.expectedRet) + "`; got type `" + unwrapType(tRet.a[0]) + "`", stmt.a);
       locals.actualRet = tRet.a[0];
       return {a: tRet.a, tag: stmt.tag, value:tRet};
     case "while":
@@ -331,7 +349,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         throw new TypeCheckError("Not an iterable: " + tIterable.a[0], stmt.a);
       let tIterableRet = env.classes.get(tIterable.a[0].name)[1].get("next")[1];
       if(!equalType(tVars.a[0], tIterableRet))
-        throw new TypeCheckError("Expected type `"+ tIterableRet.tag +"`, got type `" + tVars.a[0].tag + "`", stmt.a);
+        throw new TypeCheckError("Expected type `"+ unwrapType(tIterableRet) +"`, got type `" + unwrapType(tVars.a[0]) + "`", stmt.a);
       if(stmt.elseBody !== undefined) {
         const tElseBody = tcBlock(env, locals, stmt.elseBody);
         return {a: [NONE, stmt.a], tag: stmt.tag, vars: tVars, iterable: tIterable, body: tForBody, elseBody: tElseBody};
@@ -358,7 +376,7 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
       if (!fields.has(stmt.field))
         throw new TypeCheckError(`could not find field ${stmt.field} in class ${tObj.a[0].name}`, stmt.a);
       if (!isAssignable(env, tVal.a[0], fields.get(stmt.field)))
-        throw new TypeCheckError(`could not assign value of type: ${tVal.a[0]}; field ${stmt.field} expected type: ${fields.get(stmt.field)}`, stmt.a);
+        throw new TypeCheckError(`could not assign value of type: ${unwrapType(tVal.a[0])}; field ${stmt.field} expected type: ${unwrapType(fields.get(stmt.field))}`, stmt.a);
       return {...stmt, a: [NONE, stmt.a], obj: tObj, value: tVal};
     case "index-assign":
       var tObj = tcExpr(env, locals, stmt.obj);
@@ -368,11 +386,11 @@ export function tcStmt(env : GlobalTypeEnv, locals : LocalTypeEnv, stmt : Stmt<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, stmt.a);
+        throw new TypeCheckError(`Index is of non-integer type \`${unwrapType(tIndex.a[0])}\``, stmt.a);
       }
       if (tObj.a[0].tag === "class" && tObj.a[0].name === "list") {
         if (!isAssignable(env, tVal.a[0], tObj.a[0].type)) {
-          throw new TypeCheckError(`Could not assign value of type: ${tVal.a[0].tag}; List expected type: ${tObj.a[0].type.tag}`, stmt.a);
+          throw new TypeCheckError(`Could not assign value of type: ${unwrapType(tVal.a[0])}; List expected type: ${unwrapType(tObj.a[0].type)}`, stmt.a);
         }
         return { ...stmt, a: [NONE, stmt.a], obj: tObj, index: tIndex, value: tVal };
       }
@@ -592,7 +610,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         //TODO: make error message better, use the name of the class if it's an object
         //also update condition to account for subtypes
         if(!isAssignable(env, elementType, proposedType)) {
-          throw new TypeError("List has incompatible types: " + elementType.tag + " and " + proposedType.tag);
+          throw new TypeCheckError("List has incompatible types: " + unwrapType(elementType) + " and " + unwrapType(proposedType), expr.a);
         }
 
         elementsWithTypes.push(checkedI); //add expression w/ type annotation to new elements list
@@ -606,7 +624,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         // if (tObj.a[0].tag === "dict") {
         //   ...
         // }
-        throw new TypeCheckError(`Index is of non-integer type \`${tIndex.a[0].tag}\``, expr.a);
+        throw new TypeCheckError(`Index is of non-integer type \`${unwrapType(tIndex.a[0])}\``, expr.a);
       }
       // if (equalType(tObj.a[0], CLASS("str"))) {
       //   return { a: [{ tag: "class", name: "str" }, expr.a], tag: "index", obj: tObj, index: tIndex };
@@ -625,7 +643,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
       // if (tObj.a[0].tag === "tuple") {
       //   ...
       // }
-      throw new TypeCheckError(`Cannot index into type \`${tObj.a[0].tag}\``, expr.a); // Can only index into strings, list, dicts, and tuples
+      throw new TypeCheckError(`Cannot index into type \`${unwrapType(tObj.a[0])}\``, expr.a); // Can only index into strings, list, dicts, and tuples
     case "call":
       if (expr.name === "print") {
         if (expr.arguments.length === 0)
@@ -640,6 +658,28 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
         //To support range class for now
         if (expr.name === "range") {
           return tConstruct;
+        }
+
+        if (expr.name === "list") {
+          if (expr.arguments.length === 0) {
+            return { tag: "listliteral", a: [{ tag: "class", name: "list", type: NONE }, expr.a], elements: [] };
+          }
+          if (expr.arguments.length > 1){
+            throw new TypeCheckError("List constructor expected 1 argument, got " + expr.arguments.length, expr.a);
+          }
+          const tArgs = expr.arguments.map(arg => tcExpr(env, locals, arg));
+          if ((tArgs[0].a[0].tag !== "class" && tArgs[0].a[0].tag !== "set") || !isIterableObject(env, tArgs[0].a[0])) {
+            throw new TypeCheckError("Not an iterable: " + unwrapType(tArgs[0].a[0]), expr.a);
+          }
+          if (tArgs[0].a[0].tag === "set") {
+            return { tag: "call", a: [{ tag: "class", name: "list", type: tArgs[0].a[0].valueType }, expr.a], name: "list$set_init", arguments: tArgs };
+          }
+          else if (tArgs[0].a[0].name === "list") {
+            return { tag: "call", a: [{ tag: "class", name: "list", type: tArgs[0].a[0].type }, expr.a], name: "list$copy", arguments: tArgs };
+          }
+          else if (tArgs[0].a[0].name === "range") {
+            return { tag: "call", a: [{ tag: "class", name: "list", type: NUM }, expr.a], name: "list$range_init", arguments: tArgs };
+          }
         }
 
         const [_, methods] = env.classes.get(expr.name);
@@ -721,17 +761,17 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                   throw new TypeCheckError(`List.append() takes exactly one argument (${realArgs.length - 1} given)`, expr.a);
                 }
                 if (!equalType(tObj.a[0].type, realArgs[1].a[0])) {
-                  throw new TypeCheckError(`Method call type mismatch: List.append() --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(tObj.a[0].type)}`, expr.a)
+                  throw new TypeCheckError(`Method call type mismatch: List.append() --- callArgs: ${printArgs(realArgs.map(t => t.a[0]))}, methodArgs: ${unwrapType(tObj.a[0].type)}`, expr.a)
                 }
               } else if (expr.method === "insert") {
                 if (realArgs.length !== 3) {
                   throw new TypeCheckError(`List.insert() expected 2 argument, got (${realArgs.length - 1}`, expr.a);
                 }
                 if (!equalType(NUM, realArgs[1].a[0])) {
-                  throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
+                  throw new TypeCheckError(`${unwrapType(realArgs[1].a[0])} cannot be interpreted as an integer`, expr.a);
                 }
                 if (!equalType(tObj.a[0].type, realArgs[2].a[0])) {
-                  throw new TypeCheckError(`Method call type mismatch: List.insert() --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(tObj.a[0].type)}`, expr.a)
+                  throw new TypeCheckError(`Method call type mismatch: List.insert() --- callArgs: ${printArgs(realArgs.map(t => t.a[0]))}, methodArgs: ${unwrapType(tObj.a[0].type)}`, expr.a)
                 }
               } else if (expr.method === "pop") {
                 if (realArgs.length > 2) {
@@ -744,7 +784,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
                   tArgs.push(typedPos)
                 } else {
                   if (!equalType(NUM, realArgs[1].a[0])) {
-                    throw new TypeCheckError(`${realArgs[1].a[0].tag} cannot be interpreted as an integer`, expr.a);
+                    throw new TypeCheckError(`${unwrapType(realArgs[1].a[0])} cannot be interpreted as an integer`, expr.a);
                   }
                 }
               } else if (expr.method === "copy") {
@@ -762,7 +802,7 @@ export function tcExpr(env : GlobalTypeEnv, locals : LocalTypeEnv, expr : Expr<S
               methodArgs.every((argTyp, i) => isAssignable(env, realArgs[i].a[0], argTyp))) {
                 return {...expr, a: [methodRet, expr.a], obj: tObj, arguments: tArgs};
               } else {
-               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${JSON.stringify(realArgs)}, methodArgs: ${JSON.stringify(methodArgs)}`, expr.a);
+               throw new TypeCheckError(`Method call type mismatch: ${expr.method} --- callArgs: ${printArgs(realArgs.map(t => t.a[0]))}, methodArgs: ${printArgs(methodArgs)}`, expr.a);
               }
           } else {
             throw new TypeCheckError(`Could not found method ${expr.method} in class ${tObj.a[0].name}`, expr.a);

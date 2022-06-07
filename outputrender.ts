@@ -24,7 +24,6 @@ function stringify(typ: PrintType, arg: any, mem?: WebAssembly.Memory, typeNum?:
       bytes = new Uint8Array(mem.buffer, arg + 4, 4);
       var address = ((bytes[0] & 0xFF) | (bytes[1] & 0xFF) << 8 | (bytes[2] & 0xFF) << 16 | (bytes[3] & 0xFF) << 24);
       var elementArray = new Int32Array(mem.buffer, address, length);
-      console.log(elementArray[0]);
       var string = "[";
       for (let i = 0; i < length; i++) {
         if (typeNum > PrintType.list) {

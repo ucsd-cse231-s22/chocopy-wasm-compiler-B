@@ -1,10 +1,14 @@
 (module
     (memory (import "js" "mem") 1)
     (func $assert_not_none (import "imports" "assert_not_none") (param i32) (result i32))
+    (func $division_by_zero (import "imports" "division_by_zero") (param i32) (param i32) (param i32) (result i32))
     (func $index_out_of_bounds (import "imports" "index_out_of_bounds") (param i32) (param i32) (result i32))
     (func $alloc (import "libmemory" "alloc") (param i32) (result i32))
     (func $load (import "libmemory" "load") (param i32) (param i32) (result i32))
     (func $store (import "libmemory" "store") (param i32) (param i32) (param i32))
+    (func $set$firstItem (import "libset" "set$firstItem") (param i32) (result i32))
+    (func $set$length (import "libset" "set$length") (param i32) (result i32))
+    (func $set$next (import "libset" "set$next") (param i32) (param i32) (result i32))
     
     (func (export "list$length") (param $self i32) (result i32)
         (local.get $self)
@@ -251,7 +255,6 @@
         (local $currVal i32)
         (local $temp i32)
         (local $emptyList i32)
-        (local $trash i32)
 
         ;; set emptyList tracker
         (i32.const 1)
@@ -510,7 +513,7 @@
         (local $i i32)
         (local $val i32)
         
-        ;; get len and allocate new address
+        ;; get len
         (local.get $self)
         (i32.const 0)
         (call $load)
@@ -532,14 +535,13 @@
         (local.get $newListElements)
         (call $store)
 
-        ;; load original address
+        ;; copy original elements
         (call $load (local.get $self) (i32.const 1))
         (local.set $oldListElements)
         (local.set $i (i32.const 0))
         (loop $loop
             (call $load (local.get $oldListElements) (local.get $i))
             (local.set $val)
-
             (local.get $newListElements)
             (local.get $i)
             (local.get $val)
@@ -552,6 +554,106 @@
         (local.get $newList)
         (return)
     )
+
+    (func (export "list$set_init") (param $set_addr i32) (result i32)
+        (local $len i32)
+        (local $oldListElements i32)
+        (local $newList i32)
+        (local $newListElements i32)
+        (local $i i32)
+        (local $val i32)
+        
+        ;; get len
+        (local.get $set_addr)
+        (call $set$length)
+        (local.set $len)
+
+        ;; allocate the memory heap of newList
+        (i32.const 2)
+        (call $alloc)
+        (local.set $newList)
+        (local.get $newList)
+        (i32.const 0)
+        (local.get $len)
+        (call $store)
+        (local.get $len)
+        (call $alloc)
+        (local.set $newListElements)
+        (local.get $newList)
+        (i32.const 1)
+        (local.get $newListElements)
+        (call $store)
+
+        ;; copy original elements
+        (call $set$firstItem (local.get $set_addr))
+        (local.set $val)
+        (local.get $newListElements)
+        (i32.const 0)
+        (local.get $val)
+        (call $store)
+        (local.set $i (i32.const 1))
+        (loop $loop
+            (call $set$next (local.get $set_addr) (local.get $val))
+            (local.set $val)
+            (local.get $newListElements)
+            (local.get $i)
+            (local.get $val)
+            (call $store)
+            (local.set $i (i32.add (local.get $i) (i32.const 1)))
+            (i32.lt_s (local.get $i) (local.get $len))
+            br_if $loop
+        )
+
+        (local.get $newList)
+        (return)
+    )
+    
+    ;; (func (export "list$x_init") (param $x_addr i32) (result i32)
+    ;;     (local $len i32)
+    ;;     (local $oldListElements i32)
+    ;;     (local $newList i32)
+    ;;     (local $newListElements i32)
+    ;;     (local $i i32)
+    ;;     (local $val i32)
+        
+    ;;     ;; get len
+    ;;     (local.get $x_addr)
+    ;;     (call $x$length)
+    ;;     (local.set $len)
+
+    ;;     ;; allocate the memory heap of newList
+    ;;     (i32.const 2)
+    ;;     (call $alloc)
+    ;;     (local.set $newList)
+    ;;     (local.get $newList)
+    ;;     (i32.const 0)
+    ;;     (local.get $len)
+    ;;     (call $store)
+    ;;     (local.get $len)
+    ;;     (call $alloc)
+    ;;     (local.set $newListElements)
+    ;;     (local.get $newList)
+    ;;     (i32.const 1)
+    ;;     (local.get $newListElements)
+    ;;     (call $store)
+
+    ;;     ;; copy original elements
+    ;;     (local.set $i (i32.const 0))
+    ;;     (loop $loop
+    ;;         (call $x$next (local.get $x_addr))
+    ;;         (local.set $val)
+    ;;         (local.get $newListElements)
+    ;;         (local.get $i)
+    ;;         (local.get $val)
+    ;;         (call $store)
+    ;;         (local.set $i (i32.add (local.get $i) (i32.const 1)))
+    ;;         (i32.lt_s (local.get $i) (local.get $len))
+    ;;         br_if $loop
+    ;;     )
+
+    ;;     (local.get $newList)
+    ;;     (return)
+    ;; )
 
     (func (export "list$concat") (param $self i32) (param $right i32) (result i32)
         (local $selfLen i32)

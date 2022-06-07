@@ -260,13 +260,13 @@ describe("Milestone 2 list tests", () => {
     print(a)`, [`[1, 2, 3, 4]`])
 
     // 8
-    // assertPrint("list-copy", `
-    // a: [int] = None
-    // b: [int] = None
-    // a = [1, 2, 3]
-    // b = a.copy()
-    // a.append(4)
-    // print(b)`, [`[1, 2, 3]`])
+    assertPrint("list-copy", `
+    a: [int] = None
+    b: [int] = None
+    a = [1, 2, 3]
+    b = a.copy()
+    a.append(4)
+    print(b)`, [`[1, 2, 3]`])
 
     // 9
     assertPrint("list-insert", `
