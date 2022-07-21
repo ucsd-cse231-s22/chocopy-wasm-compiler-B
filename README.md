@@ -20,7 +20,7 @@ The compiler at this link contains most of the features, however integers larger
 ### Description: 
 The primary goal of this project was to create a compiler that could translate typed Python3 code [ChocoPy](https://chocopy.org/) into [WebAssembly](https://developer.mozilla.org/en-US/docs/WebAssembly) in the browser.
 For language specification, refer to the ChocoPy documentation [here](https://chocopy.org/). Base ChocoPy language will run on this application, however other groups added additional Python features such as lists, sets, for loops, comprehensions, big numbers, etc. 
-### Our work
+### Our work: 
 Our group's contribution to the project was to provide support for the use of arbitrarily large numbers. WebAssembly's default number types support 32 and 64 bit integers and floats, however beyond this was up to our own implementation.
 We included support for arithmetic and logical operations for large numbers, as well as support for python integer builtin functions, such as max(), min(), abs(), etc. In the end stages of this project, we worked with other teams so they could include big numbers in their features, such as lists and sets. 
 
