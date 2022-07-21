@@ -9,7 +9,7 @@
 5. For the next step, make sure you have Python installed on your machine to run python httpserver. It can be found here: https://www.python.org/downloads/
 6. Move into the build directory by running "cd build". 
 7. In the build directory, run "python -m http.server"
-8. Now move over to your browswer. In the browser, type the url "localhost:8000" which should deploy the compiler directly.  
+8. Now move over to your browser. Type the url "localhost:8000" which should deploy the compiler directly.  
 
 
 Or, follow this link: 
